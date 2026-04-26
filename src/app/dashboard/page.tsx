@@ -3,23 +3,61 @@
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { User, CheckCircle2, ChevronRight, Trophy, Flame, PlayCircle, Star } from "lucide-react";
+import BackgroundCanvas from "@/components/BackgroundCanvas";
 
-// Mock Supabase fetch logic
+import { supabase } from "@/utils/supabase/client";
+import { useRouter } from "next/navigation";
+
 const useDashboardData = () => {
   const [loading, setLoading] = useState(true);
   const [data, setData] = useState<any>(null);
+  const router = useRouter();
 
   useEffect(() => {
-    // Simulate Supabase network request
     const fetchData = async () => {
-      // const { data, error } = await supabase.from('profiles').select('*').single();
-      setTimeout(() => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        
+        if (!session) {
+          router.push("/auth");
+          return;
+        }
+
+        let { data: profile, error } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', session.user.id)
+          .single();
+
+        // If profile doesn't exist, try to create one or use default
+        if (error || !profile) {
+          console.warn("Profile not found, initializing default...", error);
+          
+          // Attempt to create profile if missing (trigger fallback)
+          const { data: newProfile, error: createError } = await supabase
+            .from('profiles')
+            .upsert({ 
+              id: session.user.id, 
+              full_name: session.user.user_metadata?.full_name || "AGENT_X",
+              status: "UNVERIFIED"
+            })
+            .select()
+            .single();
+          
+          if (!createError && newProfile) {
+            profile = newProfile;
+          } else {
+            // Fallback to minimal mock if DB fails
+            profile = { full_name: "AGENT_X", status: "UNVERIFIED", visibility_score: 0, location: "UNKNOWN" };
+          }
+        }
+
         setData({
           profile: {
-            name: "ACTOR_01",
-            status: "VERIFIED",
-            visibilityScore: 72,
-            location: "KOCHI",
+            name: profile.full_name || "AGENT_X",
+            status: profile.status || "UNVERIFIED",
+            visibilityScore: profile.visibility_score || 0,
+            location: profile.location || "UNKNOWN",
           },
           roles: [
             { id: 1, title: "LEAD ANTAGONIST", project: "SHADOWS OF KOCHI", match: 98, deadline: "24H", tags: ["INTENSE", "MALAYALAM"] },
@@ -39,11 +77,14 @@ const useDashboardData = () => {
             participants: 142
           }
         });
+      } catch (error) {
+        console.error("Dashboard critical error:", error);
+      } finally {
         setLoading(false);
-      }, 800);
+      }
     };
     fetchData();
-  }, []);
+  }, [router]);
 
   return { data, loading };
 };
@@ -65,7 +106,6 @@ export default function AgenticDashboard() {
       setUploadProgress(0);
 
       try {
-        // 1. Get Resumable URL from our secure Next.js backend
         const initRes = await fetch("/api/drive/init-upload", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -79,7 +119,6 @@ export default function AgenticDashboard() {
         
         const { uploadUrl } = await initRes.json();
 
-        // 2. Upload directly to Google Drive via PUT (bypasses Vercel limit)
         await new Promise((resolve, reject) => {
           const xhr = new XMLHttpRequest();
           xhr.open("PUT", uploadUrl, true);
@@ -96,7 +135,6 @@ export default function AgenticDashboard() {
             if (xhr.status >= 200 && xhr.status < 300) {
               resolve(xhr.responseText);
             } else {
-              console.error("Google Drive PUT Error Response:", xhr.responseText);
               reject(new Error(`Upload failed with status ${xhr.status}: ${xhr.responseText}`));
             }
           };
@@ -108,7 +146,7 @@ export default function AgenticDashboard() {
         alert("AUDITION SECURELY UPLOADED TO DRIVE.");
       } catch (error) {
         console.error("Upload error:", error);
-        alert("UPLOAD FAILED. Check console for details.");
+        alert("UPLOAD FAILED.");
       } finally {
         setUploading(false);
         setUploadProgress(0);
@@ -117,111 +155,139 @@ export default function AgenticDashboard() {
     input.click();
   };
 
-  if (loading) {
+  if (loading || !data) {
     return (
       <main className="min-h-screen bg-black flex items-center justify-center">
-        <h1 className="text-[#ff0000] text-5xl font-black uppercase animate-pulse tracking-widest">
-          SYNCING...
+        <BackgroundCanvas />
+        <h1 className="text-brand-red-neon text-6xl font-black uppercase animate-pulse tracking-[0.2em] relative z-10">
+          {loading ? "SYNCING..." : "SYNC_ERROR"}
         </h1>
       </main>
     );
   }
 
   return (
-    <main className="min-h-screen bg-black text-white p-4 md:p-8 overflow-x-hidden">
+    <main className="min-h-screen bg-black text-white p-4 md:p-12 overflow-x-hidden relative selection:bg-brand-red-neon selection:text-white">
+      <BackgroundCanvas />
       
-      {/* Header */}
-      <header className="flex justify-between items-end border-b-4 border-zinc-900 pb-6 mb-8">
-        <div>
-          <h1 className="text-4xl md:text-6xl font-black uppercase tracking-tighter leading-none text-[#ff0000]">
-            MM8 // CMD
+      {/* Header HUD */}
+      <header className="flex flex-col md:flex-row justify-between items-start md:items-end border-b border-zinc-900 pb-12 mb-16 relative z-10">
+        <motion.div
+          initial={{ opacity: 0, x: -30 }}
+          animate={{ opacity: 1, x: 0 }}
+        >
+          <h1 className="text-6xl md:text-9xl font-black uppercase tracking-tighter leading-none text-white">
+            MM8<span className="text-brand-red-neon drop-shadow-[0_0_15px_rgba(255,49,49,0.5)]">//</span>CMD
           </h1>
-          <p className="text-zinc-500 font-bold tracking-widest uppercase text-sm mt-2">
-            Actor Subsystem Online
-          </p>
-        </div>
-        <div className="hidden md:flex items-center gap-4 border-4 border-zinc-800 px-6 py-3">
-          <div className="w-3 h-3 rounded-full bg-green-500 animate-pulse"></div>
-          <span className="font-bold uppercase tracking-widest">NETWORK ACTIVE</span>
-        </div>
+          <div className="flex items-center gap-4 mt-6">
+            <div className="flex gap-1">
+              {[...Array(5)].map((_, i) => (
+                <div key={i} className={`w-1 h-4 ${i < 3 ? 'bg-brand-red-neon' : 'bg-zinc-800'}`} />
+              ))}
+            </div>
+            <p className="text-zinc-600 font-black tracking-[0.4em] uppercase text-[10px] flex items-center gap-2">
+              <span className="w-2 h-2 rounded-full bg-brand-red-neon animate-pulse" />
+              SYSTEM_READY // NODE_ACTIVE
+            </p>
+          </div>
+        </motion.div>
+        
+        <motion.div 
+          initial={{ opacity: 0, x: 30 }}
+          animate={{ opacity: 1, x: 0 }}
+          className="mt-8 md:mt-0 flex flex-col items-end"
+        >
+          <div className="glass-panel brutal-border-red px-8 py-4 clip-brutal-slant flex items-center gap-4">
+            <span className="font-black uppercase tracking-[0.2em] text-[10px] text-zinc-500">ENCRYPTED_LINK:</span>
+            <span className="font-black uppercase tracking-widest text-xs text-white tabular-nums">0x8A2...F92B</span>
+          </div>
+          <p className="text-[9px] font-black text-brand-red-deep uppercase mt-3 tracking-widest">SECURE_HANDSHAKE_ESTABLISHED</p>
+        </motion.div>
       </header>
 
-      <div className="max-w-screen-2xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-8">
+      <div className="max-w-screen-2xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-12 relative z-10 pb-20">
         
-        {/* LEFT COLUMN: Identity & Gamification */}
-        <div className="lg:col-span-4 flex flex-col gap-8">
+        {/* LEFT COLUMN: IDENTITY & INTEL */}
+        <div className="lg:col-span-4 flex flex-col gap-12">
           
-          {/* Identity Card */}
-          <section className="border-4 border-[#ff0000] bg-zinc-900 p-6 relative overflow-hidden group">
-            <div className="absolute top-0 right-0 bg-[#ff0000] text-black font-black px-4 py-1 flex items-center gap-2">
-              <CheckCircle2 className="w-5 h-5" />
+          {/* Identity HUD */}
+          <section className="glass-panel brutal-border-red p-10 relative overflow-hidden group clip-brutal-tl">
+            <div className="absolute top-0 right-0 bg-brand-red-neon text-white font-black px-6 py-3 flex items-center gap-2 text-[10px] tracking-widest clip-brutal-tr">
+              <CheckCircle2 className="w-4 h-4" />
               {data.profile.status}
             </div>
             
-            <div className="flex items-center gap-6 mt-4 mb-8">
-              <div className="w-24 h-24 bg-zinc-800 border-4 border-white flex items-center justify-center">
-                <User className="w-10 h-10 text-zinc-500" />
+            <div className="flex items-center gap-8 mt-6 mb-12">
+              <div className="w-32 h-32 bg-zinc-950 brutal-border-red flex items-center justify-center grayscale hover:grayscale-0 transition-all duration-500 clip-brutal-slant">
+                <User className="w-16 h-16 text-brand-red-deep group-hover:text-brand-red-neon transition-colors" />
               </div>
               <div>
-                <h2 className="text-3xl font-black uppercase tracking-tighter">{data.profile.name}</h2>
-                <p className="text-[#ff0000] font-bold uppercase tracking-widest text-sm">{data.profile.location}</p>
+                <h2 className="text-5xl font-black uppercase tracking-tighter leading-none">{data.profile.name}</h2>
+                <p className="text-brand-red-neon font-black uppercase tracking-[0.3em] text-xs mt-3 flex items-center gap-2">
+                  <span className="w-2 h-[1px] bg-brand-red-neon" />
+                  {data.profile.location} // OPS
+                </p>
               </div>
             </div>
 
-            <div className="border-t-4 border-zinc-800 pt-6">
-              <div className="flex justify-between items-end mb-2">
-                <h3 className="font-black text-zinc-500 uppercase tracking-widest">Visibility Score</h3>
-                <span className="text-4xl font-black tracking-tighter text-white">{data.profile.visibilityScore}<span className="text-xl text-zinc-500">%</span></span>
+            <div className="border-t border-zinc-900 pt-10">
+              <div className="flex justify-between items-end mb-6">
+                <h3 className="font-black text-zinc-600 uppercase tracking-[0.4em] text-[10px]">VISIBILITY_CORE</h3>
+                <span className="text-6xl font-black tracking-tighter text-white tabular-nums">
+                  {data.profile.visibilityScore}<span className="text-2xl text-brand-red-neon">%</span>
+                </span>
               </div>
-              <div className="w-full h-3 bg-black relative">
+              <div className="w-full h-3 bg-zinc-950 relative overflow-hidden clip-brutal-slant">
                 <motion.div 
                   initial={{ width: 0 }}
                   animate={{ width: `${data.profile.visibilityScore}%` }}
-                  transition={{ duration: 1, ease: "easeOut" }}
-                  className="absolute top-0 left-0 h-full bg-green-500"
-                ></motion.div>
+                  transition={{ duration: 1.5, ease: "circOut" }}
+                  className="absolute top-0 left-0 h-full bg-brand-red-neon shadow-[0_0_20px_rgba(255,49,49,0.8)]"
+                />
               </div>
             </div>
           </section>
 
-          {/* Gamification: Challenge */}
-          <section className="border-4 border-zinc-800 bg-black p-6 hover:border-white transition-colors cursor-pointer group relative overflow-hidden">
-            <div className="absolute top-0 left-0 w-2 h-full bg-[#ff0000] group-hover:w-full transition-all duration-300 z-0"></div>
-            <div className="relative z-10 group-hover:text-black transition-colors">
-              <div className="flex items-center gap-3 mb-4">
-                <Flame className="w-6 h-6 text-[#ff0000] group-hover:text-black" />
-                <h3 className="font-black uppercase tracking-widest">Daily Challenge</h3>
+          {/* Mission Intel */}
+          <section className="glass-panel-red p-10 hover:bg-brand-red-neon/10 transition-all cursor-pointer group relative overflow-hidden clip-brutal-br">
+            <div className="relative z-10">
+              <div className="flex items-center gap-4 mb-8">
+                <Flame className="w-6 h-6 text-brand-red-neon" />
+                <h3 className="font-black uppercase tracking-[0.4em] text-[10px]">PRIORITY_MISSION</h3>
               </div>
-              <h2 className="text-3xl font-black uppercase tracking-tighter mb-2">{data.challenge.title}</h2>
-              <p className="text-zinc-500 font-bold group-hover:text-black uppercase tracking-tight mb-6">
-                Ends in: <span className="text-white group-hover:text-black">{data.challenge.timeLeft}</span>
-              </p>
+              <h2 className="text-5xl font-black uppercase tracking-tighter mb-6 leading-[0.85] group-hover:text-white transition-colors">{data.challenge.title}</h2>
+              <div className="flex items-center gap-4 mb-10">
+                <div className="px-3 py-1 bg-brand-red-neon text-white text-[9px] font-black uppercase tracking-widest">ACTIVE</div>
+                <p className="text-zinc-500 font-black uppercase tracking-widest text-[10px]">
+                  TERMINATES: <span className="text-white tabular-nums">{data.challenge.timeLeft}</span>
+                </p>
+              </div>
               
-              <div className="flex justify-between items-center border-t-2 border-zinc-800 pt-4 group-hover:border-black">
-                <span className="font-black uppercase">{data.challenge.reward}</span>
-                <span className="font-bold text-sm tracking-widest">{data.challenge.participants} ACTORS</span>
+              <div className="flex justify-between items-center border-t border-brand-red-neon/20 pt-8">
+                <span className="font-black uppercase text-brand-red-neon text-sm tracking-tighter">{data.challenge.reward}</span>
+                <span className="font-black text-[9px] tracking-[0.3em] text-zinc-600 uppercase">{data.challenge.participants} SYNCED</span>
               </div>
             </div>
           </section>
 
-          {/* Gamification: Leaderboard */}
-          <section className="border-4 border-zinc-800 p-6">
-            <div className="flex items-center gap-3 mb-6 border-b-4 border-zinc-800 pb-4">
-              <Trophy className="w-6 h-6 text-yellow-500" />
-              <h3 className="font-black uppercase tracking-widest text-xl">Local Rank</h3>
+          {/* Ranking Subsystem */}
+          <section className="glass-panel p-10 brutal-border clip-brutal-bl">
+            <div className="flex items-center gap-4 mb-10 border-b border-zinc-900 pb-8">
+              <Trophy className="w-6 h-6 text-brand-red-neon" />
+              <h3 className="font-black uppercase tracking-[0.4em] text-[10px]">GLOBAL_RANKINGS</h3>
             </div>
-            <div className="flex flex-col gap-4">
+            <div className="flex flex-col gap-6">
               {data.leaderboard.map((actor: any) => (
-                <div key={actor.rank} className={`flex items-center justify-between p-3 border-l-4 ${actor.isUser ? 'border-[#ff0000] bg-zinc-900' : 'border-zinc-800'}`}>
-                  <div className="flex items-center gap-4">
-                    <span className={`font-black text-2xl ${actor.rank === 1 ? 'text-yellow-500' : 'text-zinc-500'}`}>
+                <div key={actor.rank} className={`flex items-center justify-between p-5 brutal-border transition-all group ${actor.isUser ? 'border-brand-red-neon bg-brand-red-neon/10 clip-brutal-slant' : 'border-zinc-900 bg-zinc-950/50 hover:border-zinc-700'}`}>
+                  <div className="flex items-center gap-6">
+                    <span className={`font-black text-3xl tabular-nums ${actor.rank === 1 ? 'text-brand-red-neon' : 'text-zinc-800 group-hover:text-zinc-600'}`}>
                       {actor.rank < 10 ? `0${actor.rank}` : actor.rank}
                     </span>
-                    <span className={`font-black uppercase tracking-tighter ${actor.isUser ? 'text-[#ff0000]' : 'text-white'}`}>
+                    <span className={`font-black uppercase tracking-tighter text-lg ${actor.isUser ? 'text-white' : 'text-zinc-500'}`}>
                       {actor.name}
                     </span>
                   </div>
-                  <span className="font-black tabular-nums">{actor.score}</span>
+                  <span className="font-black tabular-nums text-brand-red-neon text-xl">{actor.score}</span>
                 </div>
               ))}
             </div>
@@ -229,88 +295,114 @@ export default function AgenticDashboard() {
 
         </div>
 
-        {/* RIGHT COLUMN: AI Matches & Actions */}
-        <div className="lg:col-span-8 flex flex-col gap-8">
+        {/* RIGHT COLUMN: OPERATIONS */}
+        <div className="lg:col-span-8 flex flex-col gap-12">
           
-          {/* Action Center */}
+          {/* Action Hub */}
           <section className="w-full">
             <button 
               onClick={handleUploadClick}
               disabled={uploading}
-              className={`w-full relative group border-4 p-8 md:p-12 text-left overflow-hidden flex flex-col md:flex-row items-start md:items-center justify-between gap-6 transition-colors duration-300 ${uploading ? 'bg-black border-zinc-800' : 'bg-[#ff0000] border-[#ff0000] hover:bg-black'}`}
+              className={`w-full relative group p-12 md:p-24 text-left overflow-hidden flex flex-col md:flex-row items-start md:items-center justify-between gap-12 transition-all duration-700 ${
+                uploading ? 'bg-zinc-950 border-2 border-brand-red-deep' : 'bg-brand-red-neon text-white clip-brutal-hero-primary shadow-[0_0_60px_rgba(255,49,49,0.3)] hover:shadow-[0_0_100px_rgba(255,49,49,0.5)]'
+              }`}
             >
               {uploading && (
                 <div 
-                  className="absolute top-0 left-0 h-full bg-[#ff0000] opacity-20 z-0 transition-all duration-300"
+                  className="absolute top-0 left-0 h-full bg-brand-red-neon opacity-30 z-0 transition-all duration-300"
                   style={{ width: `${uploadProgress}%` }}
-                ></div>
+                />
               )}
-              <div className="relative z-10 transition-colors">
-                <h2 className={`text-4xl md:text-6xl font-black uppercase tracking-tighter ${uploading ? 'text-[#ff0000]' : 'text-black group-hover:text-[#ff0000]'}`}>
-                  {uploading ? `UPLOADING... ${uploadProgress}%` : "Upload Audition"}
+              
+              <div className="relative z-10 max-w-2xl">
+                <div className="flex items-center gap-4 mb-6">
+                  <div className="w-12 h-[2px] bg-white opacity-60" />
+                  <p className="font-black uppercase tracking-[0.5em] text-[10px] text-white/70">
+                    {uploading ? "UPLINK_ESTABLISHED" : "BYPASS_THE_GATEKEEPERS"}
+                  </p>
+                </div>
+                <h2 className="text-6xl md:text-9xl font-black uppercase tracking-tighter leading-[0.8] text-white">
+                  {uploading ? `SYNCING ${uploadProgress}%` : "UPLOAD AUDITION"}
                 </h2>
-                <p className={`font-bold uppercase tracking-widest mt-2 ${uploading ? 'text-zinc-500' : 'text-black group-hover:text-zinc-500'}`}>
-                  {uploading ? "DIRECT SECURE UPLOAD TO DRIVE" : "Override gatekeepers. Show raw talent."}
+                <p className="font-black uppercase tracking-widest mt-8 text-sm text-white/80 max-w-lg">
+                  {uploading ? "Transferring raw talent packets to the MM8 decentralized storage layer." : "Submit your latest performance. Our AI agents will match you directly to the pipeline."}
                 </p>
               </div>
+
               {!uploading && (
-                <div className="relative z-10 w-20 h-20 bg-black group-hover:bg-[#ff0000] rounded-full flex items-center justify-center shrink-0 transition-colors">
-                  <PlayCircle className="w-10 h-10 text-[#ff0000] group-hover:text-black" />
+                <div className="relative z-10 w-32 h-32 bg-white flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform duration-500 clip-brutal-tr shadow-2xl">
+                  <PlayCircle className="w-16 h-16 text-brand-red-neon" />
                 </div>
               )}
-              <div className={`absolute right-0 bottom-0 text-[10rem] font-black opacity-10 pointer-events-none transition-colors ${uploading ? 'text-zinc-800' : 'text-black group-hover:text-[#ff0000]'}`}>
-                REC
+              
+              <div className="absolute right-[-30px] bottom-[-30px] text-[20rem] font-black text-black opacity-10 pointer-events-none group-hover:opacity-20 transition-opacity uppercase leading-none">
+                RAW
               </div>
             </button>
           </section>
 
-          {/* AI Recommended Roles (Swipeable Grid) */}
-          <section className="flex-1 flex flex-col min-h-0">
-            <div className="flex items-end justify-between mb-6">
-              <div className="flex items-center gap-3">
-                <Star className="w-8 h-8 text-[#ff0000]" />
-                <h2 className="text-3xl font-black uppercase tracking-tighter">AI Matched Roles</h2>
+          {/* AI Matching Grid */}
+          <section className="flex-1 flex flex-col min-h-0 mt-8">
+            <div className="flex items-end justify-between mb-12 px-2">
+              <div className="flex items-center gap-6">
+                <div className="p-4 bg-brand-red-neon/10 brutal-border-red clip-brutal-slant">
+                  <Star className="w-8 h-8 text-brand-red-neon" />
+                </div>
+                <div>
+                  <h2 className="text-5xl font-black uppercase tracking-tighter leading-none">AGENTIC MATCHES</h2>
+                  <p className="text-[10px] font-black uppercase tracking-[0.4em] text-zinc-600 mt-2">REAL_TIME_PIPELINE_SYNC</p>
+                </div>
               </div>
-              <button className="text-zinc-500 hover:text-white font-bold uppercase tracking-widest flex items-center gap-1 transition-colors">
-                View All <ChevronRight className="w-5 h-5" />
+              <button className="text-zinc-600 hover:text-brand-red-neon font-black uppercase tracking-[0.3em] text-[10px] flex items-center gap-3 transition-all border-b border-transparent hover:border-brand-red-neon pb-2">
+                FULL REGISTRY <ChevronRight className="w-4 h-4" />
               </button>
             </div>
 
-            <div className="flex-1 w-full overflow-x-auto snap-x snap-mandatory hide-scrollbar flex gap-6 pb-4">
+            <div className="flex-1 w-full overflow-x-auto snap-x snap-mandatory hide-scrollbar flex gap-10 pb-12">
               {data.roles.map((role: any, index: number) => (
                 <motion.div
                   key={role.id}
                   initial={{ opacity: 0, x: 50 }}
-                  animate={{ opacity: 1, x: 0 }}
+                  whileInView={{ opacity: 1, x: 0 }}
                   transition={{ delay: index * 0.1 }}
-                  className="snap-center shrink-0 w-[300px] md:w-[380px] bg-zinc-900 border-4 border-zinc-800 p-6 flex flex-col hover:border-[#ff0000] hover:bg-black transition-colors group cursor-pointer"
+                  className={`snap-center shrink-0 w-[350px] md:w-[480px] glass-panel brutal-border-red p-10 flex flex-col hover:bg-brand-red-neon/5 transition-all group cursor-pointer ${
+                    index % 2 === 0 ? 'clip-brutal-tl' : 'clip-brutal-tr'
+                  }`}
                 >
-                  <div className="flex justify-between items-start mb-6">
-                    <span className="bg-[#ff0000] text-black font-black px-3 py-1 uppercase text-sm">
+                  <div className="flex justify-between items-start mb-10">
+                    <div className="bg-brand-red-neon text-white font-black px-6 py-3 uppercase text-[10px] tracking-[0.2em] shadow-[0_0_20px_rgba(255,49,49,0.4)] clip-brutal-slant">
                       {role.match}% MATCH
-                    </span>
-                    <span className="text-zinc-500 font-bold uppercase tracking-widest text-sm group-hover:text-[#ff0000] transition-colors">
-                      CLOSES: {role.deadline}
-                    </span>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-zinc-600 font-black uppercase tracking-widest text-[9px]">EXPIRES_IN</p>
+                      <span className="text-white font-black uppercase tracking-widest text-xs tabular-nums">
+                        {role.deadline}
+                      </span>
+                    </div>
                   </div>
                   
                   <div className="flex-1">
-                    <p className="text-zinc-500 font-bold uppercase tracking-widest text-sm mb-1">{role.project}</p>
-                    <h3 className="text-3xl font-black uppercase tracking-tighter leading-tight mb-4 group-hover:text-[#ff0000] transition-colors">
+                    <div className="flex items-center gap-3 mb-3">
+                      <div className="w-2 h-2 bg-brand-red-neon rounded-full" />
+                      <p className="text-zinc-500 font-black uppercase tracking-[0.3em] text-[10px]">{role.project}</p>
+                    </div>
+                    <h3 className="text-5xl font-black uppercase tracking-tighter leading-[0.9] mb-8 group-hover:text-brand-red-neon transition-colors">
                       {role.title}
                     </h3>
-                    <div className="flex flex-wrap gap-2">
+                    <div className="flex flex-wrap gap-3 mt-auto">
                       {role.tags.map((tag: string) => (
-                        <span key={tag} className="border-2 border-zinc-700 text-zinc-400 px-2 py-1 text-xs font-bold uppercase group-hover:border-zinc-500">
+                        <span key={tag} className="border border-zinc-800 text-zinc-500 px-4 py-2 text-[9px] font-black uppercase tracking-widest group-hover:border-brand-red-neon/30 group-hover:text-brand-red-neon transition-colors">
                           {tag}
                         </span>
                       ))}
                     </div>
                   </div>
 
-                  <div className="mt-8 border-t-4 border-zinc-800 pt-4 group-hover:border-[#ff0000] transition-colors flex justify-between items-center">
-                    <span className="font-black text-zinc-500 group-hover:text-white transition-colors">REVIEW SPECS</span>
-                    <ChevronRight className="w-6 h-6 text-zinc-500 group-hover:text-[#ff0000] transition-colors" />
+                  <div className="mt-12 border-t border-zinc-900 pt-8 flex justify-between items-center group-hover:border-brand-red-neon/30 transition-all">
+                    <span className="font-black text-[10px] uppercase tracking-[0.3em] text-zinc-600 group-hover:text-white transition-colors">ANALYZE_SPECIFICATIONS</span>
+                    <div className="w-12 h-12 bg-zinc-950 brutal-border-red flex items-center justify-center group-hover:bg-brand-red-neon transition-all">
+                      <ChevronRight className="w-6 h-6 text-brand-red-neon group-hover:text-white transition-all" />
+                    </div>
                   </div>
                 </motion.div>
               ))}
