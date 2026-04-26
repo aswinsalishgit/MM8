@@ -63,7 +63,7 @@ function ParticleField() {
   return (
     <points ref={pointsRef}>
       <bufferGeometry>
-        <bufferAttribute attach="attributes-position" count={particles.length / 3} array={particles} itemSize={3} />
+        <bufferAttribute attach="attributes-position" count={particles.length / 3} args={[particles, 3]} />
       </bufferGeometry>
       <pointsMaterial size={0.05} color="#400" transparent opacity={0.3} sizeAttenuation />
     </points>
@@ -219,7 +219,7 @@ function Poster({ url, position, scale, mouse, index, quote }: {
           fontWeight={900}
           letterSpacing={0.1}
           color="white"
-          opacity={0.6} // Slightly muted
+          fillOpacity={0.6} // Slightly muted
           textAlign="center"
           anchorX="center"
           anchorY="middle"
