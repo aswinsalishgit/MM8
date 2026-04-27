@@ -56,7 +56,7 @@ export default function CompletionTransitionFlow() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 1.2 }}
           onClick={enterDashboard}
-          className="w-full relative group p-12 bg-brand-red-neon text-white transition-all duration-700 shadow-[0_0_80px_rgba(255,49,49,0.4)] clip-brutal-hero-primary hover:bg-white hover:text-black hover:shadow-[0_0_120px_rgba(255,49,49,0.6)]"
+          className="w-full relative group p-12 bg-brand-red-neon text-white transition-all duration-700 shadow-[0_0_80px_rgba(255,49,49,0.4)] clip-brutal-hero-primary hover:bg-white hover:text-black hover:shadow-[0_0_120px_rgba(255,49,49,0.6)] cursor-pointer"
         >
           <div className="relative z-10 flex items-center justify-center group-hover:scale-105 transition-transform duration-500">
             <span className="text-3xl md:text-7xl font-black uppercase tracking-tighter text-center">ENTER DASHBOARD</span>

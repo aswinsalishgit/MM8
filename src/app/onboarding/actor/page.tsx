@@ -51,6 +51,10 @@ export default function ActorOnboardingFlow() {
   const [cityCode, setCityCode] = useState("");
   const [locationValue, setLocationValue] = useState("");
 
+  const [showCountryDropdown, setShowCountryDropdown] = useState(false);
+  const [showStateDropdown, setShowStateDropdown] = useState(false);
+  const [showCityDropdown, setShowCityDropdown] = useState(false);
+
   const nextStep = () => {
     if (stepIndex < STEPS.length - 1) {
       setStepIndex((prev) => prev + 1);
@@ -177,7 +181,7 @@ export default function ActorOnboardingFlow() {
 
               <button
                 onClick={nextStep}
-                className="group relative px-12 py-8 bg-brand-red-neon text-white font-black text-3xl md:text-5xl uppercase tracking-tighter hover:bg-white hover:text-black transition-all duration-500 shadow-[0_0_50px_rgba(255,49,49,0.3)] clip-brutal-hero-primary"
+                className="group relative px-12 py-8 bg-brand-red-neon text-white font-black text-3xl md:text-5xl uppercase tracking-tighter hover:bg-white hover:text-black transition-all duration-500 shadow-[0_0_50px_rgba(255,49,49,0.3)] clip-brutal-hero-primary cursor-pointer"
               >
                 START NOW
               </button>
@@ -203,7 +207,7 @@ export default function ActorOnboardingFlow() {
                   <button
                     key={opt}
                     onClick={() => { setDesire(opt); nextStep(); }}
-                    className="p-10 glass-panel brutal-border-red text-left hover:border-brand-red-neon transition-all duration-300 group"
+                    className="p-10 glass-panel brutal-border-red text-left hover:border-brand-red-neon transition-all duration-300 group cursor-pointer"
                   >
                     <span className="text-3xl font-black uppercase tracking-tighter group-hover:text-brand-red-neon transition-colors">{opt}</span>
                   </button>
@@ -228,49 +232,70 @@ export default function ActorOnboardingFlow() {
               </p>
               
               <div className="grid grid-cols-2 md:grid-cols-3 gap-4 relative">
-                {languages.map((lang) => (
+                {["MALAYALAM", "TAMIL", "HINDI", "TELUGU", "KANNADA"].map((lang) => {
+                  const isSelected = languages.includes(lang);
+                  return (
+                    <button
+                      key={lang}
+                      onClick={() => handleLanguageToggle(lang)}
+                      className={`p-6 brutal-border transition-all duration-300 text-left cursor-pointer ${isSelected ? 'border-brand-red-neon bg-brand-red-deep text-white shadow-[0_0_15px_rgba(255,49,49,0.3)]' : 'border-zinc-800 text-zinc-500 hover:border-zinc-400'}`}
+                    >
+                      <span className="text-2xl font-black uppercase tracking-tighter">{lang}</span>
+                    </button>
+                  );
+                })}
+
+                {languages.filter(l => !["MALAYALAM", "TAMIL", "HINDI", "TELUGU", "KANNADA"].includes(l)).map((lang) => (
                   <button
                     key={lang}
                     onClick={() => handleLanguageToggle(lang)}
-                    className="p-6 brutal-border border-brand-red-neon bg-brand-red-deep text-white shadow-[0_0_15px_rgba(255,49,49,0.3)] transition-all duration-300 text-left"
+                    className="p-6 brutal-border border-brand-red-neon bg-brand-red-deep text-white shadow-[0_0_15px_rgba(255,49,49,0.3)] transition-all duration-300 text-left cursor-pointer"
                   >
                     <span className="text-2xl font-black uppercase tracking-tighter">{lang}</span>
                   </button>
                 ))}
                 
-                <div className="relative group">
+                <div className="relative">
                   <button
                     onClick={() => setShowLanguageDropdown(!showLanguageDropdown)}
-                    className="w-full p-6 brutal-border border-zinc-800 text-zinc-500 hover:border-brand-red-neon hover:text-brand-red-neon transition-all duration-300 text-left"
+                    className="w-full p-6 brutal-border border-zinc-800 text-zinc-500 hover:border-brand-red-neon hover:text-brand-red-neon transition-all duration-300 text-left cursor-pointer"
                   >
                     <span className="text-2xl font-black uppercase tracking-tighter">OTHERS +</span>
                   </button>
                   
-                  {showLanguageDropdown && (
-                    <div className="absolute top-full left-0 w-full max-h-60 overflow-y-auto bg-black brutal-border-red z-50 mt-2 p-2 hide-scrollbar">
-                      {ISO6391.getAllNames().map((name) => (
-                        <button
-                          key={name}
-                          onClick={() => {
-                            if (!languages.includes(name.toUpperCase())) {
-                              setLanguages(prev => [...prev, name.toUpperCase()]);
-                            }
-                            setShowLanguageDropdown(false);
-                          }}
-                          className="w-full p-4 text-left hover:bg-brand-red-neon hover:text-white font-black uppercase text-xs tracking-widest transition-colors"
-                        >
-                          {name}
-                        </button>
-                      ))}
-                    </div>
-                  )}
+                  <AnimatePresence>
+                    {showLanguageDropdown && (
+                      <motion.div 
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: 10 }}
+                        data-lenis-prevent
+                        className="absolute top-full left-0 w-full max-h-[300px] overflow-y-auto bg-black brutal-border-red z-[100] mt-2 p-2 hide-scrollbar"
+                      >
+                        {ISO6391.getAllNames().map((name) => (
+                          <button
+                            key={name}
+                            onClick={() => {
+                              if (!languages.includes(name.toUpperCase())) {
+                                setLanguages(prev => [...prev, name.toUpperCase()]);
+                              }
+                              setShowLanguageDropdown(false);
+                            }}
+                            className="w-full p-4 text-left hover:bg-brand-red-neon hover:text-white font-black uppercase text-xs tracking-widest transition-colors cursor-pointer"
+                          >
+                            {name}
+                          </button>
+                        ))}
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
                 </div>
               </div>
               
               <button
                 disabled={languages.length === 0}
                 onClick={nextStep}
-                className="mt-8 px-10 py-6 bg-white text-black font-black text-2xl uppercase tracking-tighter disabled:opacity-30 hover:bg-brand-red-neon hover:text-white transition-all brutal-border"
+                className="mt-8 px-10 py-6 bg-white text-black font-black text-2xl uppercase tracking-tighter disabled:opacity-30 hover:bg-brand-red-neon hover:text-white transition-all brutal-border cursor-pointer"
               >
                 CONFIRM SELECTION
               </button>
@@ -306,7 +331,7 @@ export default function ActorOnboardingFlow() {
                           setPersonalities(prev => [...prev, opt]);
                         }
                       }}
-                      className={`p-10 glass-panel brutal-border transition-all duration-300 text-left group ${isSelected ? 'border-brand-red-neon bg-brand-red-deep' : 'border-zinc-800 hover:border-zinc-400'}`}
+                      className={`p-10 glass-panel brutal-border transition-all duration-300 text-left group cursor-pointer ${isSelected ? 'border-brand-red-neon bg-brand-red-deep' : 'border-zinc-800 hover:border-zinc-400'}`}
                     >
                       <span className={`text-3xl font-black uppercase tracking-tighter transition-colors ${isSelected ? 'text-white' : 'text-zinc-500 group-hover:text-white'}`}>{opt}</span>
                     </button>
@@ -317,7 +342,7 @@ export default function ActorOnboardingFlow() {
               <button
                 disabled={personalities.length === 0}
                 onClick={nextStep}
-                className="mt-8 px-10 py-6 bg-white text-black font-black text-2xl uppercase tracking-tighter disabled:opacity-30 hover:bg-brand-red-neon hover:text-white transition-all brutal-border"
+                className="mt-8 px-10 py-6 bg-white text-black font-black text-2xl uppercase tracking-tighter disabled:opacity-30 hover:bg-brand-red-neon hover:text-white transition-all brutal-border cursor-pointer"
               >
                 CONFIRM ARCHETYPES ({personalities.length}/3)
               </button>
@@ -339,7 +364,10 @@ export default function ActorOnboardingFlow() {
                 Upload a clear profile photo that captures your natural presence. First impressions matter — this helps casting teams see you instantly.
               </p>
               
-              <div className="relative w-full aspect-square max-w-[500px] mx-auto brutal-border overflow-hidden bg-zinc-950/50">
+              <div 
+                data-lenis-prevent
+                className="relative w-full aspect-square max-w-[500px] mx-auto brutal-border overflow-hidden bg-zinc-950/50"
+              >
                 {isCropping && previewUrl ? (
                   <div className="relative w-full h-full">
                     <Cropper
@@ -353,7 +381,7 @@ export default function ActorOnboardingFlow() {
                     />
                     <button 
                       onClick={() => setIsCropping(false)}
-                      className="absolute bottom-6 right-6 z-10 px-6 py-3 bg-brand-red-neon text-white font-black uppercase text-xs tracking-widest"
+                      className="absolute bottom-6 right-6 z-10 px-6 py-3 bg-brand-red-neon text-white font-black uppercase text-xs tracking-widest cursor-pointer"
                     >
                       CONFIRM CROP
                     </button>
@@ -384,14 +412,14 @@ export default function ActorOnboardingFlow() {
                 <button
                   onClick={uploadPhoto}
                   disabled={uploading || !file || isCropping}
-                  className="flex-1 px-8 py-8 bg-brand-red-dark text-white font-black text-3xl uppercase tracking-tighter disabled:opacity-20 transition-all hover:bg-brand-red-neon"
+                  className="flex-1 px-8 py-8 bg-brand-red-dark text-white font-black text-3xl uppercase tracking-tighter disabled:opacity-20 transition-all hover:bg-brand-red-neon cursor-pointer"
                 >
                   {uploading ? "UPLOADING..." : "ADD IMAGE"}
                 </button>
                 {!file && (
                   <button
                     onClick={nextStep}
-                    className="px-8 py-8 glass-panel brutal-border text-zinc-500 font-black text-xl uppercase tracking-tighter hover:text-white hover:border-white transition-all"
+                    className="px-8 py-8 glass-panel brutal-border text-zinc-500 font-black text-xl uppercase tracking-tighter hover:text-white hover:border-white transition-all cursor-pointer"
                   >
                     CONTINUE ANONYMOUSLY
                   </button>
@@ -419,7 +447,7 @@ export default function ActorOnboardingFlow() {
                   <button
                     key={opt}
                     onClick={() => { setExperience(opt); nextStep(); }}
-                    className="p-10 glass-panel brutal-border-red text-left hover:border-brand-red-neon hover:bg-brand-red-deep/20 transition-all group"
+                    className="p-10 glass-panel brutal-border-red text-left hover:border-brand-red-neon hover:bg-brand-red-deep/20 transition-all group cursor-pointer"
                   >
                     <span className="text-4xl font-black uppercase tracking-tighter group-hover:text-brand-red-neon transition-colors">{opt}</span>
                   </button>
@@ -448,7 +476,7 @@ export default function ActorOnboardingFlow() {
                   <button
                     key={label}
                     onClick={() => setAvailability(i)}
-                    className={`p-10 glass-panel brutal-border transition-all duration-300 text-center group ${availability === i ? 'border-brand-red-neon bg-brand-red-deep shadow-[0_0_20px_rgba(255,49,49,0.3)]' : 'border-zinc-800 hover:border-zinc-500'}`}
+                    className={`p-10 glass-panel brutal-border transition-all duration-300 text-center group cursor-pointer ${availability === i ? 'border-brand-red-neon bg-brand-red-deep shadow-[0_0_20px_rgba(255,49,49,0.3)]' : 'border-zinc-800 hover:border-zinc-500'}`}
                   >
                     <span className={`text-2xl font-black uppercase tracking-tighter transition-colors ${availability === i ? 'text-white' : 'text-zinc-600 group-hover:text-white'}`}>
                       {label}
@@ -459,7 +487,7 @@ export default function ActorOnboardingFlow() {
 
               <button
                 onClick={nextStep}
-                className="mt-8 px-12 py-8 bg-brand-red-dark text-white font-black text-3xl uppercase tracking-tighter hover:bg-brand-red-neon transition-all brutal-border"
+                className="mt-8 px-12 py-8 bg-brand-red-dark text-white font-black text-3xl uppercase tracking-tighter hover:bg-brand-red-neon transition-all brutal-border cursor-pointer"
               >
                 CONTINUE
               </button>
@@ -483,71 +511,137 @@ export default function ActorOnboardingFlow() {
               
               <div className="flex flex-col gap-8">
                 {/* Cascading Dropdowns */}
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 relative">
+                  
                   {/* Country Selection */}
-                  <div className="flex flex-col gap-2">
+                  <div className="flex flex-col gap-2 relative">
                     <label className="text-brand-red-neon font-black uppercase tracking-widest text-[10px]">Country</label>
-                    <select 
-                      value={countryCode}
-                      onChange={(e) => {
-                        setCountryCode(e.target.value);
-                        setStateCode("");
-                        setCityCode("");
-                        updateLocationValue("", "", e.target.value);
+                    <button 
+                      onClick={() => {
+                        setShowCountryDropdown(!showCountryDropdown);
+                        setShowStateDropdown(false);
+                        setShowCityDropdown(false);
                       }}
-                      className="w-full bg-zinc-950/50 text-white font-black px-6 py-4 brutal-border-red outline-none appearance-none cursor-pointer uppercase text-sm"
+                      className="w-full bg-zinc-950/50 text-white font-black px-6 py-5 brutal-border-red outline-none text-left uppercase text-sm hover:border-brand-red-neon transition-colors flex justify-between items-center cursor-pointer"
                     >
-                      <option value="">SELECT COUNTRY</option>
-                      {Country.getAllCountries().map(c => (
-                        <option key={c.isoCode} value={c.isoCode}>{c.name.toUpperCase()}</option>
-                      ))}
-                    </select>
+                      <span>{countryCode ? Country.getCountryByCode(countryCode)?.name.toUpperCase() : "SELECT COUNTRY"}</span>
+                      <svg className={`w-4 h-4 transition-transform ${showCountryDropdown ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="square" strokeWidth="3" d="M19 9l-7 7-7-7"></path></svg>
+                    </button>
+                    
+                    <AnimatePresence>
+                      {showCountryDropdown && (
+                        <motion.div 
+                          initial={{ opacity: 0, y: 10 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          exit={{ opacity: 0, y: 10 }}
+                          data-lenis-prevent
+                          className="absolute top-full left-0 w-full max-h-[300px] overflow-y-auto bg-black brutal-border-red z-[100] mt-2 p-2 hide-scrollbar"
+                        >
+                          {Country.getAllCountries().map(c => (
+                            <button
+                              key={c.isoCode}
+                              onClick={() => {
+                                setCountryCode(c.isoCode);
+                                setStateCode("");
+                                setCityCode("");
+                                updateLocationValue("", "", c.isoCode);
+                                setShowCountryDropdown(false);
+                              }}
+                              className="w-full p-4 text-left hover:bg-brand-red-neon hover:text-white font-black uppercase text-xs tracking-widest transition-colors cursor-pointer"
+                            >
+                              {c.name}
+                            </button>
+                          ))}
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
                   </div>
 
                   {/* State Selection */}
-                  <div className="flex flex-col gap-2">
+                  <div className="flex flex-col gap-2 relative">
                     <label className="text-brand-red-neon font-black uppercase tracking-widest text-[10px]">State</label>
-                    <select 
+                    <button 
                       disabled={!countryCode}
-                      value={stateCode}
-                      onChange={(e) => {
-                        setStateCode(e.target.value);
-                        setCityCode("");
-                        updateLocationValue("", e.target.value);
+                      onClick={() => {
+                        setShowStateDropdown(!showStateDropdown);
+                        setShowCountryDropdown(false);
+                        setShowCityDropdown(false);
                       }}
-                      className="w-full bg-zinc-950/50 text-white font-black px-6 py-4 brutal-border-red outline-none appearance-none cursor-pointer uppercase text-sm disabled:opacity-20"
+                      className="w-full bg-zinc-950/50 text-white font-black px-6 py-5 brutal-border-red outline-none text-left uppercase text-sm hover:border-brand-red-neon transition-colors flex justify-between items-center disabled:opacity-20 cursor-pointer"
                     >
-                      <option value="">SELECT STATE</option>
-                      {State.getStatesOfCountry(countryCode).map(s => (
-                        <option key={s.isoCode} value={s.isoCode}>{s.name.toUpperCase()}</option>
-                      ))}
-                    </select>
+                      <span>{stateCode ? State.getStateByCodeAndCountry(stateCode, countryCode)?.name.toUpperCase() : "SELECT STATE"}</span>
+                      <svg className={`w-4 h-4 transition-transform ${showStateDropdown ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="square" strokeWidth="3" d="M19 9l-7 7-7-7"></path></svg>
+                    </button>
+                    
+                    <AnimatePresence>
+                      {showStateDropdown && (
+                        <motion.div 
+                          initial={{ opacity: 0, y: 10 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          exit={{ opacity: 0, y: 10 }}
+                          data-lenis-prevent
+                          className="absolute top-full left-0 w-full max-h-[300px] overflow-y-auto bg-black brutal-border-red z-[100] mt-2 p-2 hide-scrollbar"
+                        >
+                          {State.getStatesOfCountry(countryCode).map(s => (
+                            <button
+                              key={s.isoCode}
+                              onClick={() => {
+                                setStateCode(s.isoCode);
+                                setCityCode("");
+                                updateLocationValue("", s.isoCode);
+                                setShowStateDropdown(false);
+                              }}
+                              className="w-full p-4 text-left hover:bg-brand-red-neon hover:text-white font-black uppercase text-xs tracking-widest transition-colors cursor-pointer"
+                            >
+                              {s.name}
+                            </button>
+                          ))}
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
                   </div>
 
                   {/* City Selection */}
-                  <div className="flex flex-col gap-2">
+                  <div className="flex flex-col gap-2 relative">
                     <label className="text-brand-red-neon font-black uppercase tracking-widest text-[10px]">District/City</label>
-                    <select 
+                    <button 
                       disabled={!stateCode}
-                      value={cityCode}
-                      onChange={(e) => {
-                        setCityCode(e.target.value);
-                        updateLocationValue(e.target.value);
+                      onClick={() => {
+                        setShowCityDropdown(!showCityDropdown);
+                        setShowCountryDropdown(false);
+                        setShowStateDropdown(false);
                       }}
-                      className="w-full bg-zinc-950/50 text-white font-black px-6 py-4 brutal-border-red outline-none appearance-none cursor-pointer uppercase text-sm disabled:opacity-20"
+                      className="w-full bg-zinc-950/50 text-white font-black px-6 py-5 brutal-border-red outline-none text-left uppercase text-sm hover:border-brand-red-neon transition-colors flex justify-between items-center disabled:opacity-20 cursor-pointer"
                     >
-                      <option value="">SELECT CITY</option>
-                      {City.getCitiesOfState(countryCode, stateCode).map(c => (
-                        <option key={c.name} value={c.name}>{c.name.toUpperCase()}</option>
-                      ))}
-                    </select>
-                  </div>
-                </div>
-
-                <div className="flex flex-col gap-4">
-                  <label className="text-zinc-500 font-black uppercase tracking-widest text-xs">Formatted Location</label>
-                  <div className="p-8 glass-panel brutal-border-red text-white font-black text-3xl uppercase tracking-tighter flex justify-between items-center bg-brand-red-deep/10">
-                    <span>{locationValue || "AWAITING_SELECTION..."}</span>
+                      <span>{cityCode ? cityCode.toUpperCase() : "SELECT CITY"}</span>
+                      <svg className={`w-4 h-4 transition-transform ${showCityDropdown ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="square" strokeWidth="3" d="M19 9l-7 7-7-7"></path></svg>
+                    </button>
+                    
+                    <AnimatePresence>
+                      {showCityDropdown && (
+                        <motion.div 
+                          initial={{ opacity: 0, y: 10 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          exit={{ opacity: 0, y: 10 }}
+                          data-lenis-prevent
+                          className="absolute top-full left-0 w-full max-h-[300px] overflow-y-auto bg-black brutal-border-red z-[100] mt-2 p-2 hide-scrollbar"
+                        >
+                          {City.getCitiesOfState(countryCode, stateCode).map(c => (
+                            <button
+                              key={c.name}
+                              onClick={() => {
+                                setCityCode(c.name);
+                                updateLocationValue(c.name);
+                                setShowCityDropdown(false);
+                              }}
+                              className="w-full p-4 text-left hover:bg-brand-red-neon hover:text-white font-black uppercase text-xs tracking-widest transition-colors cursor-pointer"
+                            >
+                              {c.name}
+                            </button>
+                          ))}
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
                   </div>
                 </div>
               </div>
@@ -566,7 +660,7 @@ export default function ActorOnboardingFlow() {
               <button
                 onClick={nextStep}
                 disabled={!locationValue}
-                className="mt-12 w-full px-12 py-10 bg-brand-red-neon text-white font-black text-5xl md:text-7xl uppercase tracking-tighter hover:bg-white hover:text-black transition-all brutal-shadow disabled:opacity-20"
+                className="mt-12 w-full px-12 py-10 bg-brand-red-neon text-white font-black text-5xl md:text-7xl uppercase tracking-tighter hover:bg-white hover:text-black transition-all brutal-shadow disabled:opacity-20 cursor-pointer"
               >
                 FINALIZE PROFILE
               </button>

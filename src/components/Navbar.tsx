@@ -15,7 +15,7 @@ export default function Navbar() {
       <div className="flex gap-4 md:gap-8 items-center pointer-events-auto">
         <Link 
           href="/auth"
-          className="px-6 md:px-10 py-3 md:py-4 glass-button text-white font-black uppercase text-xs md:text-sm tracking-widest hover:border-brand-red-neon hover:text-brand-red-neon clip-brutal-slant"
+          className="px-6 md:px-10 py-3 md:py-4 glass-button text-white font-black uppercase text-xs md:text-sm tracking-widest hover:border-brand-red-neon hover:text-brand-red-neon clip-brutal-slant cursor-pointer"
         >
           SIGN IN
         </Link>

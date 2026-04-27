@@ -62,7 +62,7 @@ export default function RoleSelectionPage() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: index * 0.05 }}
             onClick={() => handleSelect(role.id)}
-            className={`snap-center shrink-0 w-[320px] md:w-[450px] h-[450px] md:h-[600px] glass-panel brutal-border-red hover:border-brand-red-neon group relative flex flex-col justify-end p-12 text-left transition-all duration-500 overflow-hidden ${
+            className={`snap-center shrink-0 w-[320px] md:w-[450px] h-[450px] md:h-[600px] glass-panel brutal-border-red hover:border-brand-red-neon group relative flex flex-col justify-end p-12 text-left transition-all duration-500 overflow-hidden cursor-pointer ${
               index % 2 === 0 ? 'clip-brutal-tl' : 'clip-brutal-tr'
             }`}
           >
