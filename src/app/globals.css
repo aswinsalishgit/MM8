@@ -22,6 +22,7 @@
 :root {
   --background: #000000;
   --foreground: #ffffff;
+  font-size: 75%; /* Scales down all rem units to 75% (12px base) */
 }
 
 body {

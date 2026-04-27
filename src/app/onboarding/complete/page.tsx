@@ -59,7 +59,7 @@ export default function CompletionTransitionFlow() {
               transition={{ type: "spring", stiffness: 300, damping: 15, delay: 0.2 }}
               className="border-[16px] border-brand-red-neon text-brand-red-neon px-16 py-8 mb-16 shadow-[0_0_100px_rgba(255,49,49,0.5)] clip-brutal-tl"
             >
-              <h1 className="text-8xl md:text-[14rem] font-black uppercase tracking-tighter leading-none">
+              <h1 className="text-5xl md:text-[14rem] font-black uppercase tracking-tighter leading-none">
                 VERIFIED
               </h1>
             </motion.div>
@@ -68,7 +68,7 @@ export default function CompletionTransitionFlow() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.8 }}
-              className="text-5xl md:text-8xl font-black uppercase tracking-tighter mb-6 leading-none"
+              className="text-4xl md:text-8xl font-black uppercase tracking-tighter mb-6 leading-none"
             >
               UPLINK <span className="text-brand-red-neon drop-shadow-[0_0_15px_rgba(255,49,49,0.5)]">STABLE</span>
             </motion.h2>
@@ -77,7 +77,7 @@ export default function CompletionTransitionFlow() {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ delay: 1.2 }}
-              className="text-2xl font-black text-zinc-600 uppercase tracking-[0.3em] mb-16"
+              className="text-lg md:text-2xl font-black text-zinc-600 uppercase tracking-[0.3em] mb-16"
             >
               Your digital footprint is now active on the <span className="text-white">MM8</span> network.
             </motion.p>
@@ -90,7 +90,7 @@ export default function CompletionTransitionFlow() {
             >
               <div className="absolute top-0 left-0 h-3 bg-brand-red-neon w-[72%] shadow-[0_0_20px_rgba(255,49,49,1)]"></div>
               <h3 className="text-xl font-black uppercase text-zinc-500 tracking-[0.4em]">NETWORK_AUTHORITY_SYNC</h3>
-              <div className="text-9xl font-black text-white tracking-tighter mt-4 tabular-nums">72<span className="text-3xl text-brand-red-neon">%</span></div>
+              <div className="text-6xl md:text-9xl font-black text-white tracking-tighter mt-4 tabular-nums">72<span className="text-2xl md:text-3xl text-brand-red-neon">%</span></div>
             </motion.div>
           </motion.div>
         )}
@@ -125,7 +125,7 @@ export default function CompletionTransitionFlow() {
                 </div>
                 <div className="flex flex-col">
                   <span className="text-xs font-black text-zinc-600 tracking-[0.5em] mb-2 uppercase">ACTIVE_VIEWERS</span>
-                  <h3 className="text-4xl md:text-6xl font-black uppercase tracking-tighter text-white">
+                  <h3 className="text-3xl md:text-6xl font-black uppercase tracking-tighter text-white">
                     <span className="text-brand-red-neon">02</span> SYNCED
                   </h3>
                 </div>
@@ -165,9 +165,9 @@ export default function CompletionTransitionFlow() {
               onClick={enterDashboard}
               className="w-full relative group p-12 bg-brand-red-neon text-white transition-all duration-700 shadow-[0_0_80px_rgba(255,49,49,0.4)] clip-brutal-hero-primary hover:bg-white hover:text-black hover:shadow-[0_0_120px_rgba(255,49,49,0.6)]"
             >
-              <div className="relative z-10 flex items-center justify-center gap-10 group-hover:scale-105 transition-transform duration-500">
-                <span className="text-5xl md:text-7xl font-black uppercase tracking-tighter">ENTER DASHBOARD</span>
-                <svg className="w-16 h-16" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="6"><path strokeLinecap="square" d="M13 5l7 7-7 7M5 12h15"></path></svg>
+              <div className="relative z-10 flex flex-col md:flex-row items-center justify-center gap-6 md:gap-10 group-hover:scale-105 transition-transform duration-500">
+                <span className="text-3xl md:text-7xl font-black uppercase tracking-tighter">ENTER DASHBOARD</span>
+                <svg className="w-10 h-10 md:w-16 md:h-16" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="6"><path strokeLinecap="square" d="M13 5l7 7-7 7M5 12h15"></path></svg>
               </div>
             </motion.button>
           </motion.div>
