@@ -130,19 +130,26 @@ export default function ActorOnboardingFlow() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95 }}
-              className="flex flex-col items-start gap-8"
+              className="flex flex-col items-start"
             >
-              <h1 className="text-5xl md:text-[7rem] font-black uppercase tracking-tighter leading-[0.8] border-l-[12px] border-brand-red-dark pl-8">
-                PHASE 01:<br /><span className="text-brand-red-neon">DISCOVERY</span>
+              <h1 className="text-6xl md:text-9xl font-black uppercase tracking-tighter leading-none mb-8">
+                PROFILE<br /><span className="text-brand-red-neon">CREATION</span>
               </h1>
-              <p className="text-2xl md:text-3xl font-bold text-zinc-400 uppercase tracking-tight max-w-2xl">
-                The network is initializing. Your data is the key to bypassing the gatekeepers.
-              </p>
+              
+              <div className="border-l-4 border-brand-red-neon pl-6 py-2 mb-12">
+                <p className="text-zinc-500 font-bold uppercase tracking-widest text-lg md:text-xl italic">
+                  "Your Data is the key to bypassing the gatekeepers"
+                </p>
+                <p className="text-white font-black uppercase tracking-[0.3em] text-sm md:text-base mt-4">
+                  Create your profile in under 60 seconds
+                </p>
+              </div>
+
               <button
                 onClick={nextStep}
-                className="mt-8 px-12 py-8 bg-brand-red-dark text-white font-black text-4xl uppercase tracking-tighter hover:bg-brand-red-neon hover:scale-105 transition-all duration-500 brutal-border"
+                className="group relative px-12 py-8 bg-brand-red-neon text-white font-black text-3xl md:text-5xl uppercase tracking-tighter hover:bg-white hover:text-black transition-all duration-500 shadow-[0_0_50px_rgba(255,49,49,0.3)] clip-brutal-hero-primary"
               >
-                EXECUTE START
+                START NOW
               </button>
             </motion.div>
           )}
