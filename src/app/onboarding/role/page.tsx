@@ -13,7 +13,6 @@ const ROLES = [
 
 export default function RoleSelectionPage() {
   const router = useRouter();
-  const [selectedRole, setSelectedRole] = useState<string | null>(null);
 
   const handleSelect = async (id: string) => {
     if (id === "director") {
@@ -21,8 +20,6 @@ export default function RoleSelectionPage() {
       return;
     }
 
-    setSelectedRole(id);
-    
     // Update role in DB
     const { data: { user } } = await supabase.auth.getUser();
     if (user) {
@@ -32,9 +29,7 @@ export default function RoleSelectionPage() {
         .eq('id', user.id);
     }
 
-    setTimeout(() => {
-      router.push(`/onboarding/${id}`);
-    }, 800);
+    router.push(`/onboarding/${id}`);
   };
 
   return (
@@ -58,26 +53,6 @@ export default function RoleSelectionPage() {
           Choose how you want to rise in the MM8 ecosystem.
         </motion.p>
       </div>
-
-      <AnimatePresence>
-        {selectedRole && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 bg-brand-red-deep flex flex-col items-center justify-center pointer-events-none"
-          >
-            <motion.h2 
-              initial={{ scale: 0.8, opacity: 0 }}
-              animate={{ scale: 1.1, opacity: 1 }}
-              transition={{ type: "spring", stiffness: 200, damping: 20 }}
-              className="text-7xl md:text-[12rem] font-black text-white uppercase tracking-tighter mix-blend-overlay"
-            >
-              UPLOADING...
-            </motion.h2>
-          </motion.div>
-        )}
-      </AnimatePresence>
 
       <div className="flex-1 w-full overflow-x-auto snap-x snap-mandatory px-6 md:px-16 pb-12 hide-scrollbar flex items-center gap-10 relative z-10">
         {ROLES.map((role, index) => (
