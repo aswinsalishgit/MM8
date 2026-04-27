@@ -9,12 +9,6 @@ import { supabase } from "@/utils/supabase/client";
 const ROLES = [
   { id: "actor", label: "ACTOR", desc: "I want to be cast." },
   { id: "director", label: "DIRECTOR", desc: "I am building a vision." },
-  { id: "producer", label: "PRODUCER", desc: "I am funding the vision." },
-  { id: "writer", label: "WRITER", desc: "I have the script." },
-  { id: "crew", label: "CREW", desc: "I make it happen." },
-  { id: "fan_scout", label: "FAN SCOUT", desc: "I spot raw talent." },
-  { id: "agency", label: "AGENCY", desc: "I represent the best." },
-  { id: "exploring", label: "JUST EXPLORING", desc: "Let me see the network." },
 ];
 
 export default function RoleSelectionPage() {
@@ -22,6 +16,11 @@ export default function RoleSelectionPage() {
   const [selectedRole, setSelectedRole] = useState<string | null>(null);
 
   const handleSelect = async (id: string) => {
+    if (id === "director") {
+      alert("Director onboarding coming soon.");
+      return;
+    }
+
     setSelectedRole(id);
     
     // Update role in DB
@@ -29,7 +28,7 @@ export default function RoleSelectionPage() {
     if (user) {
       await supabase
         .from('profiles')
-        .update({ location: id.toUpperCase() }) // Using location as a placeholder for role for now, or I should add a role column
+        .update({ location: id.toUpperCase() })
         .eq('id', user.id);
     }
 
@@ -56,7 +55,7 @@ export default function RoleSelectionPage() {
           transition={{ delay: 0.3 }}
           className="text-zinc-500 font-bold uppercase tracking-widest text-sm mt-6 border-l-4 border-brand-red-dark pl-4"
         >
-          Select your primary function within the MM8 ecosystem.
+          Choose how you want to rise in the MM8 ecosystem.
         </motion.p>
       </div>
 
