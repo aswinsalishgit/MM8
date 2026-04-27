@@ -28,7 +28,7 @@ export default function ActorOnboardingFlow() {
   // State
   const [desire, setDesire] = useState<string | null>(null);
   const [languages, setLanguages] = useState<string[]>([]);
-  const [personality, setPersonality] = useState<string | null>(null);
+  const [personalities, setPersonalities] = useState<string[]>([]);
   const [experience, setExperience] = useState<string | null>(null);
   const [availability, setAvailability] = useState(0); // 0, 1, 2
   const [acquisition, setAcquisition] = useState("");
@@ -163,8 +163,11 @@ export default function ActorOnboardingFlow() {
               className="flex flex-col gap-8 w-full"
             >
               <h2 className="text-5xl md:text-8xl font-black uppercase tracking-tighter leading-none">
-                OBJECTIVE<br /><span className="text-brand-red-neon">SETTING</span>
+                OBJECTIVE<br /><span className="text-brand-red-neon">PREFERENCE</span>
               </h2>
+              <p className="text-zinc-500 font-bold uppercase tracking-widest text-xs max-w-2xl border-l-4 border-brand-red-dark pl-4">
+                Choose the opportunities that match your current ambition. This helps us surface roles aligned with where you want to rise next.
+              </p>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {["FIRST BREAK", "LEAD ROLES", "OTT DEBUT", "COMMERCIALS"].map((opt) => (
                   <button
@@ -188,8 +191,12 @@ export default function ActorOnboardingFlow() {
               className="flex flex-col gap-8 w-full"
             >
               <h2 className="text-5xl md:text-8xl font-black uppercase tracking-tighter leading-none">
-                LINGUAL<br /><span className="text-brand-red-neon">MATRIX</span>
+                LANGUAGE<br /><span className="text-brand-red-neon">PREFERENCES</span>
               </h2>
+              <p className="text-zinc-500 font-bold uppercase tracking-widest text-xs max-w-2xl border-l-4 border-brand-red-dark pl-4">
+                Select every language you can confidently speak or perform in. This helps match you with roles, scripts, and markets where you can deliver naturally on screen.
+              </p>
+              
               <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                 {LANGUAGES.map((lang) => {
                   const isSelected = languages.includes(lang);
@@ -203,7 +210,17 @@ export default function ActorOnboardingFlow() {
                     </button>
                   );
                 })}
+                <button
+                  onClick={() => {
+                    const extra = ["FRENCH", "GERMAN", "SPANISH", "ARABIC", "KOREAN", "JAPANESE"];
+                    setLanguages(prev => Array.from(new Set([...prev, ...extra])));
+                  }}
+                  className="p-6 brutal-border border-zinc-800 text-zinc-500 hover:border-brand-red-neon hover:text-brand-red-neon transition-all duration-300 text-left"
+                >
+                  <span className="text-2xl font-black uppercase tracking-tighter">OTHERS +</span>
+                </button>
               </div>
+              
               <button
                 disabled={languages.length === 0}
                 onClick={nextStep}
@@ -225,17 +242,39 @@ export default function ActorOnboardingFlow() {
               <h2 className="text-5xl md:text-8xl font-black uppercase tracking-tighter leading-none">
                 CORE<br /><span className="text-brand-red-neon">ARCHETYPE</span>
               </h2>
+              <p className="text-zinc-500 font-bold uppercase tracking-widest text-xs max-w-2xl border-l-4 border-brand-red-dark pl-4">
+                Select the three archetypes you embody most naturally. This helps us match you to roles where your presence feels authentic, powerful, and instantly believable.
+              </p>
+              
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {PERSONALITIES.map((opt) => (
-                  <button
-                    key={opt}
-                    onClick={() => { setPersonality(opt); nextStep(); }}
-                    className="p-10 glass-panel brutal-border-red text-left hover:border-brand-red-neon transition-all duration-300 group"
-                  >
-                    <span className="text-3xl font-black uppercase tracking-tighter group-hover:text-brand-red-neon transition-colors">{opt}</span>
-                  </button>
-                ))}
+                {PERSONALITIES.map((opt) => {
+                  const isSelected = personalities.includes(opt);
+                  const isMax = personalities.length >= 3;
+                  return (
+                    <button
+                      key={opt}
+                      onClick={() => {
+                        if (isSelected) {
+                          setPersonalities(prev => prev.filter(p => p !== opt));
+                        } else if (!isMax) {
+                          setPersonalities(prev => [...prev, opt]);
+                        }
+                      }}
+                      className={`p-10 glass-panel brutal-border transition-all duration-300 text-left group ${isSelected ? 'border-brand-red-neon bg-brand-red-deep' : 'border-zinc-800 hover:border-zinc-400'}`}
+                    >
+                      <span className={`text-3xl font-black uppercase tracking-tighter transition-colors ${isSelected ? 'text-white' : 'text-zinc-500 group-hover:text-white'}`}>{opt}</span>
+                    </button>
+                  );
+                })}
               </div>
+              
+              <button
+                disabled={personalities.length === 0}
+                onClick={nextStep}
+                className="mt-8 px-10 py-6 bg-white text-black font-black text-2xl uppercase tracking-tighter disabled:opacity-30 hover:bg-brand-red-neon hover:text-white transition-all brutal-border"
+              >
+                CONFIRM ARCHETYPES ({personalities.length}/3)
+              </button>
             </motion.div>
           )}
 
@@ -248,8 +287,11 @@ export default function ActorOnboardingFlow() {
               className="flex flex-col gap-8 w-full"
             >
               <h2 className="text-5xl md:text-7xl font-black uppercase tracking-tighter leading-none">
-                VISUAL<br /><span className="text-brand-red-neon">UPLINK</span>
+                UPLOAD<br /><span className="text-brand-red-neon">FACE</span>
               </h2>
+              <p className="text-zinc-500 font-bold uppercase tracking-widest text-xs max-w-2xl border-l-4 border-brand-red-dark pl-4">
+                Upload a clear profile photo that captures your natural presence. First impressions matter — this helps casting teams see you instantly.
+              </p>
               
               <label 
                 onDragOver={(e) => e.preventDefault()}
@@ -262,7 +304,7 @@ export default function ActorOnboardingFlow() {
                   <img src={previewUrl} alt="Preview" className="absolute inset-0 w-full h-full object-cover opacity-40 mix-blend-luminosity grayscale hover:grayscale-0 transition-all duration-700" />
                 ) : (
                   <div className="text-zinc-700 font-black text-4xl uppercase tracking-tighter z-10 pointer-events-none text-center px-8">
-                    DROP SOURCE FILE HERE
+                    UPLOAD YOUR IMAGE
                   </div>
                 )}
                 {file && (
@@ -278,7 +320,7 @@ export default function ActorOnboardingFlow() {
                   disabled={uploading || !file}
                   className="flex-1 px-8 py-8 bg-brand-red-dark text-white font-black text-3xl uppercase tracking-tighter disabled:opacity-20 transition-all hover:bg-brand-red-neon"
                 >
-                  {uploading ? "UPLOADING..." : "SYNC PHOTO"}
+                  {uploading ? "UPLOADING..." : "ADD IMAGE"}
                 </button>
                 {!file && (
                   <button
@@ -301,8 +343,11 @@ export default function ActorOnboardingFlow() {
               className="flex flex-col gap-8 w-full"
             >
               <h2 className="text-5xl md:text-8xl font-black uppercase tracking-tighter leading-none">
-                SYSTEM<br /><span className="text-brand-red-neon">HISTORY</span>
+                YOUR<br /><span className="text-brand-red-neon">EXPERIENCE</span>
               </h2>
+              <p className="text-zinc-500 font-bold uppercase tracking-widest text-xs max-w-2xl border-l-4 border-brand-red-dark pl-4">
+                Tell us where you are in your journey. Whether beginner or seasoned, we’ll tailor opportunities to match your current level and next leap.
+              </p>
               <div className="flex flex-col gap-6">
                 {["YES (STAGE)", "YES (SCREEN)", "NO (RAW TALENT)"].map((opt) => (
                   <button
@@ -323,39 +368,34 @@ export default function ActorOnboardingFlow() {
               initial={{ opacity: 0, y: 50 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -50 }}
-              className="flex flex-col gap-16 w-full"
+              className="flex flex-col gap-12 w-full"
             >
               <h2 className="text-5xl md:text-8xl font-black uppercase tracking-tighter leading-none">
-                DEPLOYMENT<br /><span className="text-brand-red-neon">WINDOW</span>
+                OPPORTUNITY<br /><span className="text-brand-red-neon">READINESS</span>
               </h2>
+              <p className="text-zinc-500 font-bold uppercase tracking-widest text-xs max-w-2xl border-l-4 border-brand-red-dark pl-4">
+                Let us know when you’re ready to move. We’ll prioritize opportunities that match your ideal timeline.
+              </p>
               
-              <div className="relative pt-12 pb-8">
-                <input
-                  type="range"
-                  min="0"
-                  max="2"
-                  step="1"
-                  value={availability}
-                  onChange={(e) => setAvailability(parseInt(e.target.value))}
-                  className="w-full h-2 bg-zinc-900 appearance-none outline-none cursor-pointer accent-brand-red-neon"
-                />
-                <div className="flex justify-between mt-10">
-                  {AVAILABILITY_LABELS.map((label, i) => (
-                    <span 
-                      key={label} 
-                      className={`text-2xl font-black uppercase tracking-tighter transition-colors duration-500 ${availability === i ? 'text-brand-red-neon scale-110' : 'text-zinc-700'}`}
-                    >
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                {AVAILABILITY_LABELS.map((label, i) => (
+                  <button
+                    key={label}
+                    onClick={() => setAvailability(i)}
+                    className={`p-10 glass-panel brutal-border transition-all duration-300 text-center group ${availability === i ? 'border-brand-red-neon bg-brand-red-deep shadow-[0_0_20px_rgba(255,49,49,0.3)]' : 'border-zinc-800 hover:border-zinc-500'}`}
+                  >
+                    <span className={`text-2xl font-black uppercase tracking-tighter transition-colors ${availability === i ? 'text-white' : 'text-zinc-600 group-hover:text-white'}`}>
                       {label}
                     </span>
-                  ))}
-                </div>
+                  </button>
+                ))}
               </div>
 
               <button
                 onClick={nextStep}
                 className="mt-8 px-12 py-8 bg-brand-red-dark text-white font-black text-3xl uppercase tracking-tighter hover:bg-brand-red-neon transition-all brutal-border"
               >
-                LOCK WINDOW
+                CONTINUE
               </button>
             </motion.div>
           )}
@@ -369,14 +409,29 @@ export default function ActorOnboardingFlow() {
               className="flex flex-col gap-8 w-full"
             >
               <h2 className="text-5xl md:text-8xl font-black uppercase tracking-tighter leading-none">
-                FINAL<br /><span className="text-brand-red-neon">UPLINK</span>
+                OBJECTIVE<br /><span className="text-brand-red-neon">PREFERENCE</span>
               </h2>
+              <p className="text-zinc-500 font-bold uppercase tracking-widest text-xs max-w-2xl border-l-4 border-brand-red-dark pl-4">
+                Choose the opportunities that match your current ambition. This helps us surface roles aligned with where you want to rise next.
+              </p>
               
               <div className="flex flex-col gap-4">
-                <label className="text-brand-red-neon font-black uppercase tracking-widest text-xs">Origin Node</label>
+                <label className="text-brand-red-neon font-black uppercase tracking-widest text-xs">Current Location</label>
                 <div className="p-8 glass-panel brutal-border-red text-white font-black text-3xl uppercase tracking-tighter flex justify-between items-center bg-brand-red-deep/10">
-                  <span>KOCHI, KERALA</span>
-                  <span className="text-brand-red-neon text-xs tracking-widest animate-pulse">DETECTED</span>
+                  <span id="location-display">DETECTING...</span>
+                  <button 
+                    onClick={() => {
+                      if (navigator.geolocation) {
+                        navigator.geolocation.getCurrentPosition((pos) => {
+                          const display = document.getElementById('location-display');
+                          if (display) display.innerText = `${pos.coords.latitude.toFixed(2)}, ${pos.coords.longitude.toFixed(2)} (GPS)`;
+                        });
+                      }
+                    }}
+                    className="text-brand-red-neon text-xs tracking-widest animate-pulse hover:text-white transition-colors"
+                  >
+                    SYNC_GPS
+                  </button>
                 </div>
               </div>
 

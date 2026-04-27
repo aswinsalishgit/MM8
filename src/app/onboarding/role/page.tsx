@@ -42,7 +42,7 @@ export default function RoleSelectionPage() {
           animate={{ opacity: 1, x: 0 }}
           className="text-5xl md:text-8xl font-black uppercase tracking-tighter leading-none"
         >
-          INITIALIZE<br/><span className="text-brand-red-neon">PROTOCOL</span>
+          INITIALIZE<br/><span className="text-brand-red-neon">YOUR ROLE</span>
         </motion.h1>
         <motion.p 
           initial={{ opacity: 0 }}
@@ -76,7 +76,7 @@ export default function RoleSelectionPage() {
                 {role.label}
               </h3>
               <p className="text-zinc-500 font-bold uppercase tracking-[0.2em] text-[10px] opacity-0 group-hover:opacity-100 transition-all duration-300 delay-100">
-                PROTOCOL: <span className="text-brand-red-neon">{role.desc}</span>
+                <span className="text-brand-red-neon">{role.desc}</span>
               </p>
             </div>
             
