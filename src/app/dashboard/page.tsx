@@ -157,11 +157,8 @@ export default function AgenticDashboard() {
 
   if (loading || !data) {
     return (
-      <main className="min-h-screen bg-black flex items-center justify-center">
+      <main className="min-h-screen bg-black">
         <BackgroundCanvas />
-        <h1 className="text-brand-red-neon text-6xl font-black uppercase animate-pulse tracking-[0.2em] relative z-10">
-          {loading ? "SYNCING..." : "SYNC_ERROR"}
-        </h1>
       </main>
     );
   }

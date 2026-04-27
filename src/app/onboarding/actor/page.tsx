@@ -1,10 +1,13 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/utils/supabase/client";
 import BackgroundCanvas from "@/components/BackgroundCanvas";
+import ISO6391 from "iso-639-1";
+import Cropper, { Area } from "react-easy-crop";
+import { Country, State, City } from "country-state-city";
 
 const STEPS = [
   "WELCOME",
@@ -36,6 +39,18 @@ export default function ActorOnboardingFlow() {
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [file, setFile] = useState<File | null>(null);
 
+  // Advanced State
+  const [showLanguageDropdown, setShowLanguageDropdown] = useState(false);
+  const [crop, setCrop] = useState({ x: 0, y: 0 });
+  const [zoom, setZoom] = useState(1);
+  const [croppedAreaPixels, setCroppedAreaPixels] = useState<Area | null>(null);
+  const [isCropping, setIsCropping] = useState(false);
+
+  const [countryCode, setCountryCode] = useState("");
+  const [stateCode, setStateCode] = useState("");
+  const [cityCode, setCityCode] = useState("");
+  const [locationValue, setLocationValue] = useState("");
+
   const nextStep = () => {
     if (stepIndex < STEPS.length - 1) {
       setStepIndex((prev) => prev + 1);
@@ -54,12 +69,17 @@ export default function ActorOnboardingFlow() {
     );
   };
 
+  const onCropComplete = useCallback((_croppedArea: Area, croppedAreaPixels: Area) => {
+    setCroppedAreaPixels(croppedAreaPixels);
+  }, []);
+
   const handleDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault();
     if (e.dataTransfer.files && e.dataTransfer.files[0]) {
       const f = e.dataTransfer.files[0];
       setFile(f);
       setPreviewUrl(URL.createObjectURL(f));
+      setIsCropping(true);
     }
   }, []);
 
@@ -68,7 +88,17 @@ export default function ActorOnboardingFlow() {
       const f = e.target.files[0];
       setFile(f);
       setPreviewUrl(URL.createObjectURL(f));
+      setIsCropping(true);
     }
+  };
+
+  const updateLocationValue = (city?: string, state?: string, country?: string) => {
+    const parts = [
+      city || City.getAllCities().find(c => c.name === cityCode)?.name,
+      state || State.getStateByCodeAndCountry(stateCode, countryCode)?.name,
+      country || Country.getCountryByCode(countryCode)?.name
+    ].filter(Boolean);
+    setLocationValue(parts.join(", ").toUpperCase());
   };
 
   const uploadPhoto = async () => {
@@ -197,28 +227,44 @@ export default function ActorOnboardingFlow() {
                 Select every language you can confidently speak or perform in. This helps match you with roles, scripts, and markets where you can deliver naturally on screen.
               </p>
               
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                {LANGUAGES.map((lang) => {
-                  const isSelected = languages.includes(lang);
-                  return (
-                    <button
-                      key={lang}
-                      onClick={() => handleLanguageToggle(lang)}
-                      className={`p-6 brutal-border transition-all duration-300 text-left ${isSelected ? 'border-brand-red-neon bg-brand-red-deep text-white shadow-[0_0_15px_rgba(255,49,49,0.3)]' : 'border-zinc-800 text-zinc-500 hover:border-zinc-400'}`}
-                    >
-                      <span className="text-2xl font-black uppercase tracking-tighter">{lang}</span>
-                    </button>
-                  );
-                })}
-                <button
-                  onClick={() => {
-                    const extra = ["FRENCH", "GERMAN", "SPANISH", "ARABIC", "KOREAN", "JAPANESE"];
-                    setLanguages(prev => Array.from(new Set([...prev, ...extra])));
-                  }}
-                  className="p-6 brutal-border border-zinc-800 text-zinc-500 hover:border-brand-red-neon hover:text-brand-red-neon transition-all duration-300 text-left"
-                >
-                  <span className="text-2xl font-black uppercase tracking-tighter">OTHERS +</span>
-                </button>
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-4 relative">
+                {languages.map((lang) => (
+                  <button
+                    key={lang}
+                    onClick={() => handleLanguageToggle(lang)}
+                    className="p-6 brutal-border border-brand-red-neon bg-brand-red-deep text-white shadow-[0_0_15px_rgba(255,49,49,0.3)] transition-all duration-300 text-left"
+                  >
+                    <span className="text-2xl font-black uppercase tracking-tighter">{lang}</span>
+                  </button>
+                ))}
+                
+                <div className="relative group">
+                  <button
+                    onClick={() => setShowLanguageDropdown(!showLanguageDropdown)}
+                    className="w-full p-6 brutal-border border-zinc-800 text-zinc-500 hover:border-brand-red-neon hover:text-brand-red-neon transition-all duration-300 text-left"
+                  >
+                    <span className="text-2xl font-black uppercase tracking-tighter">OTHERS +</span>
+                  </button>
+                  
+                  {showLanguageDropdown && (
+                    <div className="absolute top-full left-0 w-full max-h-60 overflow-y-auto bg-black brutal-border-red z-50 mt-2 p-2 hide-scrollbar">
+                      {ISO6391.getAllNames().map((name) => (
+                        <button
+                          key={name}
+                          onClick={() => {
+                            if (!languages.includes(name.toUpperCase())) {
+                              setLanguages(prev => [...prev, name.toUpperCase()]);
+                            }
+                            setShowLanguageDropdown(false);
+                          }}
+                          className="w-full p-4 text-left hover:bg-brand-red-neon hover:text-white font-black uppercase text-xs tracking-widest transition-colors"
+                        >
+                          {name}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
               </div>
               
               <button
@@ -293,31 +339,51 @@ export default function ActorOnboardingFlow() {
                 Upload a clear profile photo that captures your natural presence. First impressions matter — this helps casting teams see you instantly.
               </p>
               
-              <label 
-                onDragOver={(e) => e.preventDefault()}
-                onDrop={handleDrop}
-                className={`relative flex flex-col items-center justify-center w-full h-[450px] brutal-border ${file ? 'border-brand-red-neon' : 'border-zinc-800 border-dashed hover:border-brand-red-dark'} cursor-pointer overflow-hidden transition-all bg-zinc-950/50`}
-              >
-                <input type="file" className="hidden" accept="image/*" onChange={handleFileChange} />
-                
-                {previewUrl ? (
-                  <img src={previewUrl} alt="Preview" className="absolute inset-0 w-full h-full object-cover opacity-40 mix-blend-luminosity grayscale hover:grayscale-0 transition-all duration-700" />
+              <div className="relative w-full aspect-square max-w-[500px] mx-auto brutal-border overflow-hidden bg-zinc-950/50">
+                {isCropping && previewUrl ? (
+                  <div className="relative w-full h-full">
+                    <Cropper
+                      image={previewUrl}
+                      crop={crop}
+                      zoom={zoom}
+                      aspect={1 / 1}
+                      onCropChange={setCrop}
+                      onCropComplete={onCropComplete}
+                      onZoomChange={setZoom}
+                    />
+                    <button 
+                      onClick={() => setIsCropping(false)}
+                      className="absolute bottom-6 right-6 z-10 px-6 py-3 bg-brand-red-neon text-white font-black uppercase text-xs tracking-widest"
+                    >
+                      CONFIRM CROP
+                    </button>
+                  </div>
                 ) : (
-                  <div className="text-zinc-700 font-black text-4xl uppercase tracking-tighter z-10 pointer-events-none text-center px-8">
-                    UPLOAD YOUR IMAGE
-                  </div>
+                  <label className="w-full h-full flex flex-col items-center justify-center cursor-pointer group">
+                    <input type="file" className="hidden" accept="image/*" onChange={handleFileChange} />
+                    {previewUrl ? (
+                      <div className="relative w-full h-full">
+                        <img src={previewUrl} alt="Preview" className="w-full h-full object-cover grayscale hover:grayscale-0 transition-all duration-700" />
+                        <div 
+                          onClick={() => setIsCropping(true)}
+                          className="absolute inset-0 flex items-center justify-center bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity"
+                        >
+                          <span className="text-white font-black uppercase text-xs tracking-widest">ADJUST CROP</span>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="text-zinc-700 font-black text-4xl uppercase tracking-tighter z-10 text-center px-8">
+                        UPLOAD YOUR IMAGE
+                      </div>
+                    )}
+                  </label>
                 )}
-                {file && (
-                  <div className="absolute inset-0 flex items-center justify-center">
-                    <span className="text-white font-black text-5xl uppercase tracking-tighter drop-shadow-[0_0_10px_rgba(255,0,0,0.5)]">FILE CAPTURED</span>
-                  </div>
-                )}
-              </label>
+              </div>
 
               <div className="flex flex-col md:flex-row gap-4">
                 <button
                   onClick={uploadPhoto}
-                  disabled={uploading || !file}
+                  disabled={uploading || !file || isCropping}
                   className="flex-1 px-8 py-8 bg-brand-red-dark text-white font-black text-3xl uppercase tracking-tighter disabled:opacity-20 transition-all hover:bg-brand-red-neon"
                 >
                   {uploading ? "UPLOADING..." : "ADD IMAGE"}
@@ -415,23 +481,74 @@ export default function ActorOnboardingFlow() {
                 Choose the opportunities that match your current ambition. This helps us surface roles aligned with where you want to rise next.
               </p>
               
-              <div className="flex flex-col gap-4">
-                <label className="text-brand-red-neon font-black uppercase tracking-widest text-xs">Current Location</label>
-                <div className="p-8 glass-panel brutal-border-red text-white font-black text-3xl uppercase tracking-tighter flex justify-between items-center bg-brand-red-deep/10">
-                  <span id="location-display">DETECTING...</span>
-                  <button 
-                    onClick={() => {
-                      if (navigator.geolocation) {
-                        navigator.geolocation.getCurrentPosition((pos) => {
-                          const display = document.getElementById('location-display');
-                          if (display) display.innerText = `${pos.coords.latitude.toFixed(2)}, ${pos.coords.longitude.toFixed(2)} (GPS)`;
-                        });
-                      }
-                    }}
-                    className="text-brand-red-neon text-xs tracking-widest animate-pulse hover:text-white transition-colors"
-                  >
-                    SYNC_GPS
-                  </button>
+              <div className="flex flex-col gap-8">
+                {/* Cascading Dropdowns */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  {/* Country Selection */}
+                  <div className="flex flex-col gap-2">
+                    <label className="text-brand-red-neon font-black uppercase tracking-widest text-[10px]">Country</label>
+                    <select 
+                      value={countryCode}
+                      onChange={(e) => {
+                        setCountryCode(e.target.value);
+                        setStateCode("");
+                        setCityCode("");
+                        updateLocationValue("", "", e.target.value);
+                      }}
+                      className="w-full bg-zinc-950/50 text-white font-black px-6 py-4 brutal-border-red outline-none appearance-none cursor-pointer uppercase text-sm"
+                    >
+                      <option value="">SELECT COUNTRY</option>
+                      {Country.getAllCountries().map(c => (
+                        <option key={c.isoCode} value={c.isoCode}>{c.name.toUpperCase()}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {/* State Selection */}
+                  <div className="flex flex-col gap-2">
+                    <label className="text-brand-red-neon font-black uppercase tracking-widest text-[10px]">State</label>
+                    <select 
+                      disabled={!countryCode}
+                      value={stateCode}
+                      onChange={(e) => {
+                        setStateCode(e.target.value);
+                        setCityCode("");
+                        updateLocationValue("", e.target.value);
+                      }}
+                      className="w-full bg-zinc-950/50 text-white font-black px-6 py-4 brutal-border-red outline-none appearance-none cursor-pointer uppercase text-sm disabled:opacity-20"
+                    >
+                      <option value="">SELECT STATE</option>
+                      {State.getStatesOfCountry(countryCode).map(s => (
+                        <option key={s.isoCode} value={s.isoCode}>{s.name.toUpperCase()}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {/* City Selection */}
+                  <div className="flex flex-col gap-2">
+                    <label className="text-brand-red-neon font-black uppercase tracking-widest text-[10px]">District/City</label>
+                    <select 
+                      disabled={!stateCode}
+                      value={cityCode}
+                      onChange={(e) => {
+                        setCityCode(e.target.value);
+                        updateLocationValue(e.target.value);
+                      }}
+                      className="w-full bg-zinc-950/50 text-white font-black px-6 py-4 brutal-border-red outline-none appearance-none cursor-pointer uppercase text-sm disabled:opacity-20"
+                    >
+                      <option value="">SELECT CITY</option>
+                      {City.getCitiesOfState(countryCode, stateCode).map(c => (
+                        <option key={c.name} value={c.name}>{c.name.toUpperCase()}</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+
+                <div className="flex flex-col gap-4">
+                  <label className="text-zinc-500 font-black uppercase tracking-widest text-xs">Formatted Location</label>
+                  <div className="p-8 glass-panel brutal-border-red text-white font-black text-3xl uppercase tracking-tighter flex justify-between items-center bg-brand-red-deep/10">
+                    <span>{locationValue || "AWAITING_SELECTION..."}</span>
+                  </div>
                 </div>
               </div>
 
@@ -448,7 +565,8 @@ export default function ActorOnboardingFlow() {
 
               <button
                 onClick={nextStep}
-                className="mt-12 w-full px-12 py-10 bg-brand-red-neon text-white font-black text-5xl md:text-7xl uppercase tracking-tighter hover:bg-white hover:text-black transition-all brutal-shadow"
+                disabled={!locationValue}
+                className="mt-12 w-full px-12 py-10 bg-brand-red-neon text-white font-black text-5xl md:text-7xl uppercase tracking-tighter hover:bg-white hover:text-black transition-all brutal-shadow disabled:opacity-20"
               >
                 FINALIZE PROFILE
               </button>
