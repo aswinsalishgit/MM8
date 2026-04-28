@@ -9,7 +9,7 @@ import BackgroundCanvas from "@/components/BackgroundCanvas";
 import ISO6391 from "iso-639-1";
 import Cropper, { Area } from "react-easy-crop";
 import { Country, State, City } from "country-state-city";
-import getCroppedImg from "@/utils/cropImage";
+import { uploadProfilePicture } from "@/app/actions/driveActions";
 
 const STEPS = [
   "WELCOME",
@@ -89,7 +89,7 @@ export default function ActorOnboardingFlow() {
           objective_preference: desire,
           languages: languages,
           archetypes: personalities,
-          avatar_url: uploadedFilePath || 'NONE',
+          user_drive: uploadedFilePath || 'NONE', // Stores the Drive Link
           experience: experience,
           opportunity_readiness: AVAILABILITY_LABELS[availability],
           location: locationValue,
@@ -151,31 +151,17 @@ export default function ActorOnboardingFlow() {
     }
     setUploading(true);
     try {
-      const { data: buckets, error: bucketError } = await supabase.storage.listBuckets();
-      const bucketExists = buckets?.some(b => b.name === 'avatars');
-      
-      if (bucketError || !bucketExists) {
-        console.warn("MM8_SYSTEM_NOTICE: Storage bucket 'avatars' not found.");
-        nextStep();
-        return;
-      }
-
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("No user found");
 
-      const fileExt = file.name.split('.').pop();
-      const fileName = `${Math.random()}.${fileExt}`;
-      const filePath = `${user.id}/${fileName}`;
-
-      const { error } = await supabase.storage
-        .from('avatars')
-        .upload(filePath, file);
+      const formData = new FormData();
+      formData.append('file', file);
       
-      if (error) throw error;
-      setUploadedFilePath(filePath);
+      const driveUrl = await uploadProfilePicture(formData);
+      setUploadedFilePath(driveUrl);
       nextStep();
     } catch (e) {
-      console.error("MM8_UPLOAD_FAILURE:", e);
+      console.error("MM8_DRIVE_UPLOAD_FAILURE:", e);
       nextStep();
     } finally {
       setUploading(false);

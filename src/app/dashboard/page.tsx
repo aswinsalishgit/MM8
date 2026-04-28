@@ -7,6 +7,7 @@ import BackgroundCanvas from "@/components/BackgroundCanvas";
 
 import { supabase } from "@/utils/supabase/client";
 import { useRouter } from "next/navigation";
+import { uploadAuditionTape } from "@/app/actions/driveActions";
 
 const useDashboardData = () => {
   const [loading, setLoading] = useState(true);
@@ -58,6 +59,7 @@ const useDashboardData = () => {
             status: profile.status || "UNVERIFIED",
             visibilityScore: profile.visibility_score || 0,
             location: profile.location || "UNKNOWN",
+            avatarUrl: profile.avatar_url_proxy || null
           },
           roles: [
             { id: 1, title: "LEAD ANTAGONIST", project: "SHADOWS OF KOCHI", match: 98, deadline: "24H", tags: ["INTENSE", "MALAYALAM"] },
@@ -181,42 +183,10 @@ export default function AgenticDashboard() {
       setUploadProgress(0);
 
       try {
-        const initRes = await fetch("/api/drive/init-upload", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ filename: file.name, mimeType: file.type }),
-        });
-
-        if (!initRes.ok) {
-            const errorData = await initRes.json();
-            throw new Error(`Failed to initialize upload: ${errorData.details || errorData.error}`);
-        }
+        const formData = new FormData();
+        formData.append('file', file);
         
-        const { uploadUrl } = await initRes.json();
-
-        await new Promise((resolve, reject) => {
-          const xhr = new XMLHttpRequest();
-          xhr.open("PUT", uploadUrl, true);
-          xhr.setRequestHeader("Content-Type", file.type);
-          
-          xhr.upload.onprogress = (e) => {
-            if (e.lengthComputable) {
-              const percentComplete = Math.floor((e.loaded / e.total) * 100);
-              setUploadProgress(percentComplete);
-            }
-          };
-
-          xhr.onload = () => {
-            if (xhr.status >= 200 && xhr.status < 300) {
-              resolve(xhr.responseText);
-            } else {
-              reject(new Error(`Upload failed with status ${xhr.status}: ${xhr.responseText}`));
-            }
-          };
-
-          xhr.onerror = () => reject(new Error("Network Error during upload"));
-          xhr.send(file);
-        });
+        await uploadAuditionTape(formData);
 
         setMessage({ text: "AUDITION SECURELY UPLOADED TO DRIVE.", type: 'success' });
       } catch (error: any) {
@@ -319,8 +289,19 @@ export default function AgenticDashboard() {
             </div>
             
             <div className="flex items-center gap-8 mt-6 mb-12">
-              <div className="w-32 h-32 bg-zinc-950 brutal-border-red flex items-center justify-center grayscale hover:grayscale-0 transition-all duration-500 clip-brutal-slant">
-                <User className="w-16 h-16 text-brand-red-deep group-hover:text-brand-red-neon transition-colors" />
+              <div className="w-32 h-32 bg-zinc-950 brutal-border-red flex items-center justify-center grayscale hover:grayscale-0 transition-all duration-500 clip-brutal-slant overflow-hidden">
+                {data.profile.avatarUrl ? (
+                  <img 
+                    src={data.profile.avatarUrl} 
+                    alt="PFP" 
+                    className="w-full h-full object-cover"
+                    onError={(e: any) => {
+                      e.target.style.display = 'none';
+                      e.target.nextSibling.style.display = 'block';
+                    }}
+                  />
+                ) : null}
+                <User className={`w-16 h-16 text-brand-red-deep group-hover:text-brand-red-neon transition-colors ${data.profile.avatarUrl ? 'hidden' : ''}`} />
               </div>
               <div>
                 <h2 className="text-5xl font-black uppercase tracking-tighter leading-none">{data.profile.name}</h2>

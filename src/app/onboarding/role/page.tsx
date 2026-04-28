@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { ChevronLeft } from "lucide-react";
 import BackgroundCanvas from "@/components/BackgroundCanvas";
 import { supabase } from "@/utils/supabase/client";
+import { ensureUserFolder } from "@/app/actions/driveActions";
 
 const ROLES = [
   { id: "actor", label: "ACTOR", desc: "I want to be cast." },
@@ -28,6 +29,13 @@ export default function RoleSelectionPage() {
         .from('profiles')
         .update({ role: id.toUpperCase() })
         .eq('id', user.id);
+      
+      // Ensure Google Drive folder exists
+      try {
+        await ensureUserFolder();
+      } catch (e) {
+        console.error("MM8_DRIVE_INIT_FAILURE:", e);
+      }
     }
 
     router.push(`/onboarding/${id}`);
