@@ -179,7 +179,7 @@ export default function AuthPage() {
           {mode === "email" && (
             <form onSubmit={handleCheckUser} className="flex flex-col gap-10">
               <div className="flex flex-col gap-4">
-                <label className="text-[10px] font-black uppercase tracking-[0.4em] text-brand-red-neon ml-2">TERMINAL_INPUT: EMAIL</label>
+                <label className="text-[10px] font-black uppercase tracking-[0.4em] text-brand-red-neon ml-2">Sign in with email</label>
                 <input 
                   type="email" 
                   placeholder="USER@DOMAIN.COM" 
@@ -209,7 +209,7 @@ export default function AuthPage() {
           {mode === "password" && (
             <form onSubmit={handleAuth} className="flex flex-col gap-8">
               <div className="flex flex-col gap-4">
-                <label className="text-[10px] font-black uppercase tracking-[0.4em] text-brand-red-neon ml-2">TERMINAL_INPUT: EMAIL / USERNAME</label>
+                <label className="text-[10px] font-black uppercase tracking-[0.4em] text-brand-red-neon ml-2">Sign in with username or email</label>
                 <input 
                   type="text" 
                   placeholder="USER_IDENT / EMAIL" 
@@ -222,7 +222,7 @@ export default function AuthPage() {
               </div>
               <div className="flex flex-col gap-4">
                 <label className="text-[10px] font-black uppercase tracking-[0.4em] text-brand-red-neon ml-2">
-                  {isNewUser ? "CREATE_PASSWORD" : "TERMINAL_INPUT: PASSWORD"}
+                  {isNewUser ? "CREATE PASSWORD" : "Input password"}
                 </label>
                 <input 
                   type="password" 
@@ -239,7 +239,7 @@ export default function AuthPage() {
                 disabled={loading}
                 className="w-full group relative px-8 py-8 bg-brand-red-neon text-white font-black text-3xl uppercase tracking-tighter hover:bg-white hover:text-black transition-all duration-500 shadow-[0_0_40px_rgba(255,49,49,0.3)] clip-brutal-hero-primary cursor-pointer disabled:opacity-50"
               >
-                {loading ? "AUTHORIZING..." : isNewUser ? "INITIALIZE_ACCOUNT" : "AUTHORIZE_ACCESS"}
+                {loading ? "AUTHORIZING..." : isNewUser ? "INITIALIZE ACCOUNT" : "Verify Access"}
               </button>
               <button 
                 type="button"
