@@ -1,8 +1,15 @@
 import { google } from 'googleapis';
 import { NextResponse } from 'next/server';
+import { createClient } from '@/utils/supabase/server';
 
 export async function POST(request: Request) {
   try {
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
+    }
+
     const body = await request.json();
     const { filename, mimeType } = body;
 
@@ -10,33 +17,41 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Filename and mimeType are required' }, { status: 400 });
     }
 
-    // 1. Initialize OAuth2 client with your Admin credentials
+    // Fetch user profile for Drive folder ID and audition count
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('drive_folder_id, audition_count')
+      .eq('id', user.id)
+      .single();
+
+    if (!profile?.drive_folder_id) {
+      return NextResponse.json({ error: 'Drive folder not initialized' }, { status: 400 });
+    }
+
+    const newCount = (profile.audition_count || 0) + 1;
+    const driveFileName = `Audition Tape - ${newCount}`;
+
+    // Initialize OAuth2 client
     const oauth2Client = new google.auth.OAuth2(
       process.env.GOOGLE_CLIENT_ID,
       process.env.GOOGLE_CLIENT_SECRET
     );
 
-    // 2. Set the Refresh Token to allow long-term impersonation
     oauth2Client.setCredentials({
       refresh_token: process.env.GOOGLE_REFRESH_TOKEN?.replace(/"/g, ''),
     });
 
-    // 3. Obtain a fresh Access Token for this upload session
     const { token } = await oauth2Client.getAccessToken();
+    if (!token) throw new Error("Failed to authenticate with Google");
 
-    if (!token) {
-      throw new Error("Failed to authenticate with Google Refresh Token. Check credentials.");
-    }
-
-    const folderId = process.env.GOOGLE_DRIVE_FOLDER_ID;
     const origin = request.headers.get('origin') || 'http://localhost:3000';
 
     const metadata = {
-      name: filename,
-      parents: folderId ? [folderId] : [],
+      name: driveFileName,
+      parents: [profile.drive_folder_id],
     };
 
-    // 4. Request the Resumable Upload Session URL from Google Drive API
+    // Request Resumable Upload Session URL
     const response = await fetch(
       'https://www.googleapis.com/upload/drive/v3/files?uploadType=resumable&supportsAllDrives=true',
       {
@@ -45,26 +60,26 @@ export async function POST(request: Request) {
           Authorization: `Bearer ${token}`,
           'Content-Type': 'application/json',
           'X-Upload-Content-Type': mimeType,
-          'Origin': origin, // Critical for CORS during the client-side PUT
+          'Origin': origin,
         },
         body: JSON.stringify(metadata),
       }
     );
 
     const uploadUrl = response.headers.get('Location');
+    if (!uploadUrl) throw new Error(`Google rejected session: ${response.status}`);
 
-    if (!uploadUrl) {
-      const errorText = await response.text();
-      console.error("Google Drive Handshake Error:", errorText);
-      throw new Error(`Google rejected session initiation: ${response.status}`);
-    }
+    // Increment audition count in DB
+    await supabase
+      .from('profiles')
+      .update({ audition_count: newCount })
+      .eq('id', user.id);
 
-    // 5. Return the secure session URI to the client for direct upload
     return NextResponse.json({ uploadUrl });
   } catch (error: any) {
     console.error('MM8_DRIVE_INIT_FAILURE:', error.message || error);
     return NextResponse.json({ 
-      error: 'Authentication or Handshake Failure', 
+      error: 'Upload Initialization Failure', 
       details: error.message 
     }, { status: 500 });
   }

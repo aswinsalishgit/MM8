@@ -183,10 +183,42 @@ export default function AgenticDashboard() {
       setUploadProgress(0);
 
       try {
-        const formData = new FormData();
-        formData.append('file', file);
+        const initRes = await fetch("/api/drive/init-upload", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ filename: file.name, mimeType: file.type }),
+        });
+
+        if (!initRes.ok) {
+            const errorData = await initRes.json();
+            throw new Error(`Failed to initialize upload: ${errorData.details || errorData.error}`);
+        }
         
-        await uploadAuditionTape(formData);
+        const { uploadUrl } = await initRes.json();
+
+        await new Promise((resolve, reject) => {
+          const xhr = new XMLHttpRequest();
+          xhr.open("PUT", uploadUrl, true);
+          xhr.setRequestHeader("Content-Type", file.type);
+          
+          xhr.upload.onprogress = (e) => {
+            if (e.lengthComputable) {
+              const percentComplete = Math.floor((e.loaded / e.total) * 100);
+              setUploadProgress(percentComplete);
+            }
+          };
+
+          xhr.onload = () => {
+            if (xhr.status >= 200 && xhr.status < 300) {
+              resolve(xhr.responseText);
+            } else {
+              reject(new Error(`Upload failed with status ${xhr.status}`));
+            }
+          };
+
+          xhr.onerror = () => reject(new Error("Network Error during upload"));
+          xhr.send(file);
+        });
 
         setMessage({ text: "AUDITION SECURELY UPLOADED TO DRIVE.", type: 'success' });
       } catch (error: any) {

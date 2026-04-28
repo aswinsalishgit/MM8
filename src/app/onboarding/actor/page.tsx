@@ -159,11 +159,19 @@ export default function ActorOnboardingFlow() {
       formData.append('file', file);
       
       const driveUrl = await uploadProfilePicture(formData);
-      if (driveUrl) setUploadedFilePath(driveUrl);
+      if (driveUrl) {
+        setUploadedFilePath(driveUrl);
+        // Immediate save to DB to prevent data loss on reload
+        await supabase
+          .from('profiles')
+          .update({ user_drive: driveUrl })
+          .eq('id', user.id);
+      }
       nextStep();
     } catch (e) {
       console.error("MM8_DRIVE_UPLOAD_FAILURE:", e);
-      nextStep();
+      alert("UPLOAD FAILED. PLEASE TRY AGAIN OR SKIP.");
+      // nextStep(); // Don't skip automatically on failure to allow retry
     } finally {
       setUploading(false);
     }
@@ -437,6 +445,7 @@ export default function ActorOnboardingFlow() {
                     />
                     
                     <button 
+                      type="button"
                       onClick={handleConfirmCrop}
                       className="absolute bottom-6 left-1/2 -translate-x-1/2 z-30 px-10 py-4 bg-brand-red-neon text-white font-black uppercase text-sm tracking-[0.2em] brutal-shadow hover:bg-white hover:text-black transition-all cursor-pointer"
                     >
@@ -467,6 +476,7 @@ export default function ActorOnboardingFlow() {
 
               <div className="flex flex-col md:flex-row gap-4">
                 <button
+                  type="button"
                   onClick={uploadPhoto}
                   disabled={uploading || !file || isCropping}
                   className="flex-1 px-8 py-8 bg-brand-red-dark text-white font-black text-3xl uppercase tracking-tighter disabled:opacity-20 transition-all hover:bg-brand-red-neon cursor-pointer"
