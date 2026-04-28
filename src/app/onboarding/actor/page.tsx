@@ -9,7 +9,8 @@ import ISO6391 from "iso-639-1";
 import Cropper, { Area } from "react-easy-crop";
 import { Country, State, City } from "country-state-city";
 import getCroppedImg from "@/utils/cropImage";
-import { uploadProfilePicture } from "@/app/actions/driveActions";
+import { uploadProfilePicture, ensureUserFolder, removeProfilePicture } from "@/app/actions/driveActions";
+import { useEffect } from "react";
 
 const STEPS = [
   "WELCOME",
@@ -41,6 +42,8 @@ export default function ActorOnboardingFlow() {
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [file, setFile] = useState<File | null>(null);
   const [uploadedFilePath, setUploadedFilePath] = useState<string | null>(null);
+  const [isUploadingBackground, setIsUploadingBackground] = useState(false);
+  const [lastUploadedFile, setLastUploadedFile] = useState<File | null>(null);
 
   // Advanced State
   const [showLanguageDropdown, setShowLanguageDropdown] = useState(false);
@@ -57,6 +60,28 @@ export default function ActorOnboardingFlow() {
   const [showCountryDropdown, setShowCountryDropdown] = useState(false);
   const [showStateDropdown, setShowStateDropdown] = useState(false);
   const [showCityDropdown, setShowCityDropdown] = useState(false);
+
+  // Background Initialization: Ensure role and Drive folder exist without blocking UI
+  useEffect(() => {
+    const initializeUser = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      // 1. Update role if not already set (for zero-lag transition)
+      await supabase
+        .from('profiles')
+        .update({ role: 'ACTOR' })
+        .eq('id', user.id);
+
+      // 2. Ensure Google Drive folder exists in background
+      try {
+        await ensureUserFolder();
+      } catch (e) {
+        console.error("MM8_ONBOARDING_BG_INIT_FAILURE:", e);
+      }
+    };
+    initializeUser();
+  }, []);
 
   const nextStep = () => {
     if (stepIndex < STEPS.length - 1) {
@@ -82,19 +107,25 @@ export default function ActorOnboardingFlow() {
         return;
       }
 
+      const profileUpdate: any = {
+        role: 'ACTOR',
+        objective_preference: desire,
+        languages: languages,
+        archetypes: personalities,
+        experience: experience,
+        opportunity_readiness: AVAILABILITY_LABELS[availability],
+        location: locationValue,
+        acquisition_source: acquisition
+      };
+
+      // Only update user_drive if it's already finished or we have no file to upload
+      if (uploadedFilePath || !file) {
+        profileUpdate.user_drive = uploadedFilePath || 'NONE';
+      }
+
       const { error } = await supabase
         .from('profiles')
-        .update({
-          role: 'ACTOR',
-          objective_preference: desire,
-          languages: languages,
-          archetypes: personalities,
-          user_drive: uploadedFilePath || 'NONE', // Stores the Drive Link
-          experience: experience,
-          opportunity_readiness: AVAILABILITY_LABELS[availability],
-          location: locationValue,
-          acquisition_source: acquisition
-        })
+        .update(profileUpdate)
         .eq('id', user.id);
 
       if (error) throw error;
@@ -144,36 +175,64 @@ export default function ActorOnboardingFlow() {
     setLocationValue(parts.join(", ").toUpperCase());
   };
 
-  const uploadPhoto = async () => {
+  const uploadPhoto = () => {
     if (!file) {
       nextStep();
       return;
     }
-    setUploading(true);
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error("No user found");
 
-      const formData = new FormData();
-      formData.append('file', file);
-      
-      const driveUrl = await uploadProfilePicture(formData);
-      if (driveUrl) {
-        setUploadedFilePath(driveUrl);
-        // Immediate save to DB to prevent data loss on reload
-        await supabase
-          .from('profiles')
-          .update({ user_drive: driveUrl })
-          .eq('id', user.id);
-      }
+    // Prevent double upload of same file
+    if (file === lastUploadedFile || isUploadingBackground) {
       nextStep();
-    } catch (e) {
-      console.error("MM8_DRIVE_UPLOAD_FAILURE:", e);
-      alert("UPLOAD FAILED. PLEASE TRY AGAIN OR SKIP.");
-      // nextStep(); // Don't skip automatically on failure to allow retry
-    } finally {
-      setUploading(false);
+      return;
     }
+
+    setIsUploadingBackground(true);
+    setLastUploadedFile(file);
+
+    const processUpload = async () => {
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) return;
+
+        const formData = new FormData();
+        formData.append('file', file);
+        
+        const driveUrl = await uploadProfilePicture(formData);
+        if (driveUrl) {
+          setUploadedFilePath(driveUrl);
+          await supabase
+            .from('profiles')
+            .update({ user_drive: driveUrl })
+            .eq('id', user.id);
+        }
+      } catch (e) {
+        console.error("MM8_BG_UPLOAD_FAILURE:", e);
+      } finally {
+        setIsUploadingBackground(false);
+      }
+    };
+
+    processUpload();
+    nextStep();
+  };
+
+  const handleRemovePhoto = () => {
+    // Clear UI state instantly
+    setFile(null);
+    setPreviewUrl(null);
+    setUploadedFilePath(null);
+    setLastUploadedFile(null);
+
+    // Process deletion in background
+    const processDeletion = async () => {
+      try {
+        await removeProfilePicture();
+      } catch (e) {
+        console.error("MM8_BG_REMOVE_PFP_FAILURE:", e);
+      }
+    };
+    processDeletion();
   };
 
   const handleConfirmCrop = async () => {
@@ -479,8 +538,17 @@ export default function ActorOnboardingFlow() {
                   disabled={uploading || !file || isCropping}
                   className="flex-1 px-8 py-8 bg-brand-red-dark text-white font-black text-3xl uppercase tracking-tighter disabled:opacity-20 transition-all hover:bg-brand-red-neon cursor-pointer"
                 >
-                  {uploading ? "UPLOADING..." : "ADD IMAGE"}
+                  {uploading || isUploadingBackground ? "PROCESSING..." : "ADD IMAGE"}
                 </button>
+                {file && !uploading && (
+                  <button
+                    type="button"
+                    onClick={handleRemovePhoto}
+                    className="px-8 py-8 glass-panel brutal-border-red text-brand-red-neon font-black text-xl uppercase tracking-tighter hover:bg-brand-red-neon hover:text-white transition-all cursor-pointer"
+                  >
+                    REMOVE
+                  </button>
+                )}
                 {!file && (
                   <button
                     onClick={nextStep}

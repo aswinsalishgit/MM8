@@ -281,13 +281,24 @@ function PosterGrid({ mouse }: { mouse: React.MutableRefObject<{ x: number, y: n
 export default function BackgroundCanvas() {
   const mouse = useRef({ x: 0, y: 0 });
   const [webglError, setWebglError] = useState(false);
+  const [isReady, setIsReady] = useState(false);
 
   useEffect(() => {
+    // Check if we are on the homepage (where splash exists)
+    const isHome = window.location.pathname === "/";
+    if (!isHome) {
+      setIsReady(true);
+    }
+
     const handleMouseMove = (e: MouseEvent) => {
       mouse.current.x = (e.clientX / window.innerWidth) * 2 - 1;
       mouse.current.y = -(e.clientY / window.innerHeight) * 2 + 1;
     };
+    
+    const handleSplashComplete = () => setIsReady(true);
+
     window.addEventListener("mousemove", handleMouseMove);
+    window.addEventListener("mm8_splash_complete", handleSplashComplete);
     
     // Check for WebGL availability
     const canvas = document.createElement("canvas");
@@ -297,8 +308,13 @@ export default function BackgroundCanvas() {
       setWebglError(true);
     }
 
-    return () => window.removeEventListener("mousemove", handleMouseMove);
+    return () => {
+      window.removeEventListener("mousemove", handleMouseMove);
+      window.removeEventListener("mm8_splash_complete", handleSplashComplete);
+    };
   }, []);
+
+  if (!isReady) return <div className="fixed inset-0 -z-10 bg-black" />;
 
   return (
     <div className="fixed inset-0 -z-10 bg-black pointer-events-none overflow-hidden">

@@ -1,6 +1,6 @@
 "use server";
 
-import { createUserFolder, uploadToDrive } from "@/utils/googleDrive";
+import { createUserFolder, uploadToDrive, deleteFile, findFilesByName } from "@/utils/googleDrive";
 import { createClient } from "@/utils/supabase/server";
 
 export async function ensureUserFolder() {
@@ -61,6 +61,16 @@ export async function uploadProfilePicture(formData: FormData) {
   const buffer = Buffer.from(await file.arrayBuffer());
   const fileName = `PFP - ${fullName || profile?.full_name || 'User'}`;
   
+  // Cleanup old PFPs before uploading new one
+  try {
+    const existingFiles = await findFilesByName(driveFolderId, fileName);
+    for (const f of existingFiles) {
+      if (f.id) await deleteFile(f.id);
+    }
+  } catch (e) {
+    console.error("MM8_CLEANUP_STALE_PFP_FAILURE:", e);
+  }
+
   const driveFile = await uploadToDrive(driveFolderId, fileName, buffer, file.type);
   
   await supabase
@@ -69,6 +79,33 @@ export async function uploadProfilePicture(formData: FormData) {
     .eq('id', user.id);
 
   return driveFile.webContentLink || null;
+}
+
+export async function removeProfilePicture() {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error("Not authenticated");
+
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('drive_folder_id, full_name')
+    .eq('id', user.id)
+    .single();
+
+  if (profile?.drive_folder_id) {
+    const fileName = `PFP - ${profile.full_name || 'User'}`;
+    const existingFiles = await findFilesByName(profile.drive_folder_id, fileName);
+    for (const f of existingFiles) {
+      if (f.id) await deleteFile(f.id);
+    }
+  }
+
+  await supabase
+    .from('profiles')
+    .update({ avatar_url_proxy: null, user_drive: 'NONE' })
+    .eq('id', user.id);
+
+  return true;
 }
 
 export async function uploadAuditionTape(formData: FormData) {

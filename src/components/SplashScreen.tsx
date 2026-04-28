@@ -9,6 +9,7 @@ export default function SplashScreen({ onComplete }: { onComplete: () => void })
   useEffect(() => {
     const timer = setTimeout(() => {
       setIsVisible(false);
+      window.dispatchEvent(new Event("mm8_splash_complete"));
       setTimeout(onComplete, 1000); // Wait for exit animation
     }, 2500);
     return () => clearTimeout(timer);
@@ -32,7 +33,7 @@ export default function SplashScreen({ onComplete }: { onComplete: () => void })
                 ease: [0.23, 1, 0.32, 1],
                 delay: 0.2
               }}
-              className="text-9xl md:text-[15rem] font-black tracking-tighter text-white"
+              className="text-9xl md:text-[15rem] font-black tracking-tighter text-white will-change-transform"
             >
               MM8<span className="text-brand-red-neon">.</span>
             </motion.h1>

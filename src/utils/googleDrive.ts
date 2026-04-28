@@ -80,3 +80,27 @@ export async function uploadToDrive(folderId: string, fileName: string, fileBuff
     throw err;
   }
 }
+export async function deleteFile(fileId: string) {
+  const drive = await getDriveClient();
+  try {
+    await drive.files.delete({ fileId });
+    return true;
+  } catch (err) {
+    console.error('MM8_DRIVE_DELETE_ERROR:', err);
+    return false;
+  }
+}
+
+export async function findFilesByName(folderId: string, name: string) {
+  const drive = await getDriveClient();
+  try {
+    const response = await drive.files.list({
+      q: `'${folderId}' in parents and name = '${name}' and trashed = false`,
+      fields: 'files(id, name)',
+    });
+    return response.data.files || [];
+  } catch (err) {
+    console.error('MM8_DRIVE_FIND_ERROR:', err);
+    return [];
+  }
+}
