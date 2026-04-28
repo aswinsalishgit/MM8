@@ -1,8 +1,8 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { motion, AnimatePresence } from "framer-motion";
-import { ChevronLeft, Play, ExternalLink, Film, Loader2, X, Download } from "lucide-react";
+import { motion } from "framer-motion";
+import { ChevronLeft, Play, ExternalLink, Film, Loader2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import BackgroundCanvas from "@/components/BackgroundCanvas";
 import { getAuditionVideos } from "@/app/actions/driveActions";
@@ -11,7 +11,6 @@ export default function AuditionsPage() {
   const router = useRouter();
   const [videos, setVideos] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [selectedVideo, setSelectedVideo] = useState<any>(null);
 
   useEffect(() => {
     async function loadVideos() {
@@ -75,21 +74,21 @@ export default function AuditionsPage() {
               >
                 <div className="aspect-video bg-zinc-950 relative overflow-hidden grayscale group-hover:grayscale-0 transition-all duration-700">
                   {video.thumbnailLink ? (
-                    <img 
-                      src={video.thumbnailLink.replace('=s220', '=s800')} 
-                      alt={video.name} 
-                      className="w-full h-full object-cover"
-                      loading="lazy"
-                    />
+                    <img src={video.thumbnailLink.replace('=s220', '=s600')} alt={video.name} className="w-full h-full object-cover" />
                   ) : (
                     <div className="w-full h-full flex items-center justify-center">
                       <Film className="w-12 h-12 text-zinc-900" />
                     </div>
                   )}
-                  <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center cursor-pointer" onClick={() => setSelectedVideo(video)}>
-                    <div className="p-4 bg-brand-red-neon rounded-full hover:scale-110 transition-transform shadow-[0_0_20px_rgba(255,49,49,0.5)]">
+                  <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                    <a 
+                      href={video.webViewLink} 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="p-4 bg-brand-red-neon rounded-full hover:scale-110 transition-transform"
+                    >
                       <Play className="w-8 h-8 text-white fill-white" />
-                    </div>
+                    </a>
                   </div>
                 </div>
                 
@@ -103,12 +102,14 @@ export default function AuditionsPage() {
                   </div>
                   
                   <div className="mt-8 flex justify-between items-center">
-                    <button 
-                      onClick={() => setSelectedVideo(video)}
-                      className="text-[10px] font-black uppercase tracking-widest text-zinc-500 hover:text-white flex items-center gap-2 transition-colors cursor-pointer"
+                    <a 
+                      href={video.webViewLink} 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="text-[10px] font-black uppercase tracking-widest text-zinc-500 hover:text-white flex items-center gap-2 transition-colors"
                     >
-                      STREAM_NOW <Play className="w-3 h-3" />
-                    </button>
+                      VIEW SOURCE <ExternalLink className="w-3 h-3" />
+                    </a>
                     <span className="text-zinc-800 font-black tabular-nums text-sm">#{video.id.slice(-4).toUpperCase()}</span>
                   </div>
                 </div>
@@ -119,56 +120,6 @@ export default function AuditionsPage() {
           </div>
         )}
       </div>
-
-      {/* Video Player Modal */}
-      <AnimatePresence>
-        {selectedVideo && (
-          <motion.div 
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[100] flex items-center justify-center bg-black/95 backdrop-blur-xl p-4 md:p-12"
-          >
-            <div className="absolute top-8 right-8 z-[110] flex gap-4">
-              <a 
-                href={selectedVideo.webViewLink} 
-                target="_blank" 
-                rel="noopener noreferrer"
-                className="p-4 bg-white/5 hover:bg-white/10 text-white transition-all cursor-pointer rounded-full flex items-center gap-2 px-6 font-black uppercase text-[10px] tracking-widest"
-              >
-                <Download className="w-4 h-4" /> DRIVE_SOURCE
-              </a>
-              <button 
-                onClick={() => setSelectedVideo(null)}
-                className="p-4 bg-white/10 hover:bg-brand-red-neon text-white transition-all cursor-pointer rounded-full"
-              >
-                <X className="w-8 h-8" />
-              </button>
-            </div>
-            
-            <div className="w-full max-w-6xl aspect-video bg-black brutal-border-red relative overflow-hidden shadow-[0_0_100px_rgba(255,49,49,0.2)] group">
-              <video 
-                key={selectedVideo.id}
-                controls 
-                autoPlay
-                preload="metadata"
-                className="w-full h-full object-contain"
-                poster={selectedVideo.thumbnailLink?.replace('=s220', '=s1200')}
-              >
-                <source src={`https://drive.google.com/uc?id=${selectedVideo.id}&export=download`} type="video/mp4" />
-                Your browser does not support the video tag.
-              </video>
-              
-              <div className="absolute bottom-0 left-0 w-full p-8 bg-gradient-to-t from-black via-black/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
-                <h2 className="text-4xl font-black uppercase tracking-tighter text-white">{selectedVideo.name}</h2>
-                <div className="flex items-center gap-4 mt-4">
-                  <span className="text-brand-red-neon font-black text-xs uppercase tracking-widest px-3 py-1 bg-brand-red-neon/10 brutal-border-red">OPTIMIZED_PLAYBACK_ACTIVE</span>
-                </div>
-              </div>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
     </main>
   );
 }

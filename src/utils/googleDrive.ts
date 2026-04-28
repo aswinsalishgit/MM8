@@ -38,22 +38,7 @@ export async function createUserFolder(fullName: string, email: string, userId: 
       },
     });
 
-    // Create subfolders
-    const archiveFolder = await drive.files.create({
-      requestBody: { name: 'Archive', mimeType: 'application/vnd.google-apps.folder', parents: [file.data.id!] },
-      fields: 'id'
-    });
-    const playbackFolder = await drive.files.create({
-      requestBody: { name: 'Playback', mimeType: 'application/vnd.google-apps.folder', parents: [file.data.id!] },
-      fields: 'id'
-    });
-
-    return { 
-      id: file.data.id, 
-      link: file.data.webViewLink,
-      archiveId: archiveFolder.data.id,
-      playbackId: playbackFolder.data.id
-    };
+    return { id: file.data.id, link: file.data.webViewLink };
   } catch (err) {
     console.error('MM8_DRIVE_FOLDER_ERROR:', err);
     throw err;

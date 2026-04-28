@@ -48,7 +48,7 @@ const POSTER_QUOTES = [
 function ParticleField() {
   const pointsRef = useRef<THREE.Points>(null!);
   const particles = useMemo(() => {
-    const count = 1000;
+    const count = 300; // Reduced from 1000 for performance
     const positions = new Float32Array(count * 3);
     for (let i = 0; i < count; i++) {
       positions.set([(Math.random() - 0.5) * 100, (Math.random() - 0.5) * 60, (Math.random() - 0.5) * 30], i * 3);
@@ -57,7 +57,7 @@ function ParticleField() {
   }, []);
 
   useFrame((state) => {
-    pointsRef.current.rotation.y = state.clock.getElapsedTime() * 0.05;
+    pointsRef.current.rotation.y = state.clock.getElapsedTime() * 0.02; // Slower, smoother rotation
   });
 
   return (
@@ -65,7 +65,7 @@ function ParticleField() {
       <bufferGeometry>
         <bufferAttribute attach="attributes-position" count={particles.length / 3} args={[particles, 3]} />
       </bufferGeometry>
-      <pointsMaterial size={0.05} color="#400" transparent opacity={0.3} sizeAttenuation />
+      <pointsMaterial size={0.08} color="#400" transparent opacity={0.2} sizeAttenuation />
     </points>
   );
 }
@@ -110,27 +110,33 @@ function Poster({ url, position, scale, mouse, index, quote }: {
     
     const dx = meshRef.current.position.x - mx;
     const dy = meshRef.current.position.y - my;
-    const dist = Math.sqrt(dx * dx + dy * dy);
+    const distSq = dx * dx + dy * dy; // Use squared distance to avoid sqrt
     
-    const isClose = dist < 7;
+    const isClose = distSq < 49; // 7 * 7
     if (isClose !== hovered) setHovered(isClose);
 
-    // Scaling & Rotation on the Group (Slower for 'weighted' feel)
+    // Scaling & Rotation on the Group
     const targetScale = isClose ? 1.1 : 1.0;
     const targetRotationY = isClose ? Math.PI : 0;
     
     const group = meshRef.current;
-    group.scale.set(
-      THREE.MathUtils.lerp(group.scale.x, scale[0] * targetScale, 0.04),
-      THREE.MathUtils.lerp(group.scale.y, scale[1] * targetScale, 0.04),
-      1
-    );
-    group.rotation.y = THREE.MathUtils.lerp(group.rotation.y, targetRotationY, 0.04);
+    
+    // Only update if values are significantly different (Reduce layout thrashing)
+    if (Math.abs(group.scale.x - scale[0] * targetScale) > 0.001) {
+      group.scale.x = THREE.MathUtils.lerp(group.scale.x, scale[0] * targetScale, 0.06);
+      group.scale.y = THREE.MathUtils.lerp(group.scale.y, scale[1] * targetScale, 0.06);
+    }
+    
+    if (Math.abs(group.rotation.y - targetRotationY) > 0.001) {
+      group.rotation.y = THREE.MathUtils.lerp(group.rotation.y, targetRotationY, 0.06);
+    }
 
     // Hide text until flipped past 90 degrees
     const backVisible = Math.abs(group.rotation.y) > Math.PI / 2;
-    if (textRef.current) textRef.current.visible = backVisible;
-    if (brandRef.current) brandRef.current.visible = backVisible;
+    if (textRef.current && textRef.current.visible !== backVisible) {
+      textRef.current.visible = backVisible;
+      if (brandRef.current) brandRef.current.visible = backVisible;
+    }
 
     // Entrance Fade Logic (Faster Entrance)
     const entranceDelay = 1.0 + (index * 0.05);
@@ -292,10 +298,16 @@ export default function BackgroundCanvas() {
 
   return (
     <div className="fixed inset-0 -z-10 bg-black pointer-events-none overflow-hidden">
-      <Canvas camera={{ position: [0, 0, 25], fov: 50 }}>
+      <Canvas 
+        camera={{ position: [0, 0, 25], fov: 50 }}
+        dpr={[1, 1.5]} // Limit resolution for performance
+        gl={{ antialias: false, powerPreference: "high-performance" }} // Faster rendering
+      >
         <color attach="background" args={["black"]} />
         <ambientLight intensity={0.5} />
-        <PosterGrid mouse={mouse} />
+        <Suspense fallback={null}>
+          <PosterGrid mouse={mouse} />
+        </Suspense>
         <ParticleField />
       </Canvas>
       
@@ -310,7 +322,7 @@ export default function BackgroundCanvas() {
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,transparent_0%,black_100%)] opacity-90 pointer-events-none" />
       
       {/* Digital Grain Overlay */}
-      <div className="absolute inset-0 opacity-[0.03] pointer-events-none mix-blend-overlay bg-[url('https://grainy-gradients.vercel.app/noise.svg')]" />
+      <div className="absolute inset-0 opacity-[0.03] pointer-events-none mix-blend-overlay" style={{ backgroundImage: "url(\"data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.7' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='1'/%3E%3C/svg%3E\")" }} />
     </div>
   );
 }

@@ -11,34 +11,25 @@ export async function POST(request: Request) {
     }
 
     const body = await request.json();
-    const { filename, mimeType, isOptimized } = body;
+    const { filename, mimeType } = body;
 
     if (!filename || !mimeType) {
       return NextResponse.json({ error: 'Filename and mimeType are required' }, { status: 400 });
     }
 
-    // Fetch user profile
+    // Fetch user profile for Drive folder ID and audition count
     const { data: profile } = await supabase
       .from('profiles')
-      .select('archive_folder_id, playback_folder_id, audition_count')
+      .select('drive_folder_id, audition_count')
       .eq('id', user.id)
       .single();
 
-    if (!profile?.archive_folder_id || !profile?.playback_folder_id) {
-      return NextResponse.json({ error: 'Drive folders not fully initialized' }, { status: 400 });
+    if (!profile?.drive_folder_id) {
+      return NextResponse.json({ error: 'Drive folder not initialized' }, { status: 400 });
     }
 
-    // Determine target folder and name
-    // If optimized, we don't increment the count again (it's the same audition)
-    // But we need a way to keep track. I'll use the count for both.
-    const currentCount = profile.audition_count || 0;
-    const targetCount = isOptimized ? currentCount : currentCount + 1;
-    
-    const driveFileName = isOptimized 
-      ? `Audition Tape - ${targetCount} (Optimized)` 
-      : `Audition Tape - ${targetCount} (Original)`;
-      
-    const targetFolderId = isOptimized ? profile.playback_folder_id : profile.archive_folder_id;
+    const newCount = (profile.audition_count || 0) + 1;
+    const driveFileName = `Audition Tape - ${newCount}`;
 
     // Initialize OAuth2 client
     const oauth2Client = new google.auth.OAuth2(
@@ -57,7 +48,7 @@ export async function POST(request: Request) {
 
     const metadata = {
       name: driveFileName,
-      parents: [targetFolderId],
+      parents: [profile.drive_folder_id],
     };
 
     // Request Resumable Upload Session URL
@@ -78,13 +69,11 @@ export async function POST(request: Request) {
     const uploadUrl = response.headers.get('Location');
     if (!uploadUrl) throw new Error(`Google rejected session: ${response.status}`);
 
-    // Increment audition count in DB only for the ORIGINAL file
-    if (!isOptimized) {
-      await supabase
-        .from('profiles')
-        .update({ audition_count: targetCount })
-        .eq('id', user.id);
-    }
+    // Increment audition count in DB
+    await supabase
+      .from('profiles')
+      .update({ audition_count: newCount })
+      .eq('id', user.id);
 
     return NextResponse.json({ uploadUrl });
   } catch (error: any) {

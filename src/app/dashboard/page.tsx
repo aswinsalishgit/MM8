@@ -7,8 +7,27 @@ import BackgroundCanvas from "@/components/BackgroundCanvas";
 
 import { supabase } from "@/utils/supabase/client";
 import { useRouter } from "next/navigation";
-import { uploadAuditionTape } from "@/app/actions/driveActions";
-import { compressVideo, validateAuditionVideo } from "@/utils/videoProcessor";
+
+
+const ROLES_MOCK = [
+  { id: 1, title: "LEAD ANTAGONIST", project: "SHADOWS OF KOCHI", match: 98, deadline: "24H", tags: ["INTENSE", "MALAYALAM"] },
+  { id: 2, title: "SUPPORTING COP", project: "UNTITLED THRILLER", match: 84, deadline: "3D", tags: ["ACTION", "HINDI"] },
+  { id: 3, title: "COMIC RELIEF", project: "CAMPUS DIARIES", match: 72, deadline: "1W", tags: ["FUNNY", "TAMIL"] },
+];
+
+const LEADERBOARD_MOCK = [
+  { rank: 1, name: "ARJUN_M", score: 9400, trend: "up" },
+  { rank: 2, name: "SNEHA_R", score: 9150, trend: "up" },
+  { rank: 3, name: "YOU", score: 8900, trend: "up", isUser: true },
+  { rank: 4, name: "RAHUL_K", score: 8750, trend: "down" },
+];
+
+const CHALLENGE_MOCK = {
+  title: "THE ANGER MONOLOGUE",
+  reward: "+500 VISIBILITY",
+  timeLeft: "08:14:22",
+  participants: 142
+};
 
 const useDashboardData = () => {
   const [loading, setLoading] = useState(true);
@@ -61,23 +80,6 @@ const useDashboardData = () => {
             visibilityScore: profile.visibility_score || 0,
             location: profile.location || "UNKNOWN",
             avatarUrl: profile.avatar_url_proxy || null
-          },
-          roles: [
-            { id: 1, title: "LEAD ANTAGONIST", project: "SHADOWS OF KOCHI", match: 98, deadline: "24H", tags: ["INTENSE", "MALAYALAM"] },
-            { id: 2, title: "SUPPORTING COP", project: "UNTITLED THRILLER", match: 84, deadline: "3D", tags: ["ACTION", "HINDI"] },
-            { id: 3, title: "COMIC RELIEF", project: "CAMPUS DIARIES", match: 72, deadline: "1W", tags: ["FUNNY", "TAMIL"] },
-          ],
-          leaderboard: [
-            { rank: 1, name: "ARJUN_M", score: 9400, trend: "up" },
-            { rank: 2, name: "SNEHA_R", score: 9150, trend: "up" },
-            { rank: 3, name: "YOU", score: 8900, trend: "up", isUser: true },
-            { rank: 4, name: "RAHUL_K", score: 8750, trend: "down" },
-          ],
-          challenge: {
-            title: "THE ANGER MONOLOGUE",
-            reward: "+500 VISIBILITY",
-            timeLeft: "08:14:22",
-            participants: 142
           }
         });
       } catch (error) {
@@ -93,18 +95,23 @@ const useDashboardData = () => {
 };
 
 export default function AgenticDashboard() {
-  const router = useRouter();
   const { data, loading } = useDashboardData();
+  const router = useRouter();
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [showSettings, setShowSettings] = useState(false);
   const [newUsername, setNewUsername] = useState("");
   const [newPassword, setNewPassword] = useState("");
+
+  const PASSWORD_RULES = [
+    { label: "8+ CHARS", met: newPassword.length >= 8 },
+    { label: "UPPERCASE", met: /[A-Z]/.test(newPassword) },
+    { label: "NUMBER", met: /[0-9]/.test(newPassword) },
+    { label: "SPECIAL", met: /[!@#$%^&*(),.?":{}|<>]/.test(newPassword) }
+  ];
   const [settingsLoading, setSettingsLoading] = useState(false);
   const [usernameStatus, setUsernameStatus] = useState<"idle" | "checking" | "available" | "taken" | "invalid">("idle");
   const [message, setMessage] = useState<{ text: string, type: 'error' | 'success' | 'info' } | null>(null);
-  const [processing, setProcessing] = useState(false);
-  const [processProgress, setProcessProgress] = useState(0);
 
   const validateUsername = (username: string) => {
     return /^[a-z]+$/.test(username);
@@ -184,69 +191,55 @@ export default function AgenticDashboard() {
       if (!file) return;
 
       setUploading(true);
-      setMessage({ text: "VALIDATING TALENT SPECS...", type: 'info' });
-      
+      setUploadProgress(0);
+
       try {
-        const validation = await validateAuditionVideo(file);
-        if (!validation.valid) {
-          throw new Error(validation.error);
+        const initRes = await fetch("/api/drive/init-upload", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ filename: file.name, mimeType: file.type }),
+        });
+
+        if (!initRes.ok) {
+            const errorData = await initRes.json();
+            throw new Error(`Failed to initialize upload: ${errorData.details || errorData.error}`);
         }
+        
+        const { uploadUrl } = await initRes.json();
 
-        // Step 1: Compress Video
-        setProcessing(true);
-        setMessage({ text: "OPTIMIZING PERFORMANCE DATA...", type: 'info' });
-        const optimizedBlob = await compressVideo(file, (p) => setProcessProgress(p));
-        setProcessing(false);
+        await new Promise((resolve, reject) => {
+          const xhr = new XMLHttpRequest();
+          xhr.open("PUT", uploadUrl, true);
+          xhr.setRequestHeader("Content-Type", file.type);
+          
+          xhr.upload.onprogress = (e) => {
+            if (e.lengthComputable) {
+              const percentComplete = Math.floor((e.loaded / e.total) * 100);
+              setUploadProgress(percentComplete);
+            }
+          };
 
-        // Step 2: Upload Original to Archive
-        setMessage({ text: "ARCHIVING ORIGINAL PACKET...", type: 'info' });
-        const originalUrl = await initiateResumableUpload(file, false);
-        await performXHRUpload(originalUrl, file);
+          xhr.onload = () => {
+            if (xhr.status >= 200 && xhr.status < 300) {
+              resolve(xhr.responseText);
+            } else {
+              reject(new Error(`Upload failed with status ${xhr.status}`));
+            }
+          };
 
-        // Step 3: Upload Optimized to Playback
-        setMessage({ text: "ESTABLISHING PLAYBACK UPLINK...", type: 'info' });
-        const optimizedFile = new File([optimizedBlob], `optimized-${file.name}`, { type: 'video/mp4' });
-        const optimizedUrl = await initiateResumableUpload(optimizedFile, true);
-        await performXHRUpload(optimizedUrl, optimizedFile);
+          xhr.onerror = () => reject(new Error("Network Error during upload"));
+          xhr.send(file);
+        });
 
-        setMessage({ text: "AUDITION SECURELY SYNCED (ARCHIVE + PLAYBACK).", type: 'success' });
+        setMessage({ text: "AUDITION SECURELY UPLOADED TO DRIVE.", type: 'success' });
       } catch (error: any) {
         console.error("Upload error:", error);
         setMessage({ text: `UPLOAD FAILED: ${error.message}`, type: 'error' });
       } finally {
         setUploading(false);
-        setProcessing(false);
         setUploadProgress(0);
-        setProcessProgress(0);
       }
     };
-
-    const initiateResumableUpload = async (file: File, isOptimized: boolean) => {
-      const res = await fetch("/api/drive/init-upload", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ filename: file.name, mimeType: file.type, isOptimized }),
-      });
-      if (!res.ok) throw new Error("Failed to initialize session");
-      const { uploadUrl } = await res.json();
-      return uploadUrl;
-    };
-
-    const performXHRUpload = async (url: string, file: File | Blob) => {
-      return new Promise((resolve, reject) => {
-        const xhr = new XMLHttpRequest();
-        xhr.open("PUT", url, true);
-        xhr.upload.onprogress = (e) => {
-          if (e.lengthComputable) {
-            setUploadProgress(Math.floor((e.loaded / e.total) * 100));
-          }
-        };
-        xhr.onload = () => (xhr.status >= 200 && xhr.status < 300) ? resolve(xhr.responseText) : reject(new Error("Upload failed"));
-        xhr.onerror = () => reject(new Error("Network Error"));
-        xhr.send(file);
-      });
-    };
-
     input.click();
   };
 
@@ -339,33 +332,32 @@ export default function AgenticDashboard() {
             </div>
             
             <div className="flex items-center gap-8 mt-6 mb-12">
-              <div className="w-32 h-32 bg-zinc-950 brutal-border-red flex items-center justify-center transition-all duration-500 clip-brutal-slant overflow-hidden relative">
+              <div className="w-32 h-32 bg-zinc-950 brutal-border-red flex items-center justify-center grayscale hover:grayscale-0 transition-all duration-500 clip-brutal-slant overflow-hidden">
                 {data.profile.avatarUrl ? (
                   <img 
                     src={data.profile.avatarUrl} 
                     alt="PFP" 
-                    className="w-full h-full object-cover relative z-10"
+                    className="w-full h-full object-cover"
                     onError={(e: any) => {
-                      e.target.style.opacity = '0';
+                      e.target.style.display = 'none';
+                      e.target.nextSibling.style.display = 'block';
                     }}
                   />
                 ) : null}
-                <div className="absolute inset-0 flex items-center justify-center z-0">
-                  <User className="w-16 h-16 text-brand-red-deep group-hover:text-brand-red-neon transition-colors" />
-                </div>
+                <User className={`w-16 h-16 text-brand-red-deep group-hover:text-brand-red-neon transition-colors ${data.profile.avatarUrl ? 'opacity-0' : 'opacity-100'}`} />
               </div>
               <div>
                 <h2 className="text-5xl font-black uppercase tracking-tighter leading-none">{data.profile.name}</h2>
-                <div className="flex flex-col gap-3 mt-4">
-                  <p className="text-zinc-500 font-black uppercase tracking-[0.3em] text-[10px] flex items-center gap-2">
-                    <span className="w-2 h-[1px] bg-zinc-800" />
+                <div className="flex flex-col gap-2 mt-3">
+                  <p className="text-brand-red-neon font-black uppercase tracking-[0.3em] text-xs flex items-center gap-2">
+                    <span className="w-2 h-[1px] bg-brand-red-neon" />
                     {data.profile.location}
                   </p>
                   <button 
                     onClick={() => router.push("/dashboard/auditions")}
-                    className="px-4 py-2 bg-brand-red-neon/10 border border-brand-red-neon/20 text-brand-red-neon hover:bg-brand-red-neon hover:text-white font-black uppercase tracking-widest text-[9px] text-left transition-all flex items-center gap-2 group/btn clip-brutal-slant"
+                    className="text-zinc-600 hover:text-white font-black uppercase tracking-widest text-[9px] text-left transition-colors flex items-center gap-2 group/btn"
                   >
-                    <PlayCircle className="w-3 h-3" />
+                    <div className="w-1 h-1 bg-zinc-800 group-hover/btn:bg-white transition-colors" />
                     VIEW_ACTIVE_AUDITIONS
                   </button>
                 </div>
@@ -397,17 +389,17 @@ export default function AgenticDashboard() {
                 <Flame className="w-6 h-6 text-brand-red-neon" />
                 <h3 className="font-black uppercase tracking-[0.4em] text-[10px]">PRIORITY_MISSION</h3>
               </div>
-              <h2 className="text-5xl font-black uppercase tracking-tighter mb-6 leading-[0.85] group-hover:text-white transition-colors">{data.challenge.title}</h2>
+              <h2 className="text-5xl font-black uppercase tracking-tighter mb-6 leading-[0.85] group-hover:text-white transition-colors">{CHALLENGE_MOCK.title}</h2>
               <div className="flex items-center gap-4 mb-10">
                 <div className="px-3 py-1 bg-brand-red-neon text-white text-[9px] font-black uppercase tracking-widest">ACTIVE</div>
                 <p className="text-zinc-500 font-black uppercase tracking-widest text-[10px]">
-                  TERMINATES: <span className="text-white tabular-nums">{data.challenge.timeLeft}</span>
+                  TERMINATES: <span className="text-white tabular-nums">{CHALLENGE_MOCK.timeLeft}</span>
                 </p>
               </div>
               
               <div className="flex justify-between items-center border-t border-brand-red-neon/20 pt-8">
-                <span className="font-black uppercase text-brand-red-neon text-sm tracking-tighter">{data.challenge.reward}</span>
-                <span className="font-black text-[9px] tracking-[0.3em] text-zinc-600 uppercase">{data.challenge.participants} SYNCED</span>
+                <span className="font-black uppercase text-brand-red-neon text-sm tracking-tighter">{CHALLENGE_MOCK.reward}</span>
+                <span className="font-black text-[9px] tracking-[0.3em] text-zinc-600 uppercase">{CHALLENGE_MOCK.participants} SYNCED</span>
               </div>
             </div>
           </section>
@@ -419,7 +411,7 @@ export default function AgenticDashboard() {
               <h3 className="font-black uppercase tracking-[0.4em] text-[10px]">GLOBAL_RANKINGS</h3>
             </div>
             <div className="flex flex-col gap-6">
-              {data.leaderboard.map((actor: any) => (
+              {LEADERBOARD_MOCK.map((actor: any) => (
                 <div key={actor.rank} className={`flex items-center justify-between p-5 brutal-border transition-all group ${actor.isUser ? 'border-brand-red-neon bg-brand-red-neon/10 clip-brutal-slant' : 'border-zinc-900 bg-zinc-950/50 hover:border-zinc-700'}`}>
                   <div className="flex items-center gap-6">
                     <span className={`font-black text-3xl tabular-nums ${actor.rank === 1 ? 'text-brand-red-neon' : 'text-zinc-800 group-hover:text-zinc-600'}`}>
@@ -501,7 +493,7 @@ export default function AgenticDashboard() {
             </div>
 
             <div className="flex-1 w-full overflow-x-auto snap-x snap-mandatory hide-scrollbar flex gap-10 pb-12">
-              {data.roles.map((role: any, index: number) => (
+              {ROLES_MOCK.map((role: any, index: number) => (
                 <motion.div
                   key={role.id}
                   initial={{ opacity: 0, x: 50 }}
@@ -628,12 +620,7 @@ export default function AgenticDashboard() {
                   />
                 </div>
                 <div className="grid grid-cols-2 gap-2 ml-2">
-                  {[
-                    { label: "8+ CHARS", met: newPassword.length >= 8 },
-                    { label: "UPPERCASE", met: /[A-Z]/.test(newPassword) },
-                    { label: "NUMBER", met: /[0-9]/.test(newPassword) },
-                    { label: "SPECIAL", met: /[!@#$%^&*(),.?":{}|<>]/.test(newPassword) }
-                  ].map(rule => (
+                  {PASSWORD_RULES.map(rule => (
                     <div key={rule.label} className="flex items-center gap-2">
                       <div className={`w-1 h-1 rounded-full ${rule.met ? 'bg-green-500' : 'bg-zinc-800'}`} />
                       <span className={`text-[8px] font-black uppercase tracking-widest ${rule.met ? 'text-green-500' : 'text-zinc-600'}`}>{rule.label}</span>
