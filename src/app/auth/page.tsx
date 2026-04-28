@@ -212,7 +212,7 @@ export default function AuthPage() {
                 <label className="text-[10px] font-black uppercase tracking-[0.4em] text-brand-red-neon ml-2">Sign in with username or email</label>
                 <input 
                   type="text" 
-                  placeholder="USER_IDENT / EMAIL" 
+                  placeholder="USERNAME / EMAIL" 
                   className="w-full bg-zinc-950 text-white font-black text-2xl px-8 py-6 border-2 border-zinc-800 outline-none focus:border-brand-red-neon transition-all placeholder:text-zinc-800 uppercase clip-brutal-tl"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
