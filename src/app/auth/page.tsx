@@ -53,8 +53,10 @@ export default function AuthPage() {
 
         if (!hasEmailProvider && hasGoogleProvider) {
           // Exists via Google but no password set
-          setMessage({ text: "GOOGLE ACCOUNT DETECTED. INITIALIZING SECURE PASSWORD SETUP.", type: 'info' });
-          setIsNewUser(true);
+          setMessage({ text: "GOOGLE ACCOUNT DETECTED. PLEASE SIGN IN WITH GOOGLE, THEN SET PASSWORD IN DASHBOARD.", type: 'info' });
+          setMode("options");
+          setLoading(false);
+          return;
         } else {
           // Has email provider (password exists)
           setIsNewUser(false);
@@ -96,9 +98,25 @@ export default function AuthPage() {
           email: identifier,
           password,
         });
-        if (error) throw error;
-        setMessage({ text: "VERIFICATION LINK DISPATCHED. CHECK INBOX.", type: 'success' });
-        // Optional: transition or show next steps
+        
+        if (error) {
+          if (error.message.includes("already registered")) {
+            setMessage({ text: "ACCOUNT EXISTS. PLEASE SIGN IN OR USE GOOGLE AUTHENTICATION.", type: 'error' });
+          } else {
+            throw error;
+          }
+        } else if (data.user && data.user.identities && data.user.identities.length === 0) {
+            setMessage({ text: "ACCOUNT EXISTS. PLEASE SIGN IN OR USE GOOGLE AUTHENTICATION.", type: 'error' });
+        } else {
+          // If email confirmations are disabled in Supabase, session is returned immediately
+          if (data.session) {
+            router.push("/onboarding/role");
+          } else {
+            setMessage({ text: "ACCOUNT INITIALIZED. PLEASE PROCEED TO LOG IN.", type: 'success' });
+            setIsNewUser(false);
+            setMode("password");
+          }
+        }
       } else {
         // Sign in logic
         const { data, error } = await supabase.auth.signInWithPassword({
@@ -204,7 +222,7 @@ export default function AuthPage() {
               </div>
 
               <button 
-                onClick={() => setMode("password")}
+                onClick={() => setMode("email")}
                 className="w-full group relative px-8 py-6 bg-transparent text-zinc-400 font-black text-2xl uppercase tracking-tighter border-2 border-zinc-800 hover:text-white hover:border-white transition-all duration-500 flex items-center justify-center gap-4 clip-brutal-bl cursor-pointer"
               >
                 <svg className="w-7 h-7" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
