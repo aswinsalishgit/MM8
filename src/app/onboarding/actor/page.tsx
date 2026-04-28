@@ -9,6 +9,7 @@ import BackgroundCanvas from "@/components/BackgroundCanvas";
 import ISO6391 from "iso-639-1";
 import Cropper, { Area } from "react-easy-crop";
 import { Country, State, City } from "country-state-city";
+import getCroppedImg from "@/utils/cropImage";
 import { uploadProfilePicture } from "@/app/actions/driveActions";
 
 const STEPS = [
