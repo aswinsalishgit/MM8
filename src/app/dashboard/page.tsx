@@ -8,6 +8,7 @@ import BackgroundCanvas from "@/components/BackgroundCanvas";
 import { supabase } from "@/utils/supabase/client";
 import { useRouter } from "next/navigation";
 import { uploadAuditionTape } from "@/app/actions/driveActions";
+import { compressVideo, validateAuditionVideo } from "@/utils/videoProcessor";
 
 const useDashboardData = () => {
   const [loading, setLoading] = useState(true);
@@ -102,6 +103,8 @@ export default function AgenticDashboard() {
   const [settingsLoading, setSettingsLoading] = useState(false);
   const [usernameStatus, setUsernameStatus] = useState<"idle" | "checking" | "available" | "taken" | "invalid">("idle");
   const [message, setMessage] = useState<{ text: string, type: 'error' | 'success' | 'info' } | null>(null);
+  const [processing, setProcessing] = useState(false);
+  const [processProgress, setProcessProgress] = useState(0);
 
   const validateUsername = (username: string) => {
     return /^[a-z]+$/.test(username);
@@ -181,74 +184,69 @@ export default function AgenticDashboard() {
       if (!file) return;
 
       setUploading(true);
-      setUploadProgress(0);
-
+      setMessage({ text: "VALIDATING TALENT SPECS...", type: 'info' });
+      
       try {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) throw new Error("Not authenticated");
+        const validation = await validateAuditionVideo(file);
+        if (!validation.valid) {
+          throw new Error(validation.error);
+        }
 
-        const fileExt = file.name.split('.').pop();
-        const { data: profile } = await supabase
-          .from('profiles')
-          .select('audition_count')
-          .eq('id', user.id)
-          .single();
+        // Step 1: Compress Video
+        setProcessing(true);
+        setMessage({ text: "OPTIMIZING PERFORMANCE DATA...", type: 'info' });
+        const optimizedBlob = await compressVideo(file, (p) => setProcessProgress(p));
+        setProcessing(false);
 
-        const newCount = (profile?.audition_count || 0) + 1;
-        const fileName = `${user.id}/audition_${newCount}_${Date.now()}.${fileExt}`;
+        // Step 2: Upload Original to Archive
+        setMessage({ text: "ARCHIVING ORIGINAL PACKET...", type: 'info' });
+        const originalUrl = await initiateResumableUpload(file, false);
+        await performXHRUpload(originalUrl, file);
 
-        // 1. Upload to Supabase Storage (Direct & Fast)
-        const { error: uploadError } = await supabase.storage
-          .from('auditions')
-          .upload(fileName, file, {
-            cacheControl: '3600',
-            upsert: false,
-            onUploadProgress: (e) => {
-              const percent = Math.floor((e.loaded / e.total) * 100);
-              setUploadProgress(percent);
-            }
-          });
+        // Step 3: Upload Optimized to Playback
+        setMessage({ text: "ESTABLISHING PLAYBACK UPLINK...", type: 'info' });
+        const optimizedFile = new File([optimizedBlob], `optimized-${file.name}`, { type: 'video/mp4' });
+        const optimizedUrl = await initiateResumableUpload(optimizedFile, true);
+        await performXHRUpload(optimizedUrl, optimizedFile);
 
-        if (uploadError) throw uploadError;
-
-        const { data: { publicUrl } } = supabase.storage
-          .from('auditions')
-          .getPublicUrl(fileName);
-
-        // 2. Save metadata to DB
-        const newVideo = {
-          id: fileName,
-          name: `Audition Tape - ${newCount}`,
-          url: publicUrl,
-          type: file.type,
-          created_at: new Date().toISOString()
-        };
-
-        const { data: currentProfile } = await supabase
-          .from('profiles')
-          .select('audition_videos')
-          .eq('id', user.id)
-          .single();
-
-        const updatedVideos = [...(currentProfile?.audition_videos || []), newVideo];
-
-        await supabase
-          .from('profiles')
-          .update({ 
-            audition_count: newCount,
-            audition_videos: updatedVideos
-          })
-          .eq('id', user.id);
-
-        setMessage({ text: "AUDITION SECURELY UPLOADED AND PROCESSED.", type: 'success' });
+        setMessage({ text: "AUDITION SECURELY SYNCED (ARCHIVE + PLAYBACK).", type: 'success' });
       } catch (error: any) {
         console.error("Upload error:", error);
         setMessage({ text: `UPLOAD FAILED: ${error.message}`, type: 'error' });
       } finally {
         setUploading(false);
+        setProcessing(false);
         setUploadProgress(0);
+        setProcessProgress(0);
       }
     };
+
+    const initiateResumableUpload = async (file: File, isOptimized: boolean) => {
+      const res = await fetch("/api/drive/init-upload", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ filename: file.name, mimeType: file.type, isOptimized }),
+      });
+      if (!res.ok) throw new Error("Failed to initialize session");
+      const { uploadUrl } = await res.json();
+      return uploadUrl;
+    };
+
+    const performXHRUpload = async (url: string, file: File | Blob) => {
+      return new Promise((resolve, reject) => {
+        const xhr = new XMLHttpRequest();
+        xhr.open("PUT", url, true);
+        xhr.upload.onprogress = (e) => {
+          if (e.lengthComputable) {
+            setUploadProgress(Math.floor((e.loaded / e.total) * 100));
+          }
+        };
+        xhr.onload = () => (xhr.status >= 200 && xhr.status < 300) ? resolve(xhr.responseText) : reject(new Error("Upload failed"));
+        xhr.onerror = () => reject(new Error("Network Error"));
+        xhr.send(file);
+      });
+    };
+
     input.click();
   };
 

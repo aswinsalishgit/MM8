@@ -28,7 +28,9 @@ export async function ensureUserFolder() {
     .from('profiles')
     .update({ 
       user_drive: driveInfo.link,
-      drive_folder_id: driveInfo.id 
+      drive_folder_id: driveInfo.id,
+      archive_folder_id: driveInfo.archiveId,
+      playback_folder_id: driveInfo.playbackId
     })
     .eq('id', user.id);
 
@@ -74,11 +76,11 @@ export async function getAuditionVideos() {
 
   const { data: profile } = await supabase
     .from('profiles')
-    .select('drive_folder_id')
+    .select('playback_folder_id')
     .eq('id', user.id)
     .single();
 
-  if (!profile?.drive_folder_id) return [];
+  if (!profile?.playback_folder_id) return [];
 
   const { google } = await import('googleapis');
   const oauth2Client = new google.auth.OAuth2(
@@ -91,7 +93,7 @@ export async function getAuditionVideos() {
   const drive = google.drive({ version: 'v3', auth: oauth2Client });
 
   const response = await drive.files.list({
-    q: `'${profile.drive_folder_id}' in parents and mimeType contains 'video/' and not name contains 'PFP -'`,
+    q: `'${profile.playback_folder_id}' in parents and mimeType contains 'video/'`,
     fields: 'files(id, name, webViewLink, webContentLink, thumbnailLink)',
     orderBy: 'createdTime desc'
   });
