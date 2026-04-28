@@ -5,7 +5,6 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useRouter } from "next/navigation";
 import { ChevronLeft } from "lucide-react";
 import { supabase } from "@/utils/supabase/client";
-import BackgroundCanvas from "@/components/BackgroundCanvas";
 import ISO6391 from "iso-639-1";
 import Cropper, { Area } from "react-easy-crop";
 import { Country, State, City } from "country-state-city";
@@ -197,7 +196,6 @@ export default function ActorOnboardingFlow() {
 
   return (
     <main className="min-h-screen bg-black text-white flex flex-col relative overflow-hidden">
-      <BackgroundCanvas />
       
       <button 
         onClick={prevStep}

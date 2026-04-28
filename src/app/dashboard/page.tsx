@@ -3,31 +3,10 @@
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { User, CheckCircle2, ChevronRight, Trophy, Flame, PlayCircle, Star, Settings, X, Lock, ShieldCheck } from "lucide-react";
-import BackgroundCanvas from "@/components/BackgroundCanvas";
 
 import { supabase } from "@/utils/supabase/client";
 import { useRouter } from "next/navigation";
-
-
-const ROLES_MOCK = [
-  { id: 1, title: "LEAD ANTAGONIST", project: "SHADOWS OF KOCHI", match: 98, deadline: "24H", tags: ["INTENSE", "MALAYALAM"] },
-  { id: 2, title: "SUPPORTING COP", project: "UNTITLED THRILLER", match: 84, deadline: "3D", tags: ["ACTION", "HINDI"] },
-  { id: 3, title: "COMIC RELIEF", project: "CAMPUS DIARIES", match: 72, deadline: "1W", tags: ["FUNNY", "TAMIL"] },
-];
-
-const LEADERBOARD_MOCK = [
-  { rank: 1, name: "ARJUN_M", score: 9400, trend: "up" },
-  { rank: 2, name: "SNEHA_R", score: 9150, trend: "up" },
-  { rank: 3, name: "YOU", score: 8900, trend: "up", isUser: true },
-  { rank: 4, name: "RAHUL_K", score: 8750, trend: "down" },
-];
-
-const CHALLENGE_MOCK = {
-  title: "THE ANGER MONOLOGUE",
-  reward: "+500 VISIBILITY",
-  timeLeft: "08:14:22",
-  participants: 142
-};
+import { uploadAuditionTape } from "@/app/actions/driveActions";
 
 const useDashboardData = () => {
   const [loading, setLoading] = useState(true);
@@ -80,6 +59,23 @@ const useDashboardData = () => {
             visibilityScore: profile.visibility_score || 0,
             location: profile.location || "UNKNOWN",
             avatarUrl: profile.avatar_url_proxy || null
+          },
+          roles: [
+            { id: 1, title: "LEAD ANTAGONIST", project: "SHADOWS OF KOCHI", match: 98, deadline: "24H", tags: ["INTENSE", "MALAYALAM"] },
+            { id: 2, title: "SUPPORTING COP", project: "UNTITLED THRILLER", match: 84, deadline: "3D", tags: ["ACTION", "HINDI"] },
+            { id: 3, title: "COMIC RELIEF", project: "CAMPUS DIARIES", match: 72, deadline: "1W", tags: ["FUNNY", "TAMIL"] },
+          ],
+          leaderboard: [
+            { rank: 1, name: "ARJUN_M", score: 9400, trend: "up" },
+            { rank: 2, name: "SNEHA_R", score: 9150, trend: "up" },
+            { rank: 3, name: "YOU", score: 8900, trend: "up", isUser: true },
+            { rank: 4, name: "RAHUL_K", score: 8750, trend: "down" },
+          ],
+          challenge: {
+            title: "THE ANGER MONOLOGUE",
+            reward: "+500 VISIBILITY",
+            timeLeft: "08:14:22",
+            participants: 142
           }
         });
       } catch (error) {
@@ -96,19 +92,11 @@ const useDashboardData = () => {
 
 export default function AgenticDashboard() {
   const { data, loading } = useDashboardData();
-  const router = useRouter();
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [showSettings, setShowSettings] = useState(false);
   const [newUsername, setNewUsername] = useState("");
   const [newPassword, setNewPassword] = useState("");
-
-  const PASSWORD_RULES = [
-    { label: "8+ CHARS", met: newPassword.length >= 8 },
-    { label: "UPPERCASE", met: /[A-Z]/.test(newPassword) },
-    { label: "NUMBER", met: /[0-9]/.test(newPassword) },
-    { label: "SPECIAL", met: /[!@#$%^&*(),.?":{}|<>]/.test(newPassword) }
-  ];
   const [settingsLoading, setSettingsLoading] = useState(false);
   const [usernameStatus, setUsernameStatus] = useState<"idle" | "checking" | "available" | "taken" | "invalid">("idle");
   const [message, setMessage] = useState<{ text: string, type: 'error' | 'success' | 'info' } | null>(null);
@@ -246,14 +234,12 @@ export default function AgenticDashboard() {
   if (loading || !data) {
     return (
       <main className="min-h-screen bg-black">
-        <BackgroundCanvas />
       </main>
     );
   }
 
   return (
     <main className="min-h-screen bg-black text-white p-4 md:p-12 overflow-x-hidden relative selection:bg-brand-red-neon selection:text-white">
-      <BackgroundCanvas />
       
       {/* Status Bar */}
       {message && (
@@ -344,23 +330,14 @@ export default function AgenticDashboard() {
                     }}
                   />
                 ) : null}
-                <User className={`w-16 h-16 text-brand-red-deep group-hover:text-brand-red-neon transition-colors ${data.profile.avatarUrl ? 'opacity-0' : 'opacity-100'}`} />
+                <User className={`w-16 h-16 text-brand-red-deep group-hover:text-brand-red-neon transition-colors ${data.profile.avatarUrl ? 'hidden' : ''}`} />
               </div>
               <div>
                 <h2 className="text-5xl font-black uppercase tracking-tighter leading-none">{data.profile.name}</h2>
-                <div className="flex flex-col gap-2 mt-3">
-                  <p className="text-brand-red-neon font-black uppercase tracking-[0.3em] text-xs flex items-center gap-2">
-                    <span className="w-2 h-[1px] bg-brand-red-neon" />
-                    {data.profile.location}
-                  </p>
-                  <button 
-                    onClick={() => router.push("/dashboard/auditions")}
-                    className="text-zinc-600 hover:text-white font-black uppercase tracking-widest text-[9px] text-left transition-colors flex items-center gap-2 group/btn"
-                  >
-                    <div className="w-1 h-1 bg-zinc-800 group-hover/btn:bg-white transition-colors" />
-                    VIEW_ACTIVE_AUDITIONS
-                  </button>
-                </div>
+                <p className="text-brand-red-neon font-black uppercase tracking-[0.3em] text-xs mt-3 flex items-center gap-2">
+                  <span className="w-2 h-[1px] bg-brand-red-neon" />
+                  {data.profile.location} // OPS
+                </p>
               </div>
             </div>
 
@@ -389,17 +366,17 @@ export default function AgenticDashboard() {
                 <Flame className="w-6 h-6 text-brand-red-neon" />
                 <h3 className="font-black uppercase tracking-[0.4em] text-[10px]">PRIORITY_MISSION</h3>
               </div>
-              <h2 className="text-5xl font-black uppercase tracking-tighter mb-6 leading-[0.85] group-hover:text-white transition-colors">{CHALLENGE_MOCK.title}</h2>
+              <h2 className="text-5xl font-black uppercase tracking-tighter mb-6 leading-[0.85] group-hover:text-white transition-colors">{data.challenge.title}</h2>
               <div className="flex items-center gap-4 mb-10">
                 <div className="px-3 py-1 bg-brand-red-neon text-white text-[9px] font-black uppercase tracking-widest">ACTIVE</div>
                 <p className="text-zinc-500 font-black uppercase tracking-widest text-[10px]">
-                  TERMINATES: <span className="text-white tabular-nums">{CHALLENGE_MOCK.timeLeft}</span>
+                  TERMINATES: <span className="text-white tabular-nums">{data.challenge.timeLeft}</span>
                 </p>
               </div>
               
               <div className="flex justify-between items-center border-t border-brand-red-neon/20 pt-8">
-                <span className="font-black uppercase text-brand-red-neon text-sm tracking-tighter">{CHALLENGE_MOCK.reward}</span>
-                <span className="font-black text-[9px] tracking-[0.3em] text-zinc-600 uppercase">{CHALLENGE_MOCK.participants} SYNCED</span>
+                <span className="font-black uppercase text-brand-red-neon text-sm tracking-tighter">{data.challenge.reward}</span>
+                <span className="font-black text-[9px] tracking-[0.3em] text-zinc-600 uppercase">{data.challenge.participants} SYNCED</span>
               </div>
             </div>
           </section>
@@ -411,7 +388,7 @@ export default function AgenticDashboard() {
               <h3 className="font-black uppercase tracking-[0.4em] text-[10px]">GLOBAL_RANKINGS</h3>
             </div>
             <div className="flex flex-col gap-6">
-              {LEADERBOARD_MOCK.map((actor: any) => (
+              {data.leaderboard.map((actor: any) => (
                 <div key={actor.rank} className={`flex items-center justify-between p-5 brutal-border transition-all group ${actor.isUser ? 'border-brand-red-neon bg-brand-red-neon/10 clip-brutal-slant' : 'border-zinc-900 bg-zinc-950/50 hover:border-zinc-700'}`}>
                   <div className="flex items-center gap-6">
                     <span className={`font-black text-3xl tabular-nums ${actor.rank === 1 ? 'text-brand-red-neon' : 'text-zinc-800 group-hover:text-zinc-600'}`}>
@@ -493,7 +470,7 @@ export default function AgenticDashboard() {
             </div>
 
             <div className="flex-1 w-full overflow-x-auto snap-x snap-mandatory hide-scrollbar flex gap-10 pb-12">
-              {ROLES_MOCK.map((role: any, index: number) => (
+              {data.roles.map((role: any, index: number) => (
                 <motion.div
                   key={role.id}
                   initial={{ opacity: 0, x: 50 }}
@@ -620,7 +597,12 @@ export default function AgenticDashboard() {
                   />
                 </div>
                 <div className="grid grid-cols-2 gap-2 ml-2">
-                  {PASSWORD_RULES.map(rule => (
+                  {[
+                    { label: "8+ CHARS", met: newPassword.length >= 8 },
+                    { label: "UPPERCASE", met: /[A-Z]/.test(newPassword) },
+                    { label: "NUMBER", met: /[0-9]/.test(newPassword) },
+                    { label: "SPECIAL", met: /[!@#$%^&*(),.?":{}|<>]/.test(newPassword) }
+                  ].map(rule => (
                     <div key={rule.label} className="flex items-center gap-2">
                       <div className={`w-1 h-1 rounded-full ${rule.met ? 'bg-green-500' : 'bg-zinc-800'}`} />
                       <span className={`text-[8px] font-black uppercase tracking-widest ${rule.met ? 'text-green-500' : 'text-zinc-600'}`}>{rule.label}</span>

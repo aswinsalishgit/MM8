@@ -3,14 +3,12 @@
 import { motion } from "framer-motion";
 import { useRouter } from "next/navigation";
 import { AlertTriangle, ChevronLeft } from "lucide-react";
-import BackgroundCanvas from "@/components/BackgroundCanvas";
 
 export default function AuthErrorPage() {
   const router = useRouter();
 
   return (
     <main className="h-screen bg-black text-white flex flex-col justify-center items-center px-6 relative overflow-hidden">
-      <BackgroundCanvas />
 
       <motion.div
         initial={{ opacity: 0, scale: 0.9 }}

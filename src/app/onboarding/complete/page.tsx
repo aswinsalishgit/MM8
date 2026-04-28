@@ -4,7 +4,6 @@ import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useRouter } from "next/navigation";
 import { ChevronLeft } from "lucide-react";
-import BackgroundCanvas from "@/components/BackgroundCanvas";
 
 import { supabase } from "@/utils/supabase/client";
 
@@ -30,7 +29,6 @@ export default function CompletionTransitionFlow() {
 
   return (
     <main className="min-h-screen bg-black text-white flex flex-col justify-center px-6 md:px-16 overflow-hidden relative">
-      <BackgroundCanvas />
       
       <button 
         onClick={() => router.push("/onboarding/actor")}

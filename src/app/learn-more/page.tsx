@@ -1,6 +1,5 @@
 "use client";
 
-import BackgroundCanvas from "@/components/BackgroundCanvas";
 import Navbar from "@/components/Navbar";
 import { motion } from "framer-motion";
 import Link from "next/link";
@@ -8,7 +7,6 @@ import Link from "next/link";
 export default function LearnMore() {
   return (
     <main className="relative min-h-screen w-full overflow-x-hidden selection:bg-brand-red-neon selection:text-white flex flex-col bg-black">
-      <BackgroundCanvas />
       <Navbar />
       
       <div className="flex-1 relative z-10 pt-40 md:pt-56 px-6 md:px-16 max-w-7xl mx-auto w-full pb-20">

@@ -5,7 +5,6 @@ import { motion } from "framer-motion";
 import { useRouter } from "next/navigation";
 import { Mail, ChevronLeft } from "lucide-react";
 import { supabase } from "@/utils/supabase/client";
-import BackgroundCanvas from "@/components/BackgroundCanvas";
 
 export default function AuthPage() {
   const router = useRouter();
@@ -178,7 +177,6 @@ export default function AuthPage() {
 
   return (
     <main className="h-screen bg-black text-white flex flex-col justify-center items-center px-6 py-12 relative overflow-hidden">
-      <BackgroundCanvas />
 
       <div className="w-full max-w-2xl z-10">
         <motion.div
