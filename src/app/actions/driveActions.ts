@@ -57,13 +57,46 @@ export async function uploadProfilePicture(formData: FormData) {
   
   const driveFile = await uploadToDrive(profile.drive_folder_id, fileName, buffer, file.type);
   
-  // Update avatar link to the webContentLink (direct image link)
+  // Update avatar link to a more reliable direct link format
+  const reliableUrl = `https://lh3.googleusercontent.com/d/${driveFile.id}`;
   await supabase
     .from('profiles')
-    .update({ avatar_url_proxy: driveFile.webContentLink })
+    .update({ avatar_url_proxy: reliableUrl })
     .eq('id', user.id);
 
-  return driveFile.webContentLink || null;
+  return reliableUrl;
+}
+
+export async function getAuditionVideos() {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error("Not authenticated");
+
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('drive_folder_id')
+    .eq('id', user.id)
+    .single();
+
+  if (!profile?.drive_folder_id) return [];
+
+  const { google } = await import('googleapis');
+  const oauth2Client = new google.auth.OAuth2(
+    process.env.GOOGLE_CLIENT_ID,
+    process.env.GOOGLE_CLIENT_SECRET
+  );
+  oauth2Client.setCredentials({
+    refresh_token: process.env.GOOGLE_REFRESH_TOKEN?.replace(/"/g, ''),
+  });
+  const drive = google.drive({ version: 'v3', auth: oauth2Client });
+
+  const response = await drive.files.list({
+    q: `'${profile.drive_folder_id}' in parents and mimeType contains 'video/' and not name contains 'PFP -'`,
+    fields: 'files(id, name, webViewLink, webContentLink, thumbnailLink)',
+    orderBy: 'createdTime desc'
+  });
+
+  return response.data.files || [];
 }
 
 export async function uploadAuditionTape(formData: FormData) {

@@ -92,6 +92,7 @@ const useDashboardData = () => {
 };
 
 export default function AgenticDashboard() {
+  const router = useRouter();
   const { data, loading } = useDashboardData();
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
@@ -183,44 +184,63 @@ export default function AgenticDashboard() {
       setUploadProgress(0);
 
       try {
-        const initRes = await fetch("/api/drive/init-upload", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ filename: file.name, mimeType: file.type }),
-        });
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) throw new Error("Not authenticated");
 
-        if (!initRes.ok) {
-            const errorData = await initRes.json();
-            throw new Error(`Failed to initialize upload: ${errorData.details || errorData.error}`);
-        }
-        
-        const { uploadUrl } = await initRes.json();
+        const fileExt = file.name.split('.').pop();
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('audition_count')
+          .eq('id', user.id)
+          .single();
 
-        await new Promise((resolve, reject) => {
-          const xhr = new XMLHttpRequest();
-          xhr.open("PUT", uploadUrl, true);
-          xhr.setRequestHeader("Content-Type", file.type);
-          
-          xhr.upload.onprogress = (e) => {
-            if (e.lengthComputable) {
-              const percentComplete = Math.floor((e.loaded / e.total) * 100);
-              setUploadProgress(percentComplete);
+        const newCount = (profile?.audition_count || 0) + 1;
+        const fileName = `${user.id}/audition_${newCount}_${Date.now()}.${fileExt}`;
+
+        // 1. Upload to Supabase Storage (Direct & Fast)
+        const { error: uploadError } = await supabase.storage
+          .from('auditions')
+          .upload(fileName, file, {
+            cacheControl: '3600',
+            upsert: false,
+            onUploadProgress: (e) => {
+              const percent = Math.floor((e.loaded / e.total) * 100);
+              setUploadProgress(percent);
             }
-          };
+          });
 
-          xhr.onload = () => {
-            if (xhr.status >= 200 && xhr.status < 300) {
-              resolve(xhr.responseText);
-            } else {
-              reject(new Error(`Upload failed with status ${xhr.status}`));
-            }
-          };
+        if (uploadError) throw uploadError;
 
-          xhr.onerror = () => reject(new Error("Network Error during upload"));
-          xhr.send(file);
-        });
+        const { data: { publicUrl } } = supabase.storage
+          .from('auditions')
+          .getPublicUrl(fileName);
 
-        setMessage({ text: "AUDITION SECURELY UPLOADED TO DRIVE.", type: 'success' });
+        // 2. Save metadata to DB
+        const newVideo = {
+          id: fileName,
+          name: `Audition Tape - ${newCount}`,
+          url: publicUrl,
+          type: file.type,
+          created_at: new Date().toISOString()
+        };
+
+        const { data: currentProfile } = await supabase
+          .from('profiles')
+          .select('audition_videos')
+          .eq('id', user.id)
+          .single();
+
+        const updatedVideos = [...(currentProfile?.audition_videos || []), newVideo];
+
+        await supabase
+          .from('profiles')
+          .update({ 
+            audition_count: newCount,
+            audition_videos: updatedVideos
+          })
+          .eq('id', user.id);
+
+        setMessage({ text: "AUDITION SECURELY UPLOADED AND PROCESSED.", type: 'success' });
       } catch (error: any) {
         console.error("Upload error:", error);
         setMessage({ text: `UPLOAD FAILED: ${error.message}`, type: 'error' });
@@ -321,26 +341,36 @@ export default function AgenticDashboard() {
             </div>
             
             <div className="flex items-center gap-8 mt-6 mb-12">
-              <div className="w-32 h-32 bg-zinc-950 brutal-border-red flex items-center justify-center grayscale hover:grayscale-0 transition-all duration-500 clip-brutal-slant overflow-hidden">
+              <div className="w-32 h-32 bg-zinc-950 brutal-border-red flex items-center justify-center transition-all duration-500 clip-brutal-slant overflow-hidden relative">
                 {data.profile.avatarUrl ? (
                   <img 
                     src={data.profile.avatarUrl} 
                     alt="PFP" 
-                    className="w-full h-full object-cover"
+                    className="w-full h-full object-cover relative z-10"
                     onError={(e: any) => {
-                      e.target.style.display = 'none';
-                      e.target.nextSibling.style.display = 'block';
+                      e.target.style.opacity = '0';
                     }}
                   />
                 ) : null}
-                <User className={`w-16 h-16 text-brand-red-deep group-hover:text-brand-red-neon transition-colors ${data.profile.avatarUrl ? 'hidden' : ''}`} />
+                <div className="absolute inset-0 flex items-center justify-center z-0">
+                  <User className="w-16 h-16 text-brand-red-deep group-hover:text-brand-red-neon transition-colors" />
+                </div>
               </div>
               <div>
                 <h2 className="text-5xl font-black uppercase tracking-tighter leading-none">{data.profile.name}</h2>
-                <p className="text-brand-red-neon font-black uppercase tracking-[0.3em] text-xs mt-3 flex items-center gap-2">
-                  <span className="w-2 h-[1px] bg-brand-red-neon" />
-                  {data.profile.location} // OPS
-                </p>
+                <div className="flex flex-col gap-3 mt-4">
+                  <p className="text-zinc-500 font-black uppercase tracking-[0.3em] text-[10px] flex items-center gap-2">
+                    <span className="w-2 h-[1px] bg-zinc-800" />
+                    {data.profile.location}
+                  </p>
+                  <button 
+                    onClick={() => router.push("/dashboard/auditions")}
+                    className="px-4 py-2 bg-brand-red-neon/10 border border-brand-red-neon/20 text-brand-red-neon hover:bg-brand-red-neon hover:text-white font-black uppercase tracking-widest text-[9px] text-left transition-all flex items-center gap-2 group/btn clip-brutal-slant"
+                  >
+                    <PlayCircle className="w-3 h-3" />
+                    VIEW_ACTIVE_AUDITIONS
+                  </button>
+                </div>
               </div>
             </div>
 
