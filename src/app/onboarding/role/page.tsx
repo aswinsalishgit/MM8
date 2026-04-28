@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useRouter } from "next/navigation";
+import { ChevronLeft } from "lucide-react";
 import BackgroundCanvas from "@/components/BackgroundCanvas";
 import { supabase } from "@/utils/supabase/client";
 
@@ -36,6 +37,14 @@ export default function RoleSelectionPage() {
     <main className="min-h-screen bg-black text-white flex flex-col py-12 md:py-24 relative overflow-hidden">
       <BackgroundCanvas />
       
+      <button 
+        onClick={() => router.push("/")}
+        className="absolute top-8 left-8 md:top-12 md:left-16 z-20 flex items-center gap-2 text-zinc-500 hover:text-white font-black uppercase tracking-widest text-xs transition-colors group cursor-pointer"
+      >
+        <ChevronLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform" />
+        BACK
+      </button>
+
       <div className="px-6 md:px-16 mb-16 relative z-10">
         <motion.h1 
           initial={{ opacity: 0, x: -20 }}

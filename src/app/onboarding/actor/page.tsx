@@ -3,6 +3,7 @@
 import { useState, useCallback, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useRouter } from "next/navigation";
+import { ChevronLeft } from "lucide-react";
 import { supabase } from "@/utils/supabase/client";
 import BackgroundCanvas from "@/components/BackgroundCanvas";
 import ISO6391 from "iso-639-1";
@@ -60,6 +61,14 @@ export default function ActorOnboardingFlow() {
       setStepIndex((prev) => prev + 1);
     } else {
       finalizeProfile();
+    }
+  };
+  
+  const prevStep = () => {
+    if (stepIndex > 0) {
+      setStepIndex((prev) => prev - 1);
+    } else {
+      router.push("/onboarding/role");
     }
   };
 
@@ -145,6 +154,14 @@ export default function ActorOnboardingFlow() {
     <main className="min-h-screen bg-black text-white flex flex-col relative overflow-hidden">
       <BackgroundCanvas />
       
+      <button 
+        onClick={prevStep}
+        className="absolute top-8 left-8 md:top-12 md:left-16 z-20 flex items-center gap-2 text-zinc-500 hover:text-white font-black uppercase tracking-widest text-xs transition-colors group cursor-pointer"
+      >
+        <ChevronLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform" />
+        {stepIndex === 0 ? "BACK TO ROLE" : "PREVIOUS STEP"}
+      </button>
+
       {/* Progress Bar */}
       <div className="fixed top-0 left-0 w-full h-2 bg-zinc-900 z-50">
         <motion.div
