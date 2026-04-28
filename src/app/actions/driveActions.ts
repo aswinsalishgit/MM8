@@ -63,7 +63,7 @@ export async function uploadProfilePicture(formData: FormData) {
     .update({ avatar_url_proxy: driveFile.webContentLink })
     .eq('id', user.id);
 
-  return driveFile.webContentLink;
+  return driveFile.webContentLink || null;
 }
 
 export async function uploadAuditionTape(formData: FormData) {
@@ -93,5 +93,5 @@ export async function uploadAuditionTape(formData: FormData) {
     .update({ audition_count: newCount })
     .eq('id', user.id);
 
-  return driveFile.webViewLink;
+  return driveFile.webViewLink || null;
 }

@@ -158,7 +158,7 @@ export default function ActorOnboardingFlow() {
       formData.append('file', file);
       
       const driveUrl = await uploadProfilePicture(formData);
-      setUploadedFilePath(driveUrl);
+      if (driveUrl) setUploadedFilePath(driveUrl);
       nextStep();
     } catch (e) {
       console.error("MM8_DRIVE_UPLOAD_FAILURE:", e);
