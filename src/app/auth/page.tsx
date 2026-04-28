@@ -10,8 +10,10 @@ import BackgroundCanvas from "@/components/BackgroundCanvas";
 export default function AuthPage() {
   const router = useRouter();
   const [email, setEmail] = useState("");
-  const [mode, setMode] = useState<"options" | "email" | "password">("options");
+  const [mode, setMode] = useState<"options" | "email" | "password" | "check_user">("options");
   const [password, setPassword] = useState("");
+  const [isNewUser, setIsNewUser] = useState(false);
+  const [loading, setLoading] = useState(false);
 
   const handleOAuthLogin = async (provider: 'google' | 'apple') => {
     try {
@@ -27,48 +29,68 @@ export default function AuthPage() {
     }
   };
 
-  const handleMagicLink = async (e: React.FormEvent) => {
+  const handleCheckUser = async (e: React.FormEvent) => {
     e.preventDefault();
+    setLoading(true);
     try {
-      const { error } = await supabase.auth.signInWithOtp({
-        email,
-        options: {
-          emailRedirectTo: `${window.location.origin}/auth/callback`,
-        },
+      // Use the RPC function we created to check if user exists
+      const { data: exists, error } = await supabase.rpc('check_user_exists', { 
+        email_to_check: email.toLowerCase() 
       });
+
       if (error) throw error;
-      alert("Magic link sent! Check your email.");
+
+      setIsNewUser(!exists);
+      setMode("password");
     } catch (error) {
-      console.error("Magic link error:", error);
+      console.error("User check error:", error);
+      // Fallback: assume sign-in if check fails
+      setMode("password");
+    } finally {
+      setLoading(false);
     }
   };
 
-  const handlePasswordLogin = async (e: React.FormEvent) => {
+  const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault();
+    setLoading(true);
     try {
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
-      
-      if (error) throw error;
+      if (isNewUser) {
+        // Sign up logic
+        const { data, error } = await supabase.auth.signUp({
+          email: email.toLowerCase(),
+          password,
+        });
+        if (error) throw error;
+        alert("Verification email dispatched. Check your terminal.");
+        router.push("/onboarding/role");
+      } else {
+        // Sign in logic
+        const { data, error } = await supabase.auth.signInWithPassword({
+          email: email.toLowerCase(),
+          password,
+        });
+        if (error) throw error;
 
-      if (data.user) {
-        const { data: profile } = await supabase
-          .from('profiles')
-          .select('status')
-          .eq('id', data.user.id)
-          .single();
+        if (data.user) {
+          const { data: profile } = await supabase
+            .from('profiles')
+            .select('status')
+            .eq('id', data.user.id)
+            .single();
 
-        if (profile?.status === 'VERIFIED') {
-          router.push("/dashboard");
-        } else {
-          router.push("/onboarding/role");
+          if (profile?.status === 'VERIFIED') {
+            router.push("/dashboard");
+          } else {
+            router.push("/onboarding/role");
+          }
         }
       }
     } catch (error: any) {
-      console.error("Password login error:", error);
+      console.error("Auth error:", error);
       alert(error.message || "Authentication failed");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -139,7 +161,7 @@ export default function AuthPage() {
           )}
 
           {mode === "email" && (
-            <form onSubmit={handleMagicLink} className="flex flex-col gap-10">
+            <form onSubmit={handleCheckUser} className="flex flex-col gap-10">
               <div className="flex flex-col gap-4">
                 <label className="text-[10px] font-black uppercase tracking-[0.4em] text-brand-red-neon ml-2">TERMINAL_INPUT: EMAIL</label>
                 <input 
@@ -153,9 +175,10 @@ export default function AuthPage() {
               </div>
               <button 
                 type="submit"
-                className="w-full group relative px-8 py-8 bg-brand-red-neon text-white font-black text-3xl uppercase tracking-tighter hover:bg-white hover:text-black transition-all duration-500 shadow-[0_0_40px_rgba(255,49,49,0.3)] clip-brutal-hero-primary cursor-pointer"
+                disabled={loading}
+                className="w-full group relative px-8 py-8 bg-brand-red-neon text-white font-black text-3xl uppercase tracking-tighter hover:bg-white hover:text-black transition-all duration-500 shadow-[0_0_40px_rgba(255,49,49,0.3)] clip-brutal-hero-primary cursor-pointer disabled:opacity-50"
               >
-                Dispatch Link
+                {loading ? "PROCESSING..." : "VERIFY EMAIL"}
               </button>
               <button 
                 type="button"
@@ -168,20 +191,20 @@ export default function AuthPage() {
           )}
 
           {mode === "password" && (
-            <form onSubmit={handlePasswordLogin} className="flex flex-col gap-8">
+            <form onSubmit={handleAuth} className="flex flex-col gap-8">
               <div className="flex flex-col gap-4">
-                <label className="text-[10px] font-black uppercase tracking-[0.4em] text-brand-red-neon ml-2">TERMINAL_INPUT: USERNAME</label>
+                <label className="text-[10px] font-black uppercase tracking-[0.4em] text-brand-red-neon ml-2">TERMINAL_INPUT: EMAIL</label>
                 <input 
-                  type="text" 
-                  placeholder="USER_IDENT_01" 
-                  className="w-full bg-zinc-950 text-white font-black text-2xl px-8 py-6 border-2 border-zinc-800 outline-none focus:border-brand-red-neon transition-all placeholder:text-zinc-800 uppercase clip-brutal-tl"
+                  type="email" 
+                  readOnly
+                  className="w-full bg-zinc-900 text-zinc-500 font-black text-2xl px-8 py-6 border-2 border-zinc-800 outline-none uppercase clip-brutal-tl cursor-not-allowed"
                   value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  required
                 />
               </div>
               <div className="flex flex-col gap-4">
-                <label className="text-[10px] font-black uppercase tracking-[0.4em] text-brand-red-neon ml-2">TERMINAL_INPUT: PASSWORD</label>
+                <label className="text-[10px] font-black uppercase tracking-[0.4em] text-brand-red-neon ml-2">
+                  {isNewUser ? "CREATE_PASSWORD" : "TERMINAL_INPUT: PASSWORD"}
+                </label>
                 <input 
                   type="password" 
                   placeholder="********" 
@@ -189,20 +212,25 @@ export default function AuthPage() {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   required
+                  autoFocus
                 />
               </div>
               <button 
                 type="submit"
-                className="w-full group relative px-8 py-8 bg-brand-red-neon text-white font-black text-3xl uppercase tracking-tighter hover:bg-white hover:text-black transition-all duration-500 shadow-[0_0_40px_rgba(255,49,49,0.3)] clip-brutal-hero-primary cursor-pointer"
+                disabled={loading}
+                className="w-full group relative px-8 py-8 bg-brand-red-neon text-white font-black text-3xl uppercase tracking-tighter hover:bg-white hover:text-black transition-all duration-500 shadow-[0_0_40px_rgba(255,49,49,0.3)] clip-brutal-hero-primary cursor-pointer disabled:opacity-50"
               >
-                AUTHORIZE_ACCESS
+                {loading ? "AUTHORIZING..." : isNewUser ? "INITIALIZE_ACCOUNT" : "AUTHORIZE_ACCESS"}
               </button>
               <button 
                 type="button"
-                onClick={() => setMode("options")}
+                onClick={() => {
+                  setMode("email");
+                  setPassword("");
+                }}
                 className="text-zinc-600 font-black uppercase tracking-[0.3em] text-[10px] hover:text-white transition-colors text-center cursor-pointer"
               >
-                Go Back
+                Use Different Email
               </button>
             </form>
           )}
