@@ -132,9 +132,9 @@ function Poster({ url, position, scale, mouse, index, quote }: {
     if (textRef.current) textRef.current.visible = backVisible;
     if (brandRef.current) brandRef.current.visible = backVisible;
 
-    // Entrance Fade Logic
-    const entranceDelay = 2.5 + (index * 0.1);
-    const entranceDuration = 2.0;
+    // Entrance Fade Logic (Faster Entrance)
+    const entranceDelay = 1.0 + (index * 0.05);
+    const entranceDuration = 0.8;
     const entranceProgress = THREE.MathUtils.smoothstep(state.clock.elapsedTime, entranceDelay, entranceDelay + entranceDuration);
 
     // Update individual material uniforms
@@ -237,14 +237,14 @@ function PosterGrid({ mouse }: { mouse: React.MutableRefObject<{ x: number, y: n
   const isMobile = viewport.width < 10; // Simple threshold based on viewport units
 
   const gridData = useMemo(() => {
-    const cols = isMobile ? 3 : 6;
-    const spacingX = isMobile ? 6 : 14; 
-    const spacingY = isMobile ? 9 : 18; 
+    // Dynamic grid sizing for mobile vs desktop
+    const cols = isMobile ? 4 : 6;
+    const spacingX = isMobile ? 5 : 14; 
+    const spacingY = isMobile ? 7 : 18; 
     
     return POSTER_IMAGES.map((url, i) => {
-      // On mobile, maybe don't skip the top-right slot as aggressively 
-      // or skip index 2 (top right in 3-col)
-      const skipIndex = isMobile ? 2 : 5;
+      // Skip logic for the top-right corner to avoid clashing with nav elements
+      const skipIndex = isMobile ? 3 : 5;
       const slotIndex = i < skipIndex ? i : i + 1;
       
       const col = slotIndex % cols;
@@ -254,9 +254,9 @@ function PosterGrid({ mouse }: { mouse: React.MutableRefObject<{ x: number, y: n
         position: [
           (col - (cols - 1) / 2) * spacingX,
           (1 - row) * spacingY,
-          isMobile ? -8 : -15 
+          isMobile ? -10 : -15 
         ] as [number, number, number],
-        scale: (isMobile ? [4, 6, 1] : [8, 12, 1]) as [number, number, number]
+        scale: (isMobile ? [3.5, 5.25, 1] : [8, 12, 1]) as [number, number, number]
       };
     });
   }, [isMobile]);

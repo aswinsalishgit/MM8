@@ -40,6 +40,7 @@ export default function ActorOnboardingFlow() {
   const [uploading, setUploading] = useState(false);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [file, setFile] = useState<File | null>(null);
+  const [profilePicUrl, setProfilePicUrl] = useState<string>("NONE");
 
   // Advanced State
   const [showLanguageDropdown, setShowLanguageDropdown] = useState(false);
@@ -74,7 +75,40 @@ export default function ActorOnboardingFlow() {
   };
 
   const finalizeProfile = async () => {
-    router.push("/onboarding/complete");
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        router.push("/auth");
+        return;
+      }
+
+      const profileData = {
+        id: user.id,
+        full_name: user.user_metadata.full_name || user.user_metadata.name || "",
+        email: user.email,
+        role: 'Actor',
+        objective_preference: desire,
+        languages: languages,
+        archetypes: personalities,
+        profile_pic_url: profilePicUrl,
+        experience: experience,
+        readiness: AVAILABILITY_LABELS[availability],
+        location: locationValue,
+        acquisition_source: acquisition,
+        updated_at: new Date().toISOString(),
+      };
+
+      const { error } = await supabase
+        .from('profiles')
+        .upsert(profileData);
+
+      if (error) throw error;
+      router.push("/onboarding/complete");
+    } catch (e) {
+      console.error("MM8_FINALIZE_FAILURE:", e);
+      // Even if database save fails, we proceed to complete for UX, but log it
+      router.push("/onboarding/complete");
+    }
   };
 
   const handleLanguageToggle = (lang: string) => {
@@ -140,6 +174,7 @@ export default function ActorOnboardingFlow() {
         .upload(filePath, file);
       
       if (error) throw error;
+      setProfilePicUrl(filePath);
       nextStep();
     } catch (e) {
       console.error("MM8_UPLOAD_FAILURE:", e);

@@ -51,9 +51,9 @@ export default function Hero() {
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ duration: 1, delay: 1 }}
-          className="mt-16 text-xs font-bold uppercase tracking-[0.5em] text-zinc-700"
+          className="mt-16 text-xs font-bold uppercase tracking-[0.5em] text-zinc-700 max-w-lg"
         >
-          The decentralized agentic layer for Mollywood
+          The decentralized system for discovering, proving, and deploying next-generation talent.
         </motion.p>
       </div>
     </section>
