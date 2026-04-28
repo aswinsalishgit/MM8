@@ -520,10 +520,10 @@ export default function ActorOnboardingFlow() {
               className="flex flex-col gap-8 w-full"
             >
               <h2 className="text-5xl md:text-8xl font-black uppercase tracking-tighter leading-none">
-                OBJECTIVE<br /><span className="text-brand-red-neon">PREFERENCE</span>
+                FINAL<br /><span className="text-brand-red-neon">STEPS</span>
               </h2>
               <p className="text-zinc-500 font-bold uppercase tracking-widest text-xs max-w-2xl border-l-4 border-brand-red-dark pl-4">
-                Choose the opportunities that match your current ambition. This helps us surface roles aligned with where you want to rise next.
+                You’re one step away from entering the network. Complete access now to unlock opportunities aligned with your profile, timing, and potential.
               </p>
               
               <div className="flex flex-col gap-8">
@@ -669,14 +669,14 @@ export default function ActorOnboardingFlow() {
                   type="text" 
                   value={acquisition}
                   onChange={(e) => setAcquisition(e.target.value)}
-                  placeholder="SOURCE?" 
+                  placeholder="INSTAGRAM, FRIEND, TALENT AGENT, ETC." 
                   className="w-full bg-zinc-950/50 text-white font-black text-4xl px-8 py-10 brutal-border-red outline-none focus:border-brand-red-neon transition-all placeholder:text-zinc-800 uppercase"
                 />
               </div>
 
               <button
                 onClick={nextStep}
-                disabled={!locationValue}
+                disabled={!locationValue || !acquisition.trim()}
                 className="mt-12 w-full px-12 py-10 bg-brand-red-neon text-white font-black text-5xl md:text-7xl uppercase tracking-tighter hover:bg-white hover:text-black transition-all brutal-shadow disabled:opacity-20 cursor-pointer"
               >
                 FINALIZE PROFILE
