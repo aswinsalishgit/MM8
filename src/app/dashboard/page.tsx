@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { User, CheckCircle2, ChevronRight, Trophy, Flame, PlayCircle, Star } from "lucide-react";
+import { User, CheckCircle2, ChevronRight, Trophy, Flame, PlayCircle, Star, Settings, X, Lock, ShieldCheck } from "lucide-react";
 import BackgroundCanvas from "@/components/BackgroundCanvas";
 
 import { supabase } from "@/utils/supabase/client";
@@ -93,6 +93,78 @@ export default function AgenticDashboard() {
   const { data, loading } = useDashboardData();
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
+  const [showSettings, setShowSettings] = useState(false);
+  const [newUsername, setNewUsername] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [settingsLoading, setSettingsLoading] = useState(false);
+  const [usernameStatus, setUsernameStatus] = useState<"idle" | "checking" | "available" | "taken" | "invalid">("idle");
+
+  const validateUsername = (username: string) => {
+    return /^[a-z]+$/.test(username);
+  };
+
+  const validatePassword = (password: string) => {
+    const minLength = password.length >= 8;
+    const hasUpper = /[A-Z]/.test(password);
+    const hasNumber = /[0-9]/.test(password);
+    const hasSpecial = /[!@#$%^&*(),.?":{}|<>]/.test(password);
+    return minLength && hasUpper && hasNumber && hasSpecial;
+  };
+
+  const checkUsername = async (username: string) => {
+    if (!username) {
+      setUsernameStatus("idle");
+      return;
+    }
+    if (!validateUsername(username)) {
+      setUsernameStatus("invalid");
+      return;
+    }
+    
+    setUsernameStatus("checking");
+    try {
+      const { data: exists, error } = await supabase.rpc('check_username_exists', { p_username: username });
+      if (error) throw error;
+      setUsernameStatus(exists ? "taken" : "available");
+    } catch (err) {
+      console.error(err);
+      setUsernameStatus("idle");
+    }
+  };
+
+  const handleUpdateSettings = async () => {
+    if (newUsername && usernameStatus !== "available") {
+      alert("PLEASE CHOOSE A VALID AND AVAILABLE USERNAME.");
+      return;
+    }
+    if (newPassword && !validatePassword(newPassword)) {
+      alert("PASSWORD DOES NOT MEET SECURITY PROTOCOLS (8+ chars, Uppercase, Number, Special).");
+      return;
+    }
+
+    setSettingsLoading(true);
+    try {
+      if (newPassword) {
+        const { error } = await supabase.auth.updateUser({ password: newPassword });
+        if (error) throw error;
+      }
+
+      if (newUsername) {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+          const { error } = await supabase.from('profiles').update({ username: newUsername }).eq('id', user.id);
+          if (error) throw error;
+        }
+      }
+
+      alert("SYSTEM_CONFIG_UPDATED.");
+      setShowSettings(false);
+    } catch (err: any) {
+      alert(`ERROR: ${err.message}`);
+    } finally {
+      setSettingsLoading(false);
+    }
+  };
 
   const handleUploadClick = () => {
     const input = document.createElement("input");
@@ -198,7 +270,15 @@ export default function AgenticDashboard() {
             <span className="font-black uppercase tracking-[0.2em] text-[10px] text-zinc-500">ENCRYPTED_LINK:</span>
             <span className="font-black uppercase tracking-widest text-xs text-white tabular-nums">0x8A2...F92B</span>
           </div>
-          <p className="text-[9px] font-black text-brand-red-deep uppercase mt-3 tracking-widest">SECURE_HANDSHAKE_ESTABLISHED</p>
+          <div className="flex items-center gap-4 mt-4">
+            <p className="text-[9px] font-black text-brand-red-deep uppercase tracking-widest">SECURE_HANDSHAKE_ESTABLISHED</p>
+            <button 
+              onClick={() => setShowSettings(true)}
+              className="p-2 hover:bg-zinc-900 transition-colors cursor-pointer group"
+            >
+              <Settings className="w-4 h-4 text-zinc-500 group-hover:text-white transition-colors" />
+            </button>
+          </div>
         </motion.div>
       </header>
 
@@ -408,6 +488,98 @@ export default function AgenticDashboard() {
 
         </div>
       </div>
+
+      {/* Settings Modal */}
+      {showSettings && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-6">
+          <div 
+            className="absolute inset-0 bg-black/90 backdrop-blur-md"
+            onClick={() => setShowSettings(false)}
+          />
+          <motion.div 
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="w-full max-w-xl glass-panel brutal-border-red p-12 relative z-10"
+          >
+            <button 
+              onClick={() => setShowSettings(false)}
+              className="absolute top-8 right-8 text-zinc-500 hover:text-white cursor-pointer"
+            >
+              <X className="w-6 h-6" />
+            </button>
+
+            <h2 className="text-4xl font-black uppercase tracking-tighter mb-12">SYSTEM_CONFIG</h2>
+
+            <div className="flex flex-col gap-10">
+              <div className="flex flex-col gap-4">
+                <label className="text-[10px] font-black uppercase tracking-[0.4em] text-brand-red-neon ml-2">UPDATE_USERNAME</label>
+                <div className="relative">
+                  <input 
+                    type="text" 
+                    placeholder="lowercaseonly" 
+                    className={`w-full bg-zinc-950 text-white font-black text-xl px-8 py-5 border-2 outline-none transition-all uppercase clip-brutal-tl ${
+                      usernameStatus === "available" ? "border-green-500" : 
+                      usernameStatus === "taken" || usernameStatus === "invalid" ? "border-brand-red-neon" : "border-zinc-800"
+                    }`}
+                    value={newUsername}
+                    onChange={(e) => {
+                      const val = e.target.value.toLowerCase();
+                      setNewUsername(val);
+                      checkUsername(val);
+                    }}
+                  />
+                  {usernameStatus !== "idle" && (
+                    <div className="absolute right-4 top-1/2 -translate-y-1/2 text-[9px] font-black uppercase tracking-widest">
+                      {usernameStatus === "checking" && <span className="text-zinc-500">CHECKING...</span>}
+                      {usernameStatus === "available" && <span className="text-green-500">AVAILABLE</span>}
+                      {usernameStatus === "taken" && <span className="text-brand-red-neon">TAKEN</span>}
+                      {usernameStatus === "invalid" && <span className="text-brand-red-neon">INVALID_FORMAT</span>}
+                    </div>
+                  )}
+                </div>
+                <p className="text-[9px] text-zinc-600 font-black uppercase tracking-widest ml-2 italic">Lowercase letters only. No spaces or underscores.</p>
+              </div>
+
+              <div className="flex flex-col gap-4">
+                <label className="text-[10px] font-black uppercase tracking-[0.4em] text-brand-red-neon ml-2">UPDATE_PASSWORD</label>
+                <div className="relative">
+                  <input 
+                    type="password" 
+                    placeholder="********" 
+                    className={`w-full bg-zinc-950 text-white font-black text-xl px-8 py-5 border-2 outline-none transition-all uppercase clip-brutal-br ${
+                      newPassword && !validatePassword(newPassword) ? "border-brand-red-neon" : 
+                      newPassword && validatePassword(newPassword) ? "border-green-500" : "border-zinc-800"
+                    }`}
+                    value={newPassword}
+                    onChange={(e) => setNewPassword(e.target.value)}
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-2 ml-2">
+                  {[
+                    { label: "8+ CHARS", met: newPassword.length >= 8 },
+                    { label: "UPPERCASE", met: /[A-Z]/.test(newPassword) },
+                    { label: "NUMBER", met: /[0-9]/.test(newPassword) },
+                    { label: "SPECIAL", met: /[!@#$%^&*(),.?":{}|<>]/.test(newPassword) }
+                  ].map(rule => (
+                    <div key={rule.label} className="flex items-center gap-2">
+                      <div className={`w-1 h-1 rounded-full ${rule.met ? 'bg-green-500' : 'bg-zinc-800'}`} />
+                      <span className={`text-[8px] font-black uppercase tracking-widest ${rule.met ? 'text-green-500' : 'text-zinc-600'}`}>{rule.label}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <button 
+                onClick={handleUpdateSettings}
+                disabled={settingsLoading || (newUsername.length > 0 && usernameStatus !== "available") || (newPassword.length > 0 && !validatePassword(newPassword))}
+                className="mt-4 w-full py-6 bg-brand-red-neon text-white font-black text-2xl uppercase tracking-tighter hover:bg-white hover:text-black transition-all brutal-shadow disabled:opacity-20 cursor-pointer"
+              >
+                {settingsLoading ? "UPLOADING_CONFIG..." : "SAVE_CHANGES"}
+              </button>
+            </div>
+          </motion.div>
+        </div>
+      )}
     </main>
   );
 }

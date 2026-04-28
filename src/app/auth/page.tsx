@@ -55,10 +55,26 @@ export default function AuthPage() {
     e.preventDefault();
     setLoading(true);
     try {
+      let identifier = email.toLowerCase();
+      
+      // If it's not an email, try to resolve as username
+      if (!identifier.includes("@")) {
+        const { data: resolvedEmail, error: rpcError } = await supabase.rpc('get_email_from_username', { 
+          p_username: identifier 
+        });
+
+        if (rpcError || !resolvedEmail) {
+          alert("USERNAME_NOT_FOUND. INITIALIZE WITH EMAIL.");
+          setMode("email");
+          return;
+        }
+        identifier = resolvedEmail;
+      }
+
       if (isNewUser) {
         // Sign up logic
         const { data, error } = await supabase.auth.signUp({
-          email: email.toLowerCase(),
+          email: identifier,
           password,
         });
         if (error) throw error;
@@ -67,7 +83,7 @@ export default function AuthPage() {
       } else {
         // Sign in logic
         const { data, error } = await supabase.auth.signInWithPassword({
-          email: email.toLowerCase(),
+          email: identifier,
           password,
         });
         if (error) throw error;
@@ -193,12 +209,15 @@ export default function AuthPage() {
           {mode === "password" && (
             <form onSubmit={handleAuth} className="flex flex-col gap-8">
               <div className="flex flex-col gap-4">
-                <label className="text-[10px] font-black uppercase tracking-[0.4em] text-brand-red-neon ml-2">TERMINAL_INPUT: EMAIL</label>
+                <label className="text-[10px] font-black uppercase tracking-[0.4em] text-brand-red-neon ml-2">TERMINAL_INPUT: EMAIL / USERNAME</label>
                 <input 
-                  type="email" 
-                  readOnly
-                  className="w-full bg-zinc-900 text-zinc-500 font-black text-2xl px-8 py-6 border-2 border-zinc-800 outline-none uppercase clip-brutal-tl cursor-not-allowed"
+                  type="text" 
+                  placeholder="USER_IDENT / EMAIL" 
+                  className="w-full bg-zinc-950 text-white font-black text-2xl px-8 py-6 border-2 border-zinc-800 outline-none focus:border-brand-red-neon transition-all placeholder:text-zinc-800 uppercase clip-brutal-tl"
                   value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  readOnly={!isNewUser && mode === "password" && email.includes("@") && mode !== "password"} // Only readonly if coming from email check
+                  required
                 />
               </div>
               <div className="flex flex-col gap-4">
