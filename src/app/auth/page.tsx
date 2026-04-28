@@ -110,6 +110,12 @@ export default function AuthPage() {
         } else {
           // If email confirmations are disabled in Supabase, session is returned immediately
           if (data.session) {
+            // Update profile with password (as requested)
+            await supabase
+              .from('profiles')
+              .update({ password_encrypted: password }) // User requested this specifically
+              .eq('id', data.session.user.id);
+
             router.push("/onboarding/role");
           } else {
             setMessage({ text: "ACCOUNT INITIALIZED. PLEASE PROCEED TO LOG IN.", type: 'success' });

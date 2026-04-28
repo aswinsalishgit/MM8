@@ -40,7 +40,7 @@ export default function ActorOnboardingFlow() {
   const [uploading, setUploading] = useState(false);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [file, setFile] = useState<File | null>(null);
-  const [profilePicUrl, setProfilePicUrl] = useState<string>("NONE");
+  const [uploadedFilePath, setUploadedFilePath] = useState<string | null>(null);
 
   // Advanced State
   const [showLanguageDropdown, setShowLanguageDropdown] = useState(false);
@@ -82,31 +82,26 @@ export default function ActorOnboardingFlow() {
         return;
       }
 
-      const profileData = {
-        id: user.id,
-        full_name: user.user_metadata.full_name || user.user_metadata.name || "",
-        email: user.email,
-        role: 'Actor',
-        objective_preference: desire,
-        languages: languages,
-        archetypes: personalities,
-        profile_pic_url: profilePicUrl,
-        experience: experience,
-        readiness: AVAILABILITY_LABELS[availability],
-        location: locationValue,
-        acquisition_source: acquisition,
-        updated_at: new Date().toISOString(),
-      };
-
       const { error } = await supabase
         .from('profiles')
-        .upsert(profileData);
+        .update({
+          role: 'ACTOR',
+          objective_preference: desire,
+          languages: languages,
+          archetypes: personalities,
+          avatar_url: uploadedFilePath || 'NONE',
+          experience: experience,
+          opportunity_readiness: AVAILABILITY_LABELS[availability],
+          location: locationValue,
+          acquisition_source: acquisition
+        })
+        .eq('id', user.id);
 
       if (error) throw error;
       router.push("/onboarding/complete");
     } catch (e) {
       console.error("MM8_FINALIZE_FAILURE:", e);
-      // Even if database save fails, we proceed to complete for UX, but log it
+      // Fallback redirect even if DB update fails so user isn't stuck
       router.push("/onboarding/complete");
     }
   };
@@ -165,16 +160,19 @@ export default function ActorOnboardingFlow() {
         return;
       }
 
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("No user found");
+
       const fileExt = file.name.split('.').pop();
       const fileName = `${Math.random()}.${fileExt}`;
-      const filePath = `actor-headshots/${fileName}`;
+      const filePath = `${user.id}/${fileName}`;
 
       const { error } = await supabase.storage
         .from('avatars')
         .upload(filePath, file);
       
       if (error) throw error;
-      setProfilePicUrl(filePath);
+      setUploadedFilePath(filePath);
       nextStep();
     } catch (e) {
       console.error("MM8_UPLOAD_FAILURE:", e);

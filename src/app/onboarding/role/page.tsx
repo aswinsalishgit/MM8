@@ -26,7 +26,7 @@ export default function RoleSelectionPage() {
     if (user) {
       await supabase
         .from('profiles')
-        .update({ location: id.toUpperCase() })
+        .update({ role: id.toUpperCase() })
         .eq('id', user.id);
     }
 
