@@ -46,7 +46,7 @@ export async function compressVideo(file: File, onProgress?: (p: number) => void
   ]);
 
   const data = await ffmpeg.readFile(outputName);
-  return new Blob([(data as Uint8Array).buffer], { type: 'video/mp4' });
+  return new Blob([data as any], { type: 'video/mp4' });
 }
 
 export function validateAuditionVideo(file: File): Promise<{ valid: boolean, error?: string }> {
