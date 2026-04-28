@@ -14,6 +14,7 @@ export default function AuthPage() {
   const [password, setPassword] = useState("");
   const [isNewUser, setIsNewUser] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [message, setMessage] = useState<{ text: string, type: 'error' | 'success' | 'info' } | null>(null);
 
   const handleOAuthLogin = async (provider: 'google' | 'apple') => {
     try {
@@ -33,18 +34,36 @@ export default function AuthPage() {
     e.preventDefault();
     setLoading(true);
     try {
-      // Use the RPC function we created to check if user exists
-      const { data: exists, error } = await supabase.rpc('check_user_exists', { 
-        email_to_check: email.toLowerCase() 
+      setMessage(null);
+      const cleanEmail = email.toLowerCase();
+      // Check what identities this user has
+      const { data: identities, error } = await supabase.rpc('get_user_identities', { 
+        email_to_check: cleanEmail 
       });
 
       if (error) throw error;
 
-      setIsNewUser(!exists);
+      if (!identities || identities.length === 0) {
+        // Truly new user
+        setIsNewUser(true);
+      } else {
+        // User exists. Check if they have an email/password identity
+        const hasEmailProvider = identities.some((id: any) => id.provider === 'email');
+        const hasGoogleProvider = identities.some((id: any) => id.provider === 'google');
+
+        if (!hasEmailProvider && hasGoogleProvider) {
+          // Exists via Google but no password set
+          setMessage({ text: "GOOGLE ACCOUNT DETECTED. INITIALIZING SECURE PASSWORD SETUP.", type: 'info' });
+          setIsNewUser(true);
+        } else {
+          // Has email provider (password exists)
+          setIsNewUser(false);
+        }
+      }
       setMode("password");
-    } catch (error) {
+    } catch (error: any) {
       console.error("User check error:", error);
-      // Fallback: assume sign-in if check fails
+      setMessage({ text: error.message || "USER CHECK FAILED", type: 'error' });
       setMode("password");
     } finally {
       setLoading(false);
@@ -64,7 +83,7 @@ export default function AuthPage() {
         });
 
         if (rpcError || !resolvedEmail) {
-          alert("USERNAME_NOT_FOUND. INITIALIZE WITH EMAIL.");
+          setMessage({ text: "USERNAME NOT FOUND. INITIALIZE WITH EMAIL.", type: 'error' });
           setMode("email");
           return;
         }
@@ -78,8 +97,8 @@ export default function AuthPage() {
           password,
         });
         if (error) throw error;
-        alert("Verification email dispatched. Check your terminal.");
-        router.push("/onboarding/role");
+        setMessage({ text: "VERIFICATION LINK DISPATCHED. CHECK INBOX.", type: 'success' });
+        // Optional: transition or show next steps
       } else {
         // Sign in logic
         const { data, error } = await supabase.auth.signInWithPassword({
@@ -104,7 +123,11 @@ export default function AuthPage() {
       }
     } catch (error: any) {
       console.error("Auth error:", error);
-      alert(error.message || "Authentication failed");
+      if (error.message === "Invalid login credentials") {
+        setMessage({ text: "ACCESS DENIED: INVALID CREDENTIALS. CHECK PASSWORD.", type: 'error' });
+      } else {
+        setMessage({ text: error.message || "AUTHENTICATION FAILED", type: 'error' });
+      }
     } finally {
       setLoading(false);
     }
@@ -142,6 +165,20 @@ export default function AuthPage() {
           {/* Decorative Corner */}
           <div className="absolute top-0 right-0 w-16 h-16 bg-brand-red-neon/10 clip-brutal-tr" />
           
+          {message && (
+            <motion.div 
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: 'auto' }}
+              className={`mb-8 p-4 text-[10px] font-black uppercase tracking-widest border-l-4 ${
+                message.type === 'error' ? 'bg-red-500/10 border-brand-red-neon text-brand-red-neon' : 
+                message.type === 'success' ? 'bg-green-500/10 border-green-500 text-green-500' :
+                'bg-blue-500/10 border-blue-500 text-blue-500'
+              }`}
+            >
+              {message.text}
+            </motion.div>
+          )}
+
           {mode === "options" && (
             <div className="flex flex-col gap-6">
               <button 

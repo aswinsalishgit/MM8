@@ -98,6 +98,7 @@ export default function AgenticDashboard() {
   const [newPassword, setNewPassword] = useState("");
   const [settingsLoading, setSettingsLoading] = useState(false);
   const [usernameStatus, setUsernameStatus] = useState<"idle" | "checking" | "available" | "taken" | "invalid">("idle");
+  const [message, setMessage] = useState<{ text: string, type: 'error' | 'success' | 'info' } | null>(null);
 
   const validateUsername = (username: string) => {
     return /^[a-z]+$/.test(username);
@@ -133,12 +134,13 @@ export default function AgenticDashboard() {
   };
 
   const handleUpdateSettings = async () => {
+    setMessage(null);
     if (newUsername && usernameStatus !== "available") {
-      alert("PLEASE CHOOSE A VALID AND AVAILABLE USERNAME.");
+      setMessage({ text: "CHOOSE A VALID AND AVAILABLE USERNAME.", type: 'error' });
       return;
     }
     if (newPassword && !validatePassword(newPassword)) {
-      alert("PASSWORD DOES NOT MEET SECURITY PROTOCOLS (8+ chars, Uppercase, Number, Special).");
+      setMessage({ text: "PASSWORD PROTOCOL VIOLATION.", type: 'error' });
       return;
     }
 
@@ -157,10 +159,11 @@ export default function AgenticDashboard() {
         }
       }
 
-      alert("SYSTEM_CONFIG_UPDATED.");
-      setShowSettings(false);
+
+      setMessage({ text: "SYSTEM CONFIG UPDATED.", type: 'success' });
+      setTimeout(() => setShowSettings(false), 2000);
     } catch (err: any) {
-      alert(`ERROR: ${err.message}`);
+      setMessage({ text: `CRITICAL ERROR: ${err.message}`, type: 'error' });
     } finally {
       setSettingsLoading(false);
     }
@@ -215,10 +218,10 @@ export default function AgenticDashboard() {
           xhr.send(file);
         });
 
-        alert("AUDITION SECURELY UPLOADED TO DRIVE.");
-      } catch (error) {
+        setMessage({ text: "AUDITION SECURELY UPLOADED TO DRIVE.", type: 'success' });
+      } catch (error: any) {
         console.error("Upload error:", error);
-        alert("UPLOAD FAILED.");
+        setMessage({ text: `UPLOAD FAILED: ${error.message}`, type: 'error' });
       } finally {
         setUploading(false);
         setUploadProgress(0);
@@ -239,6 +242,27 @@ export default function AgenticDashboard() {
     <main className="min-h-screen bg-black text-white p-4 md:p-12 overflow-x-hidden relative selection:bg-brand-red-neon selection:text-white">
       <BackgroundCanvas />
       
+      {/* Status Bar */}
+      {message && (
+        <motion.div 
+          initial={{ y: -50, opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+          className={`fixed top-0 left-0 w-full z-[1000] p-4 text-center font-black uppercase tracking-[0.4em] text-[10px] border-b ${
+            message.type === 'error' ? 'bg-red-500/10 border-brand-red-neon text-brand-red-neon' : 
+            message.type === 'success' ? 'bg-green-500/10 border-green-500 text-green-500' :
+            'bg-brand-red-neon/10 border-brand-red-neon text-white'
+          }`}
+        >
+          {message.text}
+          <button 
+            onClick={() => setMessage(null)}
+            className="ml-8 text-zinc-500 hover:text-white"
+          >
+            [ DISMISS ]
+          </button>
+        </motion.div>
+      )}
+
       {/* Header HUD */}
       <header className="flex flex-col md:flex-row justify-between items-start md:items-end border-b border-zinc-900 pb-12 mb-16 relative z-10">
         <motion.div
@@ -508,11 +532,19 @@ export default function AgenticDashboard() {
               <X className="w-6 h-6" />
             </button>
 
-            <h2 className="text-4xl font-black uppercase tracking-tighter mb-12">SYSTEM_CONFIG</h2>
+            <h2 className="text-4xl font-black uppercase tracking-tighter mb-8">SYSTEM CONFIG</h2>
+
+            {message && message.type !== 'success' && (
+              <div className={`mb-8 p-4 text-[9px] font-black uppercase tracking-widest border-l-2 ${
+                message.type === 'error' ? 'bg-red-500/10 border-brand-red-neon text-brand-red-neon' : 'bg-brand-red-neon/10 border-brand-red-neon text-white'
+              }`}>
+                {message.text}
+              </div>
+            )}
 
             <div className="flex flex-col gap-10">
               <div className="flex flex-col gap-4">
-                <label className="text-[10px] font-black uppercase tracking-[0.4em] text-brand-red-neon ml-2">UPDATE_USERNAME</label>
+                <label className="text-[10px] font-black uppercase tracking-[0.4em] text-brand-red-neon ml-2">UPDATE USERNAME</label>
                 <div className="relative">
                   <input 
                     type="text" 
@@ -541,7 +573,7 @@ export default function AgenticDashboard() {
               </div>
 
               <div className="flex flex-col gap-4">
-                <label className="text-[10px] font-black uppercase tracking-[0.4em] text-brand-red-neon ml-2">UPDATE_PASSWORD</label>
+                <label className="text-[10px] font-black uppercase tracking-[0.4em] text-brand-red-neon ml-2">UPDATE PASSWORD</label>
                 <div className="relative">
                   <input 
                     type="password" 
@@ -574,7 +606,7 @@ export default function AgenticDashboard() {
                 disabled={settingsLoading || (newUsername.length > 0 && usernameStatus !== "available") || (newPassword.length > 0 && !validatePassword(newPassword))}
                 className="mt-4 w-full py-6 bg-brand-red-neon text-white font-black text-2xl uppercase tracking-tighter hover:bg-white hover:text-black transition-all brutal-shadow disabled:opacity-20 cursor-pointer"
               >
-                {settingsLoading ? "UPLOADING_CONFIG..." : "SAVE_CHANGES"}
+                {settingsLoading ? "UPLOADING CONFIG..." : "SAVE CHANGES"}
               </button>
             </div>
           </motion.div>
