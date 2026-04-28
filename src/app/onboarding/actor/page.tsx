@@ -9,6 +9,7 @@ import BackgroundCanvas from "@/components/BackgroundCanvas";
 import ISO6391 from "iso-639-1";
 import Cropper, { Area } from "react-easy-crop";
 import { Country, State, City } from "country-state-city";
+import getCroppedImg from "@/utils/cropImage";
 
 const STEPS = [
   "WELCOME",
@@ -145,6 +146,22 @@ export default function ActorOnboardingFlow() {
       nextStep();
     } finally {
       setUploading(false);
+    }
+  };
+
+  const handleConfirmCrop = async () => {
+    if (!previewUrl || !croppedAreaPixels) return;
+    try {
+      const croppedBlob = await getCroppedImg(previewUrl, croppedAreaPixels);
+      if (croppedBlob) {
+        const croppedFile = new File([croppedBlob], file?.name || 'profile.jpg', { type: 'image/jpeg' });
+        setFile(croppedFile);
+        setPreviewUrl(URL.createObjectURL(croppedBlob));
+        setIsCropping(false);
+      }
+    } catch (e) {
+      console.error("MM8_CROP_ERROR:", e);
+      setIsCropping(false);
     }
   };
 
@@ -391,14 +408,17 @@ export default function ActorOnboardingFlow() {
                       image={previewUrl}
                       crop={crop}
                       zoom={zoom}
-                      aspect={1 / 1}
+                      aspect={1}
+                      cropShape="round"
+                      showGrid={false}
                       onCropChange={setCrop}
                       onCropComplete={onCropComplete}
                       onZoomChange={setZoom}
                     />
+                    
                     <button 
-                      onClick={() => setIsCropping(false)}
-                      className="absolute bottom-6 right-6 z-10 px-6 py-3 bg-brand-red-neon text-white font-black uppercase text-xs tracking-widest cursor-pointer"
+                      onClick={handleConfirmCrop}
+                      className="absolute bottom-6 left-1/2 -translate-x-1/2 z-30 px-10 py-4 bg-brand-red-neon text-white font-black uppercase text-sm tracking-[0.2em] brutal-shadow hover:bg-white hover:text-black transition-all cursor-pointer"
                     >
                       CONFIRM CROP
                     </button>

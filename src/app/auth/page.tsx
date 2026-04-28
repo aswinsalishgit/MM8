@@ -123,7 +123,26 @@ export default function AuthPage() {
           email: identifier,
           password,
         });
-        if (error) throw error;
+
+        if (error) {
+          if (error.message === "Invalid login credentials") {
+            // Check if user actually exists
+            const cleanEmail = identifier.toLowerCase();
+            const { data: identities } = await supabase.rpc('get_user_identities', { 
+              email_to_check: cleanEmail 
+            });
+
+            if (!identities || identities.length === 0) {
+              setMessage({ text: "ACCOUNT NOT FOUND. ENTER A PASSWORD TO INITIALIZE.", type: 'info' });
+              setIsNewUser(true);
+              return;
+            } else {
+              setMessage({ text: "ACCESS DENIED: INVALID CREDENTIALS. CHECK PASSWORD.", type: 'error' });
+            }
+          } else {
+            throw error;
+          }
+        }
 
         if (data.user) {
           const { data: profile } = await supabase
@@ -222,7 +241,7 @@ export default function AuthPage() {
               </div>
 
               <button 
-                onClick={() => setMode("email")}
+                onClick={() => setMode("password")}
                 className="w-full group relative px-8 py-6 bg-transparent text-zinc-400 font-black text-2xl uppercase tracking-tighter border-2 border-zinc-800 hover:text-white hover:border-white transition-all duration-500 flex items-center justify-center gap-4 clip-brutal-bl cursor-pointer"
               >
                 <svg className="w-7 h-7" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
