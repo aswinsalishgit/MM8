@@ -15,29 +15,33 @@ const ROLES = [
 export default function RoleSelectionPage() {
   const router = useRouter();
 
-  const handleSelect = async (id: string) => {
+  const handleSelect = (id: string) => {
     if (id === "director") {
       alert("Director onboarding coming soon.");
       return;
     }
 
-    // Update role in DB
-    const { data: { user } } = await supabase.auth.getUser();
-    if (user) {
-      await supabase
-        .from('profiles')
-        .update({ role: id.toUpperCase() })
-        .eq('id', user.id);
-      
-      // Ensure Google Drive folder exists
-      try {
-        await ensureUserFolder();
-      } catch (e) {
-        console.error("MM8_DRIVE_INIT_FAILURE:", e);
-      }
-    }
-
+    // 1. Instant Navigation
     router.push(`/onboarding/${id}`);
+
+    // 2. Perform background tasks without blocking UI
+    (async () => {
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+          // Update role in DB
+          await supabase
+            .from('profiles')
+            .update({ role: id.toUpperCase() })
+            .eq('id', user.id);
+          
+          // Initialize Google Drive folder in background
+          ensureUserFolder().catch(e => console.error("MM8_DRIVE_BG_INIT_FAILURE:", e));
+        }
+      } catch (err) {
+        console.error("MM8_BG_SYNC_ERROR:", err);
+      }
+    })();
   };
 
   return (
