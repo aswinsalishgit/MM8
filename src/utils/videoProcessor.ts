@@ -46,7 +46,7 @@ export async function compressVideo(file: File, onProgress?: (p: number) => void
   ]);
 
   const data = await ffmpeg.readFile(outputName);
-  return new Blob([data], { type: 'video/mp4' });
+  return new Blob([(data as Uint8Array).buffer], { type: 'video/mp4' });
 }
 
 export function validateAuditionVideo(file: File): Promise<{ valid: boolean, error?: string }> {
@@ -56,13 +56,10 @@ export function validateAuditionVideo(file: File): Promise<{ valid: boolean, err
     video.onloadedmetadata = () => {
       window.URL.revokeObjectURL(video.src);
       
-      const duration = video.duration;
-      const isPortrait = video.videoHeight > video.videoWidth;
+      const duration = Math.round(video.duration);
 
       if (duration > 60) {
-        resolve({ valid: false, error: 'Maximum audition length is 60 seconds.' });
-      } else if (!isPortrait) {
-        resolve({ valid: false, error: 'Please record your audition in portrait mode.' });
+        resolve({ valid: false, error: `Maximum length is 60s. Your video is ${duration}s.` });
       } else {
         resolve({ valid: true });
       }
