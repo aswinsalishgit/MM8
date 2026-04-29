@@ -16,11 +16,6 @@ export default function Hero() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8, delay: 0.2 }}
         >
-          <div className="mb-6 px-4 py-1 border border-brand-red-neon/30 bg-brand-red-neon/5 inline-block">
-            <span className="text-[10px] md:text-xs font-black uppercase tracking-[0.3em] text-brand-red-neon">
-              App Purpose: A secure talent discovery platform using Google Drive for portfolio management.
-            </span>
-          </div>
           <h1 className="text-5xl sm:text-6xl md:text-[7rem] lg:text-[8.5rem] font-black leading-[0.9] md:leading-[0.85] tracking-tighter text-white uppercase mb-6">
             TALENT IS<br />
             <span className="text-brand-red-neon drop-shadow-[0_0_20px_rgba(255,49,49,0.4)]">BROKEN</span>
@@ -58,7 +53,7 @@ export default function Hero() {
           transition={{ duration: 1, delay: 1 }}
           className="mt-16 text-xs font-bold uppercase tracking-[0.5em] text-zinc-700 max-w-lg"
         >
-          The decentralized system for discovering, proving, and deploying next-generation talent.
+          A decentralized platform that helps artists showcase their potential and get intelligently matched to real casting opportunities.
         </motion.p>
       </div>
     </section>
