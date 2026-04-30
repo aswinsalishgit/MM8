@@ -14,6 +14,7 @@ const ROLES = [
 
 export default function RoleSelectionPage() {
   const router = useRouter();
+  const [processingId, setProcessingId] = useState<string | null>(null);
 
   const handleSelect = (id: string) => {
     if (id === "director") {
@@ -21,7 +22,8 @@ export default function RoleSelectionPage() {
       return;
     }
 
-    // Move everything to the next page to ensure 0ms lag
+    setProcessingId(id);
+    // Transition happens instantly, the animation shows the "processing" state during the navigation lag
     router.push(`/onboarding/${id}`);
   };
 
@@ -80,9 +82,44 @@ export default function RoleSelectionPage() {
               </p>
             </div>
             
-            {/* Animated Hover Background */}
-            <div className="absolute inset-0 bg-gradient-to-t from-brand-red-neon/20 to-transparent translate-y-full group-hover:translate-y-0 transition-transform duration-700 ease-[0.22,1,0.36,1] z-0" />
-            
+            {/* Processing Overlay */}
+            <AnimatePresence>
+              {processingId === role.id && (
+                <motion.div 
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  className="absolute inset-0 z-50 bg-brand-red-neon/90 flex flex-col items-center justify-center p-8 text-center backdrop-blur-md"
+                >
+                  <motion.div
+                    animate={{ 
+                      scale: [1, 1.1, 1],
+                      opacity: [1, 0.7, 1]
+                    }}
+                    transition={{ duration: 1, repeat: Infinity }}
+                    className="text-white font-black text-4xl md:text-6xl uppercase tracking-tighter leading-tight"
+                  >
+                    INITIALIZING<br />SYSTEM
+                  </motion.div>
+                  <div className="mt-8 w-full max-w-[200px] h-1 bg-white/20 relative overflow-hidden">
+                    <motion.div 
+                      className="absolute inset-0 bg-white"
+                      animate={{ x: ["-100%", "100%"] }}
+                      transition={{ duration: 1.5, repeat: Infinity, ease: "linear" }}
+                    />
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+
+            {/* Scanner Line Animation */}
+            {processingId === role.id && (
+              <motion.div 
+                className="absolute inset-x-0 h-[2px] bg-white z-[60] shadow-[0_0_15px_#fff]"
+                animate={{ top: ["0%", "100%", "0%"] }}
+                transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
+              />
+            )}
+
             <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-0 group-hover:opacity-10 transition-opacity pointer-events-none" />
           </motion.button>
         ))}
