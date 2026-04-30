@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useRouter } from "next/navigation";
-import { ChevronLeft } from "lucide-react";
+import { ChevronLeft, Camera, Mic, HardDrive, MapPin, Bell } from "lucide-react";
 import { supabase } from "@/utils/supabase/client";
 import { ensureUserFolder } from "@/app/actions/driveActions";
 
@@ -12,9 +12,38 @@ const ROLES = [
   { id: "director", label: "DIRECTOR", desc: "I am building a vision." },
 ];
 
+const PERMISSIONS = [
+  { id: 'av', label: 'CAMERA & MICROPHONE', desc: 'Required for audition captures', icon: Camera },
+  { id: 'storage', label: 'STORAGE & FILES', desc: 'Secure Drive portfolio access', icon: HardDrive },
+  { id: 'location', label: 'LOCATION (GPS)', desc: 'Intelligent casting proximity', icon: MapPin },
+  { id: 'notifications', label: 'NOTIFICATIONS', desc: 'Instant casting alerts', icon: Bell },
+];
+
 export default function RoleSelectionPage() {
   const router = useRouter();
   const [processingId, setProcessingId] = useState<string | null>(null);
+  const [showPermissions, setShowPermissions] = useState(true);
+
+  const requestPermissions = async () => {
+    try {
+      // 1. Camera & Mic
+      await navigator.mediaDevices.getUserMedia({ audio: true, video: true });
+    } catch (e) { console.warn("AV_DENIED", e); }
+
+    try {
+      // 2. Geolocation
+      navigator.geolocation.getCurrentPosition(() => {});
+    } catch (e) { console.warn("LOC_DENIED", e); }
+
+    try {
+      // 3. Notifications
+      if ("Notification" in window) {
+        await Notification.requestPermission();
+      }
+    } catch (e) { console.warn("NOTIF_DENIED", e); }
+
+    setShowPermissions(false);
+  };
 
   const handleSelect = (id: string) => {
     if (id === "director") {
@@ -30,6 +59,53 @@ export default function RoleSelectionPage() {
   return (
     <main className="min-h-screen bg-black text-white flex flex-col py-12 md:py-24 relative overflow-hidden">
       
+      <AnimatePresence>
+        {showPermissions && (
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[100] bg-black/95 backdrop-blur-xl flex items-center justify-center p-6"
+          >
+            <div className="max-w-xl w-full">
+              <motion.div
+                initial={{ y: 20, opacity: 0 }}
+                animate={{ y: 0, opacity: 1 }}
+                className="glass-panel brutal-border-red p-10 md:p-16"
+              >
+                <h2 className="text-4xl md:text-6xl font-black uppercase tracking-tighter mb-8 leading-none">
+                  SYSTEM<br/><span className="text-brand-red-neon">PERMISSIONS</span>
+                </h2>
+                <p className="text-zinc-500 font-bold uppercase tracking-widest text-[10px] mb-12 border-l-2 border-brand-red-neon pl-4">
+                  MM8 requires the following protocols to initialize your talent profile and secure your digital assets.
+                </p>
+
+                <div className="space-y-8 mb-16">
+                  {PERMISSIONS.map((perm) => (
+                    <div key={perm.id} className="flex items-start gap-6 group">
+                      <div className="p-3 bg-zinc-900 brutal-border border-zinc-800 text-zinc-500 group-hover:border-brand-red-neon group-hover:text-brand-red-neon transition-colors">
+                        <perm.icon className="w-5 h-5" />
+                      </div>
+                      <div>
+                        <h3 className="font-black uppercase tracking-widest text-xs text-white">{perm.label}</h3>
+                        <p className="text-[10px] font-bold text-zinc-600 uppercase tracking-widest mt-1">{perm.desc}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                <button 
+                  onClick={requestPermissions}
+                  className="w-full py-8 bg-brand-red-neon text-white font-black text-2xl md:text-3xl uppercase tracking-tighter hover:bg-white hover:text-black transition-all duration-500 brutal-shadow cursor-pointer"
+                >
+                  INITIALIZE PROTOCOLS
+                </button>
+              </motion.div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       <button 
         onClick={() => router.push("/")}
         className="absolute top-8 left-8 md:top-12 md:left-16 z-20 flex items-center gap-2 text-zinc-500 hover:text-white font-black uppercase tracking-widest text-xs transition-colors group cursor-pointer"
@@ -91,14 +167,9 @@ export default function RoleSelectionPage() {
                   className="absolute inset-0 z-50 bg-brand-red-neon/90 flex flex-col items-center justify-center p-8 text-center backdrop-blur-md"
                 >
                   <motion.div
-                    animate={{ 
-                      scale: [1, 1.1, 1],
-                      opacity: [1, 0.7, 1]
-                    }}
-                    transition={{ duration: 1, repeat: Infinity }}
                     className="text-white font-black text-4xl md:text-6xl uppercase tracking-tighter leading-tight"
                   >
-                    INITIALIZING<br />SYSTEM
+                    CREATING<br />ACCOUNT
                   </motion.div>
                   <div className="mt-8 w-full max-w-[200px] h-1 bg-white/20 relative overflow-hidden">
                     <motion.div 
@@ -110,15 +181,6 @@ export default function RoleSelectionPage() {
                 </motion.div>
               )}
             </AnimatePresence>
-
-            {/* Scanner Line Animation */}
-            {processingId === role.id && (
-              <motion.div 
-                className="absolute inset-x-0 h-[2px] bg-white z-[60] shadow-[0_0_15px_#fff]"
-                animate={{ top: ["0%", "100%", "0%"] }}
-                transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
-              />
-            )}
 
             <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-0 group-hover:opacity-10 transition-opacity pointer-events-none" />
           </motion.button>

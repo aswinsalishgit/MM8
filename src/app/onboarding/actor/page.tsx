@@ -3,7 +3,7 @@
 import { useState, useCallback, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useRouter } from "next/navigation";
-import { ChevronLeft } from "lucide-react";
+import { ChevronLeft, CheckCircle2 } from "lucide-react";
 import { supabase } from "@/utils/supabase/client";
 import ISO6391 from "iso-639-1";
 import Cropper, { Area } from "react-easy-crop";
@@ -21,10 +21,20 @@ const STEPS = [
   "EXPERIENCE",
   "AVAILABILITY",
   "LOCATION",
+  "COMPLETE",
 ];
 
 const LANGUAGES = ["MALAYALAM", "TAMIL", "HINDI", "TELUGU", "ENGLISH", "KANNADA"];
-const PERSONALITIES = ["INTENSE", "FUNNY", "VILLAIN ENERGY", "ROMANTIC", "EVERYDAY PRO", "ACTION DRIVEN"];
+const PERSONALITIES = [
+  { id: "INTENSE", label: "INTENSE", bg: "https://images.unsplash.com/photo-1536440136628-849c177e76a1?q=80&w=1000&auto=format&fit=crop" },
+  { id: "FUNNY", label: "FUNNY", bg: "https://images.unsplash.com/photo-1517604931442-7e0c8ed2963c?q=80&w=1000&auto=format&fit=crop" },
+  { id: "VILLAIN", label: "VILLAIN ENERGY", bg: "https://images.unsplash.com/photo-1509248961158-e54f6934749c?q=80&w=1000&auto=format&fit=crop" },
+  { id: "ROMANTIC", label: "ROMANTIC", bg: "https://images.unsplash.com/photo-1518133910546-b6c2fb7d79e3?q=80&w=1000&auto=format&fit=crop" },
+  { id: "VERSATILE", label: "VERSATILE", bg: "https://images.unsplash.com/photo-1485846234645-a62644f84728?q=80&w=1000&auto=format&fit=crop" },
+  { id: "ACTION", label: "ACTION", bg: "https://images.unsplash.com/photo-1533928298208-27ff66555d8d?q=80&w=1000&auto=format&fit=crop" },
+  { id: "INNOCENT", label: "INNOCENT", bg: "https://images.unsplash.com/photo-1508214751196-bcfd4ca60f91?q=80&w=1000&auto=format&fit=crop" },
+  { id: "EMOTIONAL", label: "EMOTIONAL", bg: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?q=80&w=1000&auto=format&fit=crop" },
+];
 const AVAILABILITY_LABELS = ["IMMEDIATELY", "THIS MONTH", "IN 3 MONTHS"];
 
 export default function ActorOnboardingFlow() {
@@ -38,6 +48,8 @@ export default function ActorOnboardingFlow() {
   const [experience, setExperience] = useState<string | null>(null);
   const [availability, setAvailability] = useState(0); // 0, 1, 2
   const [acquisition, setAcquisition] = useState("");
+  const [otherObjective, setOtherObjective] = useState("");
+  const [showOtherInput, setShowOtherInput] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [file, setFile] = useState<File | null>(null);
@@ -61,6 +73,22 @@ export default function ActorOnboardingFlow() {
   const [showStateDropdown, setShowStateDropdown] = useState(false);
   const [showCityDropdown, setShowCityDropdown] = useState(false);
 
+  // Profile Strength Calculation
+  const totalFields = 27; // 7 from onboarding + 20 future fields
+  const fieldsCompleted = useMemo(() => {
+    let count = 0;
+    if (desire) count++;
+    if (languages.length > 0) count++;
+    if (personalities.length > 0) count++;
+    if (previewUrl) count++;
+    if (experience) count++;
+    if (availability !== null) count++;
+    if (locationValue) count++;
+    return count;
+  }, [desire, languages, personalities, previewUrl, experience, availability, locationValue]);
+
+  const profileStrength = Math.round((fieldsCompleted / totalFields) * 100);
+
   // Background Initialization: Ensure role and Drive folder exist without blocking UI
   useEffect(() => {
     const initializeUser = async () => {
@@ -81,6 +109,67 @@ export default function ActorOnboardingFlow() {
       }
     };
     initializeUser();
+
+    // 3. Geolocation Detection
+    const detectLocation = async () => {
+      if ("geolocation" in navigator) {
+        navigator.geolocation.getCurrentPosition(async (position) => {
+          try {
+            const { latitude, longitude } = position.coords;
+            // Add User-Agent as required by Nominatim terms
+            const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}&zoom=10&addressdetails=1`, {
+              headers: { 'User-Agent': 'MM8-Talent-Platform' }
+            });
+            const data = await res.json();
+            
+            if (data.address) {
+              const detectedCity = data.address.city || data.address.town || data.address.village || "";
+              const detectedState = data.address.state || "";
+              const detectedCountry = data.address.country || "";
+
+              // 1. Match Country
+              const matchedCountry = Country.getAllCountries().find(c => 
+                c.name.toLowerCase() === detectedCountry.toLowerCase()
+              );
+
+              if (matchedCountry) {
+                setCountryCode(matchedCountry.isoCode);
+
+                // 2. Match State
+                const states = State.getStatesOfCountry(matchedCountry.isoCode);
+                const matchedState = states.find(s => 
+                  s.name.toLowerCase().includes(detectedState.toLowerCase()) || 
+                  detectedState.toLowerCase().includes(s.name.toLowerCase())
+                );
+
+                if (matchedState) {
+                  setStateCode(matchedState.isoCode);
+
+                  // 3. Match City
+                  const cities = City.getCitiesOfState(matchedCountry.isoCode, matchedState.isoCode);
+                  const matchedCity = cities.find(c => 
+                    c.name.toLowerCase().includes(detectedCity.toLowerCase()) ||
+                    detectedCity.toLowerCase().includes(c.name.toLowerCase())
+                  );
+
+                  if (matchedCity) {
+                    setCityCode(matchedCity.name);
+                    const locStr = [matchedCity.name, matchedState.name, matchedCountry.name].join(", ").toUpperCase();
+                    setLocationValue(locStr);
+                  } else {
+                    // Fallback to detected city if no exact match in DB
+                    setCityCode(detectedCity);
+                    const locStr = [detectedCity, matchedState.name, matchedCountry.name].join(", ").toUpperCase();
+                    setLocationValue(locStr);
+                  }
+                }
+              }
+            }
+          } catch (e) { console.warn("LOC_RESOLUTION_FAILED", e); }
+        });
+      }
+    };
+    detectLocation();
   }, []);
 
   const nextStep = () => {
@@ -129,11 +218,10 @@ export default function ActorOnboardingFlow() {
         .eq('id', user.id);
 
       if (error) throw error;
-      router.push("/onboarding/complete");
+      setStepIndex(STEPS.length - 1); // Move to COMPLETE step
     } catch (e) {
       console.error("MM8_FINALIZE_FAILURE:", e);
-      // Fallback redirect even if DB update fails so user isn't stuck
-      router.push("/onboarding/complete");
+      setStepIndex(STEPS.length - 1);
     }
   };
 
@@ -291,7 +379,7 @@ export default function ActorOnboardingFlow() {
               
               <div className="border-l-4 border-brand-red-neon pl-6 py-2 mb-12">
                 <p className="text-zinc-500 font-bold uppercase tracking-widest text-lg md:text-xl italic">
-                  "Your Data is the key to bypassing the gatekeepers"
+                  "You are 6 steps away from being discoverable."
                 </p>
                 <p className="text-white font-black uppercase tracking-[0.3em] text-sm md:text-base mt-4">
                   Create your profile in under 60 seconds
@@ -316,22 +404,58 @@ export default function ActorOnboardingFlow() {
               className="flex flex-col gap-8 w-full"
             >
               <h2 className="text-5xl md:text-8xl font-black uppercase tracking-tighter leading-none">
-                OBJECTIVE<br /><span className="text-brand-red-neon">PREFERENCE</span>
+                WHAT DO YOU WANT MOST<br /><span className="text-brand-red-neon">RIGHT NOW?</span>
               </h2>
               <p className="text-zinc-500 font-bold uppercase tracking-widest text-xs max-w-2xl border-l-4 border-brand-red-dark pl-4">
                 Choose the opportunities that match your current ambition. This helps us surface roles aligned with where you want to rise next.
               </p>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {["FIRST BREAK", "LEAD ROLES", "OTT DEBUT", "COMMERCIALS"].map((opt) => (
+                {["FIRST BREAK", "LEAD ROLES", "OTT DEBUT", "COMMERCIALS", "SIDE ROLES", "BUILD PROFILES", "EARN INCOME", "OTHERS"].map((opt) => (
                   <button
                     key={opt}
-                    onClick={() => { setDesire(opt); nextStep(); }}
-                    className="p-10 glass-panel brutal-border-red text-left hover:border-brand-red-neon transition-all duration-300 group cursor-pointer"
+                    onClick={() => { 
+                      if (opt === "OTHERS") {
+                        setShowOtherInput(true);
+                        setDesire(opt);
+                      } else {
+                        setShowOtherInput(false);
+                        setDesire(opt); 
+                        nextStep(); 
+                      }
+                    }}
+                    className={`p-10 glass-panel brutal-border-red text-left hover:border-brand-red-neon transition-all duration-300 group cursor-pointer ${desire === opt ? 'bg-brand-red-deep border-brand-red-neon' : ''}`}
                   >
                     <span className="text-3xl font-black uppercase tracking-tighter group-hover:text-brand-red-neon transition-colors">{opt}</span>
                   </button>
                 ))}
               </div>
+
+              <AnimatePresence>
+                {showOtherInput && (
+                  <motion.div
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: 'auto' }}
+                    exit={{ opacity: 0, height: 0 }}
+                    className="mt-4"
+                  >
+                    <input 
+                      type="text"
+                      placeholder="DESCRIBE YOUR GOAL..."
+                      className="w-full bg-zinc-950 text-white font-black text-3xl px-8 py-10 brutal-border-red outline-none focus:border-brand-red-neon transition-all placeholder:text-zinc-800 uppercase"
+                      value={otherObjective}
+                      onChange={(e) => setOtherObjective(e.target.value)}
+                      onKeyDown={(e) => e.key === 'Enter' && otherObjective && nextStep()}
+                    />
+                    <button 
+                      disabled={!otherObjective}
+                      onClick={nextStep}
+                      className="mt-4 w-full py-6 bg-brand-red-neon text-white font-black uppercase tracking-widest text-sm hover:bg-white hover:text-black transition-all cursor-pointer disabled:opacity-30"
+                    >
+                      CONFIRM GOAL
+                    </button>
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </motion.div>
           )}
 
@@ -344,7 +468,7 @@ export default function ActorOnboardingFlow() {
               className="flex flex-col gap-8 w-full"
             >
               <h2 className="text-5xl md:text-8xl font-black uppercase tracking-tighter leading-none">
-                LANGUAGE<br /><span className="text-brand-red-neon">PREFERENCES</span>
+                WHICH LANGUAGES CAN YOU<br /><span className="text-brand-red-neon">PERFORM IN?</span>
               </h2>
               <p className="text-zinc-500 font-bold uppercase tracking-widest text-xs max-w-2xl border-l-4 border-brand-red-dark pl-4">
                 Select every language you can confidently speak or perform in. This helps match you with roles, scripts, and markets where you can deliver naturally on screen.
@@ -430,29 +554,50 @@ export default function ActorOnboardingFlow() {
               className="flex flex-col gap-8 w-full"
             >
               <h2 className="text-5xl md:text-8xl font-black uppercase tracking-tighter leading-none">
-                CORE<br /><span className="text-brand-red-neon">ARCHETYPE</span>
+                WHAT DESCRIBES YOU<br /><span className="text-brand-red-neon">BEST?</span>
               </h2>
               <p className="text-zinc-500 font-bold uppercase tracking-widest text-xs max-w-2xl border-l-4 border-brand-red-dark pl-4">
                 Select the three archetypes you embody most naturally. This helps us match you to roles where your presence feels authentic, powerful, and instantly believable.
               </p>
               
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="flex-1 w-full overflow-x-auto snap-x snap-mandatory flex md:grid md:grid-cols-4 gap-6 pb-12 hide-scrollbar">
                 {PERSONALITIES.map((opt) => {
-                  const isSelected = personalities.includes(opt);
+                  const isSelected = personalities.includes(opt.label);
                   const isMax = personalities.length >= 3;
                   return (
                     <button
-                      key={opt}
+                      key={opt.id}
                       onClick={() => {
                         if (isSelected) {
-                          setPersonalities(prev => prev.filter(p => p !== opt));
+                          setPersonalities(prev => prev.filter(p => p !== opt.label));
                         } else if (!isMax) {
-                          setPersonalities(prev => [...prev, opt]);
+                          setPersonalities(prev => [...prev, opt.label]);
                         }
                       }}
-                      className={`p-10 glass-panel brutal-border transition-all duration-300 text-left group cursor-pointer ${isSelected ? 'border-brand-red-neon bg-brand-red-deep' : 'border-zinc-800 hover:border-zinc-400'}`}
+                      className={`snap-center shrink-0 w-[280px] md:w-auto h-[400px] md:h-[500px] glass-panel brutal-border overflow-hidden relative flex flex-col justify-end p-8 text-left transition-all duration-500 group cursor-pointer ${isSelected ? 'border-brand-red-neon shadow-[0_0_30px_rgba(255,49,49,0.4)]' : 'border-zinc-800 hover:border-zinc-500'}`}
                     >
-                      <span className={`text-3xl font-black uppercase tracking-tighter transition-colors ${isSelected ? 'text-white' : 'text-zinc-500 group-hover:text-white'}`}>{opt}</span>
+                      {/* Cinematic Background */}
+                      <div className="absolute inset-0 z-0">
+                        <img 
+                          src={opt.bg} 
+                          alt={opt.label} 
+                          className={`w-full h-full object-cover transition-all duration-700 ${isSelected ? 'grayscale-0 scale-110' : 'grayscale opacity-30 group-hover:opacity-60 group-hover:grayscale-0'}`}
+                        />
+                        <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent" />
+                      </div>
+
+                      <div className="relative z-10">
+                        <div className={`w-8 h-1 bg-brand-red-neon mb-4 transition-all duration-500 ${isSelected ? 'w-full' : 'w-0 group-hover:w-12'}`} />
+                        <span className={`text-3xl font-black uppercase tracking-tighter transition-colors ${isSelected ? 'text-white' : 'text-zinc-500 group-hover:text-white'}`}>
+                          {opt.label}
+                        </span>
+                      </div>
+                      
+                      {isSelected && (
+                        <div className="absolute top-6 right-6 w-8 h-8 rounded-full bg-brand-red-neon flex items-center justify-center text-white font-black text-xs animate-in zoom-in duration-300">
+                          {personalities.indexOf(opt.label) + 1}
+                        </div>
+                      )}
                     </button>
                   );
                 })}
@@ -477,7 +622,7 @@ export default function ActorOnboardingFlow() {
               className="flex flex-col gap-8 w-full"
             >
               <h2 className="text-5xl md:text-7xl font-black uppercase tracking-tighter leading-none">
-                UPLOAD<br /><span className="text-brand-red-neon">FACE</span>
+                DROP 1 PHOTO TO GET<br /><span className="text-brand-red-neon">3X MORE VISIBILITY</span>
               </h2>
               <p className="text-zinc-500 font-bold uppercase tracking-widest text-xs max-w-2xl border-l-4 border-brand-red-dark pl-4">
                 Upload a clear profile photo that captures your natural presence. First impressions matter — this helps casting teams see you instantly.
@@ -570,13 +715,13 @@ export default function ActorOnboardingFlow() {
               className="flex flex-col gap-8 w-full"
             >
               <h2 className="text-5xl md:text-8xl font-black uppercase tracking-tighter leading-none">
-                YOUR<br /><span className="text-brand-red-neon">EXPERIENCE</span>
+                HAVE YOU<br /><span className="text-brand-red-neon">ACTED BEFORE?</span>
               </h2>
               <p className="text-zinc-500 font-bold uppercase tracking-widest text-xs max-w-2xl border-l-4 border-brand-red-dark pl-4">
                 Tell us where you are in your journey. Whether beginner or seasoned, we’ll tailor opportunities to match your current level and next leap.
               </p>
               <div className="flex flex-col gap-6">
-                {["YES (STAGE)", "YES (SCREEN)", "NO (RAW TALENT)"].map((opt) => (
+                {["ON SCREEN", "ON STAGE", "SOCIAL MEDIA", "JUST STARTING"].map((opt) => (
                   <button
                     key={opt}
                     onClick={() => { setExperience(opt); nextStep(); }}
@@ -598,7 +743,7 @@ export default function ActorOnboardingFlow() {
               className="flex flex-col gap-12 w-full"
             >
               <h2 className="text-5xl md:text-8xl font-black uppercase tracking-tighter leading-none">
-                OPPORTUNITY<br /><span className="text-brand-red-neon">READINESS</span>
+                READY FOR<br /><span className="text-brand-red-neon">WORK?</span>
               </h2>
               <p className="text-zinc-500 font-bold uppercase tracking-widest text-xs max-w-2xl border-l-4 border-brand-red-dark pl-4">
                 Let us know when you’re ready to move. We’ll prioritize opportunities that match your ideal timeline.
@@ -796,6 +941,51 @@ export default function ActorOnboardingFlow() {
                 className="mt-12 w-full px-12 py-10 bg-brand-red-neon text-white font-black text-5xl md:text-7xl uppercase tracking-tighter hover:bg-white hover:text-black transition-all brutal-shadow disabled:opacity-20 cursor-pointer"
               >
                 FINALIZE PROFILE
+              </button>
+            </motion.div>
+          )}
+
+          {STEPS[stepIndex] === "COMPLETE" && (
+            <motion.div
+              key="complete"
+              initial={{ opacity: 0, scale: 0.8 }}
+              animate={{ opacity: 1, scale: 1 }}
+              className="flex flex-col items-center text-center gap-12"
+            >
+              <div className="w-48 h-48 bg-brand-red-neon rounded-full flex items-center justify-center shadow-[0_0_60px_rgba(255,49,49,0.5)]">
+                <CheckCircle2 className="w-24 h-24 text-white" />
+              </div>
+              
+              <div>
+                <h2 className="text-6xl md:text-9xl font-black uppercase tracking-tighter leading-none mb-6">
+                  PROFILE<br /><span className="text-brand-red-neon">INITIALIZED</span>
+                </h2>
+                
+                <div className="flex flex-col items-center gap-4 mt-8">
+                  <div className="flex items-baseline gap-4">
+                    <span className="text-zinc-500 font-black uppercase tracking-widest text-xl">PROFILE STRENGTH</span>
+                    <span className="text-6xl md:text-8xl font-black text-white tabular-nums">
+                      {profileStrength}<span className="text-brand-red-neon text-4xl">%</span>
+                    </span>
+                  </div>
+                  <div className="w-full max-w-md h-2 bg-zinc-900 overflow-hidden brutal-border border-zinc-800">
+                    <motion.div 
+                      initial={{ width: 0 }}
+                      animate={{ width: `${profileStrength}%` }}
+                      className="h-full bg-brand-red-neon shadow-[0_0_15px_rgba(255,49,49,0.5)]"
+                    />
+                  </div>
+                  <p className="text-[10px] font-bold text-zinc-600 uppercase tracking-[0.4em] mt-4 italic text-center">
+                    COMPLETE 20 MORE FIELDS IN SETTINGS TO REACH 100% & GET VERIFIED
+                  </p>
+                </div>
+              </div>
+
+              <button
+                onClick={() => router.push("/dashboard")}
+                className="group relative px-12 py-8 bg-white text-black font-black text-3xl md:text-5xl uppercase tracking-tighter hover:bg-brand-red-neon hover:text-white transition-all duration-500 shadow-[0_0_50px_rgba(255,255,255,0.1)] clip-brutal-hero-primary cursor-pointer"
+              >
+                ENTER DASHBOARD
               </button>
             </motion.div>
           )}
