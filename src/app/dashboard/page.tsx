@@ -2,11 +2,19 @@
 
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { User, CheckCircle2, ChevronRight, Trophy, Flame, PlayCircle, Star, Settings, X, Lock, ShieldCheck, LogOut, Bell, Crown, AlertTriangle } from "lucide-react";
+import { User, CheckCircle2, ChevronRight, Trophy, Flame, PlayCircle, Star, Settings, X, Lock, ShieldCheck, LogOut, Bell, Crown, AlertTriangle, Zap } from "lucide-react";
 
 import { supabase } from "@/utils/supabase/client";
 import { useRouter } from "next/navigation";
 import { uploadAuditionTape } from "@/app/actions/driveActions";
+
+const TIER_CONFIG: Record<string, { color: string; glow: string; label: string }> = {
+  'NEW TALENT': { color: 'text-zinc-500', glow: '', label: 'NEW TALENT' },
+  'RISING': { color: 'text-blue-400', glow: 'drop-shadow-[0_0_8px_rgba(96,165,250,0.5)]', label: 'RISING' },
+  'ACTIVE': { color: 'text-green-400', glow: 'drop-shadow-[0_0_8px_rgba(74,222,128,0.5)]', label: 'ACTIVE' },
+  'PRO TALENT': { color: 'text-yellow-400', glow: 'drop-shadow-[0_0_8px_rgba(250,204,21,0.5)]', label: 'PRO TALENT' },
+  'ELITE': { color: 'text-brand-red-neon', glow: 'drop-shadow-[0_0_15px_rgba(255,49,49,0.8)]', label: 'ELITE' },
+};
 
 const useDashboardData = () => {
   const [loading, setLoading] = useState(true);
@@ -32,8 +40,6 @@ const useDashboardData = () => {
         // If profile doesn't exist, try to create one or use default
         if (error || !profile) {
           console.warn("Profile not found, initializing default...", error);
-          
-          // Attempt to create profile if missing (trigger fallback)
           const { data: newProfile, error: createError } = await supabase
             .from('profiles')
             .upsert({ 
@@ -47,39 +53,89 @@ const useDashboardData = () => {
           if (!createError && newProfile) {
             profile = newProfile;
           } else {
-            // Fallback to minimal mock if DB fails
-            profile = { full_name: "AGENT_X", status: "UNVERIFIED", visibility_score: 0, location: "UNKNOWN" };
+            profile = { full_name: "AGENT_X", status: "UNVERIFIED", lumen_points: 0, location: "UNKNOWN" };
           }
         }
 
-        setData({
-          profile: {
-            name: profile.full_name || "AGENT_X",
-            status: profile.status || "UNVERIFIED",
-            visibilityScore: profile.visibility_score || 0,
-            location: profile.location || "UNKNOWN",
-            avatarUrl: profile.avatar_url_proxy || null
-          },
-          roles: [
-            { id: 1, title: "LEAD ANTAGONIST", project: "SHADOWS OF KOCHI", match: 98, deadline: "24H", tags: ["INTENSE", "MALAYALAM"] },
-            { id: 2, title: "SUPPORTING COP", project: "UNTITLED THRILLER", match: 84, deadline: "3D", tags: ["ACTION", "HINDI"] },
-            { id: 3, title: "COMIC RELIEF", project: "CAMPUS DIARIES", match: 72, deadline: "1W", tags: ["FUNNY", "TAMIL"] },
-          ],
-          leaderboard: [
-            { rank: 1, name: "ARJUN_M", score: 9400, trend: "up" },
-            { rank: 2, name: "SNEHA_R", score: 9150, trend: "up" },
-            { rank: 3, name: "YOU", score: 8900, trend: "up", isUser: true },
-            { rank: 4, name: "RAHUL_K", score: 8750, trend: "down" },
-          ],
-          challenge: {
-            title: "THE ANGER MONOLOGUE",
-            reward: "+500 VISIBILITY",
-            timeLeft: "08:14:22",
-            participants: 142
-          }
-        });
+        // --- LUMEN GRANT: +1000 on first dashboard entry ---
+        if (!profile.lumen_granted) {
+          const { data: updatedProfile } = await supabase.rpc('award_lumen', {
+            p_user_id: session.user.id,
+            p_amount: 1000,
+            p_action: 'BASE_GRANT',
+            p_reason: 'First dashboard entry — welcome to MM8'
+          });
 
-        // Fetch notifications
+          await supabase.from('profiles').update({ 
+            lumen_granted: true,
+            last_active: new Date().toISOString(),
+            streak_days: 1
+          }).eq('id', session.user.id);
+
+          // Refetch profile after grant
+          const { data: refreshed } = await supabase
+            .from('profiles').select('*').eq('id', session.user.id).single();
+          if (refreshed) profile = refreshed;
+        } else {
+          // --- STREAK & DAILY LOGIN ---
+          const lastActive = profile.last_active ? new Date(profile.last_active) : null;
+          const now = new Date();
+          const isNewDay = !lastActive || 
+            (now.toDateString() !== lastActive.toDateString());
+
+          if (isNewDay) {
+            let streakDays = profile.streak_days || 0;
+            const hoursSinceLast = lastActive ? (now.getTime() - lastActive.getTime()) / 3600000 : 999;
+            
+            if (hoursSinceLast <= 48) {
+              streakDays += 1;
+            } else {
+              streakDays = 1; // Reset streak
+            }
+
+            // Daily login LMN
+            let loginBonus = 10;
+            if (streakDays >= 30) loginBonus = 300;
+            else if (streakDays >= 7) loginBonus = 50;
+
+            await supabase.rpc('award_lumen', {
+              p_user_id: session.user.id,
+              p_amount: loginBonus,
+              p_action: 'DAILY_LOGIN',
+              p_reason: `Day ${streakDays} streak — +${loginBonus} LMN`
+            });
+
+            // Consistency bonus: active 5+ days this week
+            if (streakDays >= 5 && streakDays % 7 === 5) {
+              await supabase.rpc('award_lumen', {
+                p_user_id: session.user.id,
+                p_amount: 150,
+                p_action: 'CONSISTENCY_BONUS',
+                p_reason: 'Active 5+ days this week'
+              });
+            }
+
+            await supabase.from('profiles').update({ 
+              streak_days: streakDays, 
+              last_active: now.toISOString() 
+            }).eq('id', session.user.id);
+
+            // Refetch
+            const { data: refreshed } = await supabase
+              .from('profiles').select('*').eq('id', session.user.id).single();
+            if (refreshed) profile = refreshed;
+          }
+        }
+
+        // --- FETCH LEADERBOARD (live from Supabase) ---
+        const { data: leaderboard } = await supabase
+          .from('profiles')
+          .select('id, mm8_id, full_name, username, avatar_url_proxy, lumen_points, lumen_tier, is_vip, streak_days')
+          .gt('lumen_points', 0)
+          .order('lumen_points', { ascending: false })
+          .limit(10);
+
+        // --- FETCH NOTIFICATIONS ---
         const { data: notifs } = await supabase
           .from('notifications')
           .select('*')
@@ -87,20 +143,40 @@ const useDashboardData = () => {
           .order('created_at', { ascending: false })
           .limit(5);
 
-        setData((prev: any) => ({
-          ...prev,
+        setData({
           profile: {
-            ...prev?.profile,
+            id: profile.id,
             name: profile.full_name || "AGENT_X",
+            username: profile.username || null,
             status: profile.status || "UNVERIFIED",
-            visibilityScore: profile.visibility_score || 0,
+            lumenPoints: profile.lumen_points || 0,
+            lumenTier: profile.lumen_tier || 'NEW TALENT',
+            peakLumen: profile.peak_lumen || 0,
+            streakDays: profile.streak_days || 0,
             location: profile.location || "UNKNOWN",
             avatarUrl: profile.avatar_url_proxy || null,
             mm8Id: profile.mm8_id || null,
             isVip: profile.is_vip || false,
           },
+          leaderboard: (leaderboard || []).map((u: any, i: number) => ({
+            rank: i + 1,
+            id: u.id,
+            name: u.full_name || 'UNKNOWN',
+            username: u.username || null,
+            avatarUrl: u.avatar_url_proxy || null,
+            score: u.lumen_points,
+            tier: u.lumen_tier,
+            isVip: u.is_vip,
+            streakDays: u.streak_days || 0,
+            isUser: u.id === session.user.id,
+          })),
+          roles: [
+            { id: 1, title: "LEAD ANTAGONIST", project: "SHADOWS OF KOCHI", match: 98, deadline: "24H", tags: ["INTENSE", "MALAYALAM"] },
+            { id: 2, title: "SUPPORTING COP", project: "UNTITLED THRILLER", match: 84, deadline: "3D", tags: ["ACTION", "HINDI"] },
+            { id: 3, title: "COMIC RELIEF", project: "CAMPUS DIARIES", match: 72, deadline: "1W", tags: ["FUNNY", "TAMIL"] },
+          ],
           notifications: notifs || [],
-        }));
+        });
       } catch (error) {
         console.error("Dashboard critical error:", error);
       } finally {
@@ -252,7 +328,18 @@ export default function AgenticDashboard() {
           xhr.send(file);
         });
 
-        setMessage({ text: "AUDITION SECURELY UPLOADED TO DRIVE.", type: 'success' });
+        setMessage({ text: "AUDITION SECURELY UPLOADED TO DRIVE. +40 LMN AWARDED.", type: 'success' });
+
+        // Award LUMEN for upload
+        const { data: { session: uploadSession } } = await supabase.auth.getSession();
+        if (uploadSession) {
+          await supabase.rpc('award_lumen', {
+            p_user_id: uploadSession.user.id,
+            p_amount: 40,
+            p_action: 'UPLOAD_TAPE',
+            p_reason: 'Audition tape uploaded'
+          });
+        }
       } catch (error: any) {
         console.error("Upload error:", error);
         setMessage({ text: `UPLOAD FAILED: ${error.message}`, type: 'error' });
@@ -402,66 +489,132 @@ export default function AgenticDashboard() {
             </div>
 
             <div className="border-t border-zinc-900 pt-10">
-              <div className="flex justify-between items-end mb-6">
-                <h3 className="font-black text-zinc-600 uppercase tracking-[0.4em] text-[10px]">VISIBILITY_CORE</h3>
-                <span className="text-6xl font-black tracking-tighter text-white tabular-nums">
-                  {data.profile.visibilityScore}<span className="text-2xl text-brand-red-neon">%</span>
-                </span>
+              <div className="flex justify-between items-end mb-4">
+                <div>
+                  <h3 className="font-black text-zinc-600 uppercase tracking-[0.4em] text-[10px]">LUMEN_CORE</h3>
+                  <div className={`flex items-center gap-2 mt-2 ${TIER_CONFIG[data.profile.lumenTier]?.color || 'text-zinc-500'}`}>
+                    <Zap className={`w-4 h-4 ${TIER_CONFIG[data.profile.lumenTier]?.glow || ''}`} />
+                    <span className="font-black uppercase tracking-widest text-[10px]">{data.profile.lumenTier}</span>
+                  </div>
+                </div>
+                <div className="text-right">
+                  <span className="text-5xl font-black tracking-tighter text-white tabular-nums">
+                    {data.profile.lumenPoints.toLocaleString()}
+                  </span>
+                  <span className="text-lg font-black text-brand-red-neon ml-1">LMN</span>
+                </div>
               </div>
-              <div className="w-full h-3 bg-zinc-950 relative overflow-hidden clip-brutal-slant">
-                <motion.div 
-                  initial={{ width: 0 }}
-                  animate={{ width: `${data.profile.visibilityScore}%` }}
-                  transition={{ duration: 1.5, ease: "circOut" }}
-                  className="absolute top-0 left-0 h-full bg-brand-red-neon shadow-[0_0_20px_rgba(255,49,49,0.8)]"
-                />
-              </div>
+
+              {/* Streak */}
+              {data.profile.streakDays > 0 && (
+                <div className="flex items-center gap-2 mb-6">
+                  <Flame className="w-4 h-4 text-orange-500" />
+                  <span className="text-[10px] font-black text-orange-500 uppercase tracking-widest tabular-nums">
+                    {data.profile.streakDays} DAY STREAK
+                  </span>
+                </div>
+              )}
+
+              {/* Tier progress bar */}
+              {(() => {
+                const tiers = [0, 2000, 6000, 15000, 40000];
+                const pts = data.profile.lumenPoints;
+                let currentIdx = 0;
+                for (let i = tiers.length - 1; i >= 0; i--) {
+                  if (pts >= tiers[i]) { currentIdx = i; break; }
+                }
+                const nextThreshold = tiers[currentIdx + 1] || tiers[tiers.length - 1];
+                const prevThreshold = tiers[currentIdx];
+                const progress = nextThreshold > prevThreshold 
+                  ? Math.min(((pts - prevThreshold) / (nextThreshold - prevThreshold)) * 100, 100) 
+                  : 100;
+                return (
+                  <div className="w-full h-3 bg-zinc-950 relative overflow-hidden clip-brutal-slant">
+                    <motion.div 
+                      initial={{ width: 0 }}
+                      animate={{ width: `${progress}%` }}
+                      transition={{ duration: 1.5, ease: "circOut" }}
+                      className="absolute top-0 left-0 h-full bg-brand-red-neon shadow-[0_0_20px_rgba(255,49,49,0.8)]"
+                    />
+                  </div>
+                );
+              })()}
             </div>
           </section>
 
-          {/* Mission Intel */}
+          {/* Streak & Daily Missions */}
           <section className="glass-panel-red p-10 hover:bg-brand-red-neon/10 transition-all cursor-pointer group relative overflow-hidden clip-brutal-br">
             <div className="relative z-10">
               <div className="flex items-center gap-4 mb-8">
                 <Flame className="w-6 h-6 text-brand-red-neon" />
-                <h3 className="font-black uppercase tracking-[0.4em] text-[10px]">PRIORITY_MISSION</h3>
+                <h3 className="font-black uppercase tracking-[0.4em] text-[10px]">DAILY_MISSIONS</h3>
               </div>
-              <h2 className="text-5xl font-black uppercase tracking-tighter mb-6 leading-[0.85] group-hover:text-white transition-colors">{data.challenge.title}</h2>
-              <div className="flex items-center gap-4 mb-10">
-                <div className="px-3 py-1 bg-brand-red-neon text-white text-[9px] font-black uppercase tracking-widest">ACTIVE</div>
-                <p className="text-zinc-500 font-black uppercase tracking-widest text-[10px]">
-                  TERMINATES: <span className="text-white tabular-nums">{data.challenge.timeLeft}</span>
-                </p>
-              </div>
-              
-              <div className="flex justify-between items-center border-t border-brand-red-neon/20 pt-8">
-                <span className="font-black uppercase text-brand-red-neon text-sm tracking-tighter">{data.challenge.reward}</span>
-                <span className="font-black text-[9px] tracking-[0.3em] text-zinc-600 uppercase">{data.challenge.participants} SYNCED</span>
+              <div className="flex flex-col gap-4">
+                {[
+                  { label: 'UPLOAD AUDITION TAPE', reward: '+40 LMN', done: false },
+                  { label: 'COMPLETE PROFILE FIELD', reward: '+10 LMN', done: false },
+                  { label: 'DAILY LOGIN', reward: '+10 LMN', done: true },
+                ].map(mission => (
+                  <div key={mission.label} className={`flex items-center justify-between p-4 brutal-border transition-all ${mission.done ? 'border-green-500/30 bg-green-500/5' : 'border-zinc-800 bg-zinc-950/50'}`}>
+                    <div className="flex items-center gap-3">
+                      <div className={`w-3 h-3 ${mission.done ? 'bg-green-500' : 'bg-zinc-800'}`} />
+                      <span className={`font-black uppercase tracking-widest text-[10px] ${mission.done ? 'text-green-500 line-through' : 'text-zinc-500'}`}>{mission.label}</span>
+                    </div>
+                    <span className="font-black text-brand-red-neon text-[10px] tracking-widest">{mission.reward}</span>
+                  </div>
+                ))}
               </div>
             </div>
           </section>
 
-          {/* Ranking Subsystem */}
+          {/* Ranking Subsystem — Live LUMEN Leaderboard */}
           <section className="glass-panel p-10 brutal-border clip-brutal-bl">
             <div className="flex items-center gap-4 mb-10 border-b border-zinc-900 pb-8">
               <Trophy className="w-6 h-6 text-brand-red-neon" />
               <h3 className="font-black uppercase tracking-[0.4em] text-[10px]">GLOBAL_RANKINGS</h3>
+              <span className="text-[8px] font-black text-zinc-700 uppercase tracking-widest ml-auto">LIVE // {data.leaderboard.length} NODES</span>
             </div>
-            <div className="flex flex-col gap-6">
-              {data.leaderboard.map((actor: any) => (
-                <div key={actor.rank} className={`flex items-center justify-between p-5 brutal-border transition-all group ${actor.isUser ? 'border-brand-red-neon bg-brand-red-neon/10 clip-brutal-slant' : 'border-zinc-900 bg-zinc-950/50 hover:border-zinc-700'}`}>
-                  <div className="flex items-center gap-6">
-                    <span className={`font-black text-3xl tabular-nums ${actor.rank === 1 ? 'text-brand-red-neon' : 'text-zinc-800 group-hover:text-zinc-600'}`}>
-                      {actor.rank < 10 ? `0${actor.rank}` : actor.rank}
-                    </span>
-                    <span className={`font-black uppercase tracking-tighter text-lg ${actor.isUser ? 'text-white' : 'text-zinc-500'}`}>
-                      {actor.name}
-                    </span>
+            {data.leaderboard.length > 0 ? (
+              <div className="flex flex-col gap-4">
+                {data.leaderboard.map((actor: any) => (
+                  <div key={actor.id} className={`flex items-center justify-between p-5 brutal-border transition-all group ${actor.isUser ? 'border-brand-red-neon bg-brand-red-neon/10 clip-brutal-slant' : 'border-zinc-900 bg-zinc-950/50 hover:border-zinc-700'}`}>
+                    <div className="flex items-center gap-5">
+                      <span className={`font-black text-2xl tabular-nums w-8 shrink-0 ${actor.rank === 1 ? 'text-brand-red-neon' : actor.rank === 2 ? 'text-zinc-400' : actor.rank === 3 ? 'text-orange-700' : 'text-zinc-800 group-hover:text-zinc-600'}`}>
+                        {String(actor.rank).padStart(2, '0')}
+                      </span>
+                      <div className="w-10 h-10 bg-zinc-900 rounded-full overflow-hidden brutal-border border-zinc-800 shrink-0 flex items-center justify-center">
+                        {actor.avatarUrl ? (
+                          <img src={actor.avatarUrl} alt="" className="w-full h-full object-cover" />
+                        ) : (
+                          <User className="w-5 h-5 text-zinc-700" />
+                        )}
+                      </div>
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <span className={`font-black uppercase tracking-tighter text-sm ${actor.isUser ? 'text-white' : 'text-zinc-400'}`}>
+                            {actor.isUser ? 'YOU' : actor.name}
+                          </span>
+                          {actor.isVip && <Crown className="w-3 h-3 text-yellow-400" />}
+                          {actor.streakDays >= 3 && <Flame className="w-3 h-3 text-orange-500" />}
+                        </div>
+                        {actor.username && (
+                          <span className="text-[9px] font-bold text-zinc-600 uppercase tracking-widest">@{actor.username}</span>
+                        )}
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <span className="font-black tabular-nums text-brand-red-neon text-lg">{actor.score.toLocaleString()}</span>
+                      <span className="text-[8px] font-black text-zinc-600 ml-1">LMN</span>
+                    </div>
                   </div>
-                  <span className="font-black tabular-nums text-brand-red-neon text-xl">{actor.score}</span>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-12">
+                <Trophy className="w-8 h-8 text-zinc-800 mx-auto mb-4" />
+                <p className="text-zinc-700 font-black uppercase tracking-widest text-[10px]">NO RANKED USERS YET</p>
+              </div>
+            )}
           </section>
 
           {/* Notification Preview */}
