@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { User, CheckCircle2, ChevronRight, Trophy, Flame, PlayCircle, Star, Settings, X, Lock, ShieldCheck, LogOut } from "lucide-react";
+import { User, CheckCircle2, ChevronRight, Trophy, Flame, PlayCircle, Star, Settings, X, Lock, ShieldCheck, LogOut, Bell, Crown, AlertTriangle } from "lucide-react";
 
 import { supabase } from "@/utils/supabase/client";
 import { useRouter } from "next/navigation";
@@ -78,6 +78,29 @@ const useDashboardData = () => {
             participants: 142
           }
         });
+
+        // Fetch notifications
+        const { data: notifs } = await supabase
+          .from('notifications')
+          .select('*')
+          .eq('user_id', session.user.id)
+          .order('created_at', { ascending: false })
+          .limit(5);
+
+        setData((prev: any) => ({
+          ...prev,
+          profile: {
+            ...prev?.profile,
+            name: profile.full_name || "AGENT_X",
+            status: profile.status || "UNVERIFIED",
+            visibilityScore: profile.visibility_score || 0,
+            location: profile.location || "UNKNOWN",
+            avatarUrl: profile.avatar_url_proxy || null,
+            mm8Id: profile.mm8_id || null,
+            isVip: profile.is_vip || false,
+          },
+          notifications: notifs || [],
+        }));
       } catch (error) {
         console.error("Dashboard critical error:", error);
       } finally {
@@ -300,11 +323,30 @@ export default function AgenticDashboard() {
           className="mt-8 md:mt-0 flex flex-col items-end"
         >
           <div className="glass-panel brutal-border-red px-8 py-4 clip-brutal-slant flex items-center gap-4">
-            <span className="font-black uppercase tracking-[0.2em] text-[10px] text-zinc-500">ENCRYPTED_LINK:</span>
-            <span className="font-black uppercase tracking-widest text-xs text-white tabular-nums">0x8A2...F92B</span>
+            <span className="font-black uppercase tracking-[0.2em] text-[10px] text-zinc-500">MM8_ID:</span>
+            <span className="font-black uppercase tracking-widest text-xs text-brand-red-neon tabular-nums">
+              {data.profile.mm8Id ? `#${String(data.profile.mm8Id).padStart(4, '0')}` : '—'}
+            </span>
+            {data.profile.isVip && (
+              <span className="flex items-center gap-1 px-3 py-1 bg-yellow-500/20 border border-yellow-500/50 text-yellow-400 text-[8px] font-black uppercase tracking-widest">
+                <Crown className="w-3 h-3" /> VIP
+              </span>
+            )}
           </div>
           <div className="flex items-center gap-4 mt-4">
             <p className="text-[9px] font-black text-brand-red-deep uppercase tracking-widest">SECURE_HANDSHAKE_ESTABLISHED</p>
+            <button 
+              onClick={() => router.push('/dashboard/notifications')}
+              className="p-2 hover:bg-zinc-900 transition-colors cursor-pointer group relative"
+              title="NOTIFICATIONS"
+            >
+              <Bell className="w-4 h-4 text-zinc-500 group-hover:text-white transition-colors" />
+              {data.notifications?.filter((n: any) => !n.read).length > 0 && (
+                <span className="absolute -top-1 -right-1 w-4 h-4 bg-brand-red-neon rounded-full flex items-center justify-center text-[7px] font-black text-white">
+                  {data.notifications.filter((n: any) => !n.read).length}
+                </span>
+              )}
+            </button>
             <button 
               onClick={() => setShowSettings(true)}
               className="p-2 hover:bg-zinc-900 transition-colors cursor-pointer group"
@@ -420,6 +462,71 @@ export default function AgenticDashboard() {
                 </div>
               ))}
             </div>
+          </section>
+
+          {/* Notification Preview */}
+          <section className="glass-panel brutal-border-red p-10 clip-brutal-tr relative overflow-hidden">
+            <div className="flex items-center justify-between mb-8 border-b border-zinc-900 pb-6">
+              <div className="flex items-center gap-4">
+                <Bell className="w-6 h-6 text-brand-red-neon" />
+                <h3 className="font-black uppercase tracking-[0.4em] text-[10px]">LATEST_SIGNALS</h3>
+              </div>
+              <button 
+                onClick={() => router.push('/dashboard/notifications')}
+                className="text-zinc-600 hover:text-brand-red-neon font-black uppercase tracking-[0.3em] text-[10px] flex items-center gap-2 transition-colors cursor-pointer"
+              >
+                VIEW ALL <ChevronRight className="w-3 h-3" />
+              </button>
+            </div>
+            
+            {data.notifications && data.notifications.length > 0 ? (
+              <div className="space-y-4">
+                {data.notifications.slice(0, 3).map((notif: any) => (
+                  <div 
+                    key={notif.id}
+                    onClick={() => router.push('/dashboard/notifications')}
+                    className={`p-5 brutal-border transition-all cursor-pointer group relative ${
+                      notif.priority === 'VERY IMPORTANT' 
+                        ? 'border-brand-red-neon bg-brand-red-neon/10 hover:bg-brand-red-neon/20' 
+                        : notif.priority === 'IMPORTANT'
+                        ? 'border-yellow-500/50 bg-yellow-500/5 hover:bg-yellow-500/10'
+                        : 'border-zinc-800 bg-zinc-950/50 hover:border-zinc-600'
+                    }`}
+                  >
+                    {!notif.read && (
+                      <div className="absolute top-0 left-0 w-1 h-full bg-brand-red-neon" />
+                    )}
+                    <div className="flex items-start gap-4">
+                      <div className={`p-2 shrink-0 ${
+                        notif.priority === 'VERY IMPORTANT' ? 'bg-brand-red-neon/20' : 'bg-zinc-900'
+                      }`}>
+                        {notif.priority === 'VERY IMPORTANT' 
+                          ? <AlertTriangle className="w-4 h-4 text-brand-red-neon" />
+                          : <Bell className="w-4 h-4 text-zinc-500" />
+                        }
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-3 mb-2">
+                          <span className={`px-2 py-0.5 text-[7px] font-black uppercase tracking-widest text-white ${
+                            notif.priority === 'VERY IMPORTANT' ? 'bg-brand-red-neon' : notif.priority === 'IMPORTANT' ? 'bg-yellow-500' : 'bg-zinc-600'
+                          }`}>
+                            {notif.priority}
+                          </span>
+                          {!notif.read && <span className="w-1.5 h-1.5 rounded-full bg-brand-red-neon animate-pulse" />}
+                        </div>
+                        <h4 className="text-sm font-black uppercase tracking-tighter group-hover:text-brand-red-neon transition-colors">{notif.title}</h4>
+                        <p className="text-[10px] text-zinc-600 font-bold mt-1 line-clamp-2">{notif.body}</p>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-12">
+                <Bell className="w-8 h-8 text-zinc-800 mx-auto mb-4" />
+                <p className="text-zinc-700 font-black uppercase tracking-widest text-[10px]">NO SIGNALS YET</p>
+              </div>
+            )}
           </section>
 
         </div>
