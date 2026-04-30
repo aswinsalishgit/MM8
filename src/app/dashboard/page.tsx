@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { User, CheckCircle2, ChevronRight, Trophy, Flame, PlayCircle, Star, Settings, X, Lock, ShieldCheck } from "lucide-react";
+import { User, CheckCircle2, ChevronRight, Trophy, Flame, PlayCircle, Star, Settings, X, Lock, ShieldCheck, LogOut } from "lucide-react";
 
 import { supabase } from "@/utils/supabase/client";
 import { useRouter } from "next/navigation";
@@ -91,6 +91,7 @@ const useDashboardData = () => {
 };
 
 export default function AgenticDashboard() {
+  const router = useRouter();
   const { data, loading } = useDashboardData();
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
@@ -167,6 +168,15 @@ export default function AgenticDashboard() {
       setMessage({ text: `CRITICAL ERROR: ${err.message}`, type: 'error' });
     } finally {
       setSettingsLoading(false);
+    }
+  };
+
+  const handleLogout = async () => {
+    const { error } = await supabase.auth.signOut();
+    if (error) {
+      setMessage({ text: `LOGOUT_FAILURE: ${error.message}`, type: 'error' });
+    } else {
+      router.push("/");
     }
   };
 
@@ -298,8 +308,16 @@ export default function AgenticDashboard() {
             <button 
               onClick={() => setShowSettings(true)}
               className="p-2 hover:bg-zinc-900 transition-colors cursor-pointer group"
+              title="SYSTEM CONFIG"
             >
               <Settings className="w-4 h-4 text-zinc-500 group-hover:text-white transition-colors" />
+            </button>
+            <button 
+              onClick={handleLogout}
+              className="p-2 hover:bg-brand-red-neon/20 transition-colors cursor-pointer group"
+              title="TERMINATE SESSION"
+            >
+              <LogOut className="w-4 h-4 text-zinc-500 group-hover:text-brand-red-neon transition-colors" />
             </button>
           </div>
         </motion.div>
@@ -618,6 +636,16 @@ export default function AgenticDashboard() {
               >
                 {settingsLoading ? "UPLOADING CONFIG..." : "SAVE CHANGES"}
               </button>
+
+              <div className="mt-8 border-t border-zinc-900 pt-8">
+                <button 
+                  onClick={handleLogout}
+                  className="w-full py-4 glass-panel brutal-border-red text-brand-red-neon font-black text-xs uppercase tracking-widest hover:bg-brand-red-neon hover:text-white transition-all cursor-pointer flex items-center justify-center gap-3"
+                >
+                  <LogOut className="w-4 h-4" />
+                  TERMINATE SESSION
+                </button>
+              </div>
             </div>
           </motion.div>
         </div>
