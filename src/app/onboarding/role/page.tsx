@@ -7,6 +7,8 @@ import { ChevronLeft, Camera, Mic, HardDrive, MapPin, Bell } from "lucide-react"
 import { supabase } from "@/utils/supabase/client";
 import { ensureUserFolder } from "@/app/actions/driveActions";
 
+import { useEffect } from "react";
+
 const ROLES = [
   { id: "actor", label: "ACTOR", desc: "I want to be cast." },
   { id: "director", label: "DIRECTOR", desc: "I am building a vision." },
@@ -23,6 +25,24 @@ export default function RoleSelectionPage() {
   const router = useRouter();
   const [processingId, setProcessingId] = useState<string | null>(null);
   const [showPermissions, setShowPermissions] = useState(true);
+
+  useEffect(() => {
+    const checkUser = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('status, role')
+        .eq('id', user.id)
+        .single();
+
+      if (profile?.status === 'VERIFIED' || profile?.role) {
+        router.push('/dashboard');
+      }
+    };
+    checkUser();
+  }, [router]);
 
   const requestPermissions = async () => {
     try {

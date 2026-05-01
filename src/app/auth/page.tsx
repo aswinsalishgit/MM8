@@ -152,11 +152,11 @@ export default function AuthPage() {
         if (data.user) {
           const { data: profile } = await supabase
             .from('profiles')
-            .select('status')
+            .select('status, role')
             .eq('id', data.user.id)
             .single();
 
-          if (profile?.status === 'VERIFIED') {
+          if (profile?.status === 'VERIFIED' || profile?.role) {
             router.push("/dashboard");
           } else {
             router.push("/onboarding/role");

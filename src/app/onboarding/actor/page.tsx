@@ -95,11 +95,25 @@ export default function ActorOnboardingFlow() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
-      // 1. Update role if not already set (for zero-lag transition)
-      await supabase
+      // Check if already finished
+      const { data: profile } = await supabase
         .from('profiles')
-        .update({ role: 'ACTOR' })
-        .eq('id', user.id);
+        .select('status, role')
+        .eq('id', user.id)
+        .single();
+
+      if (profile?.status === 'VERIFIED') {
+        router.push('/dashboard');
+        return;
+      }
+
+      // 1. Update role if not already set (for zero-lag transition)
+      if (!profile?.role) {
+        await supabase
+          .from('profiles')
+          .update({ role: 'ACTOR' })
+          .eq('id', user.id);
+      }
 
       // 2. Ensure Google Drive folder exists in background
       try {
@@ -204,7 +218,8 @@ export default function ActorOnboardingFlow() {
         experience: experience,
         opportunity_readiness: AVAILABILITY_LABELS[availability],
         location: locationValue,
-        acquisition_source: acquisition
+        acquisition_source: acquisition,
+        status: 'VERIFIED'
       };
 
       // Only update user_drive if it's already finished or we have no file to upload
