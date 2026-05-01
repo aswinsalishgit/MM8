@@ -11,6 +11,9 @@ import { supabase } from "@/utils/supabase/client";
 import { useRouter } from "next/navigation";
 import { uploadProfilePicture, removeProfilePicture, uploadAuditionTape } from "@/app/actions/driveActions";
 import { Country, State, City } from "country-state-city";
+import "./dashboard.css";
+import Cropper from "react-easy-crop";
+import getCroppedImg from "@/utils/cropImage";
 
 const sanitizeAvatarUrl = (url: string | null) => {
   if (!url) return null;
@@ -42,172 +45,223 @@ const useDashboardData = () => {
   const [data, setData] = useState<any>(null);
   const router = useRouter();
 
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const { data: { session } } = await supabase.auth.getSession();
-        
-        if (!session) {
-          router.push("/auth");
-          return;
-        }
+  const fetchData = useCallback(async () => {
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (!session) {
+        router.push("/auth");
+        return;
+      }
 
-        let { data: profile, error } = await supabase
+      let { data: profile, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', session.user.id)
+        .single();
+
+      // If profile doesn't exist, try to create one or use default
+      if (error || !profile) {
+        console.warn("Profile not found, initializing default...", error);
+        const { data: newProfile, error: createError } = await supabase
           .from('profiles')
-          .select('*')
-          .eq('id', session.user.id)
+          .upsert({ 
+            id: session.user.id, 
+            full_name: session.user.user_metadata?.full_name || "AGENT_X",
+            status: "UNVERIFIED"
+          })
+          .select()
           .single();
-
-        // If profile doesn't exist, try to create one or use default
-        if (error || !profile) {
-          console.warn("Profile not found, initializing default...", error);
-          const { data: newProfile, error: createError } = await supabase
-            .from('profiles')
-            .upsert({ 
-              id: session.user.id, 
-              full_name: session.user.user_metadata?.full_name || "AGENT_X",
-              status: "UNVERIFIED"
-            })
-            .select()
-            .single();
-          
-          if (!createError && newProfile) {
-            profile = newProfile;
-          } else {
-            profile = { full_name: "AGENT_X", status: "UNVERIFIED", lumen_points: 0, location: "UNKNOWN" };
-          }
+        
+        if (!createError && newProfile) {
+          profile = newProfile;
+        } else {
+          profile = { full_name: "AGENT_X", status: "UNVERIFIED", lumen_points: 0, location: "UNKNOWN" };
         }
+      }
 
-        // --- LUMEN GRANT: +1000 on first dashboard entry ---
-        if (!profile.lumen_granted) {
-          const { data: updatedProfile } = await supabase.rpc('award_lumen', {
+      // --- LUMEN GRANT: +1000 on first dashboard entry ---
+      if (!profile.lumen_granted) {
+        await supabase.rpc('award_lumen', {
+          p_user_id: session.user.id,
+          p_amount: 1000,
+          p_action: 'BASE_GRANT',
+          p_reason: 'First dashboard entry — welcome to MM8'
+        });
+
+        await supabase.from('profiles').update({ 
+          lumen_granted: true,
+          last_active: new Date().toISOString(),
+          streak_days: 1
+        }).eq('id', session.user.id);
+
+        // Refetch profile after grant
+        const { data: refreshed } = await supabase
+          .from('profiles').select('*').eq('id', session.user.id).single();
+        if (refreshed) profile = refreshed;
+      } else {
+        // --- STREAK & DAILY LOGIN ---
+        const lastActive = profile.last_active ? new Date(profile.last_active) : null;
+        const now = new Date();
+        const isNewDay = !lastActive || 
+          (now.toDateString() !== lastActive.toDateString());
+
+        if (isNewDay) {
+          let streakDays = profile.streak_days || 0;
+          const hoursSinceLast = lastActive ? (now.getTime() - lastActive.getTime()) / 3600000 : 999;
+          
+          if (hoursSinceLast <= 48) {
+            streakDays += 1;
+          } else {
+            streakDays = 1; // Reset streak
+          }
+
+          // Daily login LMN
+          let loginBonus = 10;
+          if (streakDays >= 30) loginBonus = 300;
+          else if (streakDays >= 7) loginBonus = 50;
+
+          await supabase.rpc('award_lumen', {
             p_user_id: session.user.id,
-            p_amount: 1000,
-            p_action: 'BASE_GRANT',
-            p_reason: 'First dashboard entry — welcome to MM8'
+            p_amount: loginBonus,
+            p_action: 'DAILY_LOGIN',
+            p_reason: `Day ${streakDays} streak — +${loginBonus} LMN`
           });
 
+          // Consistency bonus: active 5+ days this week
+          if (streakDays >= 5 && streakDays % 7 === 5) {
+            await supabase.rpc('award_lumen', {
+              p_user_id: session.user.id,
+              p_amount: 150,
+              p_action: 'CONSISTENCY_BONUS',
+              p_reason: 'Active 5+ days this week'
+            });
+          }
+
           await supabase.from('profiles').update({ 
-            lumen_granted: true,
-            last_active: new Date().toISOString(),
-            streak_days: 1
+            streak_days: streakDays, 
+            last_active: now.toISOString() 
           }).eq('id', session.user.id);
 
-          // Refetch profile after grant
+          // Refetch
           const { data: refreshed } = await supabase
             .from('profiles').select('*').eq('id', session.user.id).single();
           if (refreshed) profile = refreshed;
-        } else {
-          // --- STREAK & DAILY LOGIN ---
-          const lastActive = profile.last_active ? new Date(profile.last_active) : null;
-          const now = new Date();
-          const isNewDay = !lastActive || 
-            (now.toDateString() !== lastActive.toDateString());
-
-          if (isNewDay) {
-            let streakDays = profile.streak_days || 0;
-            const hoursSinceLast = lastActive ? (now.getTime() - lastActive.getTime()) / 3600000 : 999;
-            
-            if (hoursSinceLast <= 48) {
-              streakDays += 1;
-            } else {
-              streakDays = 1; // Reset streak
-            }
-
-            // Daily login LMN
-            let loginBonus = 10;
-            if (streakDays >= 30) loginBonus = 300;
-            else if (streakDays >= 7) loginBonus = 50;
-
-            await supabase.rpc('award_lumen', {
-              p_user_id: session.user.id,
-              p_amount: loginBonus,
-              p_action: 'DAILY_LOGIN',
-              p_reason: `Day ${streakDays} streak — +${loginBonus} LMN`
-            });
-
-            // Consistency bonus: active 5+ days this week
-            if (streakDays >= 5 && streakDays % 7 === 5) {
-              await supabase.rpc('award_lumen', {
-                p_user_id: session.user.id,
-                p_amount: 150,
-                p_action: 'CONSISTENCY_BONUS',
-                p_reason: 'Active 5+ days this week'
-              });
-            }
-
-            await supabase.from('profiles').update({ 
-              streak_days: streakDays, 
-              last_active: now.toISOString() 
-            }).eq('id', session.user.id);
-
-            // Refetch
-            const { data: refreshed } = await supabase
-              .from('profiles').select('*').eq('id', session.user.id).single();
-            if (refreshed) profile = refreshed;
-          }
         }
-
-        // --- FETCH LEADERBOARD (live from Supabase) ---
-        const { data: leaderboard } = await supabase
-          .from('profiles')
-          .select('id, mm8_id, full_name, username, avatar_url_proxy, lumen_points, lumen_tier, is_vip, streak_days')
-          .gt('lumen_points', 0)
-          .order('lumen_points', { ascending: false })
-          .limit(10);
-
-        // --- FETCH NOTIFICATIONS ---
-        const { data: notifs } = await supabase
-          .from('notifications')
-          .select('*')
-          .eq('user_id', session.user.id)
-          .order('created_at', { ascending: false })
-          .limit(5);
-
-        setData({
-          profile: {
-            id: profile.id,
-            name: profile.full_name || "AGENT_X",
-            username: profile.username || null,
-            status: profile.status || "UNVERIFIED",
-            lumenPoints: profile.lumen_points || 0,
-            lumenTier: profile.lumen_tier || 'NEW TALENT',
-            peakLumen: profile.peak_lumen || 0,
-            streakDays: profile.streak_days || 0,
-            location: profile.location || "UNKNOWN",
-            avatarUrl: sanitizeAvatarUrl(profile.avatar_url_proxy),
-            mm8Id: profile.mm8_id || null,
-            isVip: profile.is_vip || false,
-          },
-          leaderboard: (leaderboard || []).map((u: any, i: number) => ({
-            rank: i + 1,
-            id: u.id,
-            name: u.full_name || 'UNKNOWN',
-            username: u.username || null,
-            avatarUrl: sanitizeAvatarUrl(u.avatar_url_proxy),
-            score: u.lumen_points,
-            tier: u.lumen_tier,
-            isVip: u.is_vip,
-            streakDays: u.streak_days || 0,
-            isUser: u.id === session.user.id,
-          })),
-          roles: [
-            { id: 1, title: "LEAD ANTAGONIST", project: "SHADOWS OF KOCHI", match: 98, deadline: "24H", tags: ["INTENSE", "MALAYALAM"] },
-            { id: 2, title: "SUPPORTING COP", project: "UNTITLED THRILLER", match: 84, deadline: "3D", tags: ["ACTION", "HINDI"] },
-            { id: 3, title: "COMIC RELIEF", project: "CAMPUS DIARIES", match: 72, deadline: "1W", tags: ["FUNNY", "TAMIL"] },
-          ],
-          notifications: notifs || [],
-        });
-      } catch (error) {
-        console.error("Dashboard critical error:", error);
-      } finally {
-        setLoading(false);
       }
-    };
-    fetchData();
+
+      // --- FETCH TODAY'S MISSIONS ---
+      const todayStart = new Date();
+      todayStart.setHours(0,0,0,0);
+      
+      const { data: todayLogs } = await supabase
+        .from('lumen_log')
+        .select('action')
+        .eq('user_id', session.user.id)
+        .gte('created_at', todayStart.toISOString());
+
+      const missionActions = (todayLogs || []).map(l => l.action);
+      
+      const multiplier = profile.is_vip ? 1.3 : 1.0;
+
+      // --- FETCH LEADERBOARD ---
+      const { data: leaderboard } = await supabase
+        .from('profiles')
+        .select('id, mm8_id, full_name, username, avatar_url_proxy, lumen_points, lumen_tier, is_vip, streak_days')
+        .gt('lumen_points', 0)
+        .order('lumen_points', { ascending: false })
+        .limit(10);
+
+      // --- FETCH NOTIFICATIONS ---
+      const { data: notifs } = await supabase
+        .from('notifications')
+        .select('*')
+        .eq('user_id', session.user.id)
+        .order('created_at', { ascending: false })
+        .limit(5);
+
+      setData({
+        profile: {
+          id: profile.id,
+          name: profile.full_name || "AGENT_X",
+          username: profile.username || null,
+          status: profile.status || "UNVERIFIED",
+          lumenPoints: profile.lumen_points || 0,
+          lumenTier: profile.lumen_tier || 'NEW TALENT',
+          peakLumen: profile.peak_lumen || 0,
+          streakDays: profile.streak_days || 0,
+          location: profile.location || "UNKNOWN",
+          avatarUrl: sanitizeAvatarUrl(profile.avatar_url_proxy),
+          mm8Id: profile.mm8_id || null,
+          isVip: profile.is_vip || false,
+          multiplier: multiplier,
+          objectivePreference: profile.objective_preference || "",
+          languages: profile.languages || [],
+          archetypes: profile.archetypes || [],
+          experience: profile.experience || "",
+          opportunityReadiness: profile.opportunity_readiness || "",
+        },
+        missions: [
+          { label: 'UPLOAD AUDITION TAPE', reward: Math.floor(40 * multiplier), done: missionActions.includes('UPLOAD_TAPE') },
+          { label: 'COMPLETE PROFILE FIELD', reward: Math.floor(10 * multiplier), done: missionActions.includes('PROFILE_UPDATE') || missionActions.includes('ONBOARDING_COMPLETE') },
+          { label: 'DAILY LOGIN', reward: Math.floor(10 * multiplier), done: missionActions.includes('DAILY_LOGIN') },
+        ],
+        leaderboard: (leaderboard || []).map((u: any, i: number) => ({
+          rank: i + 1,
+          id: u.id,
+          name: u.full_name || 'UNKNOWN',
+          username: u.username || null,
+          avatarUrl: sanitizeAvatarUrl(u.avatar_url_proxy),
+          score: u.lumen_points,
+          tier: u.lumen_tier,
+          isVip: u.is_vip,
+          streakDays: u.streak_days || 0,
+          isUser: u.id === session.user.id,
+        })),
+        roles: [
+          { id: 1, title: "LEAD ANTAGONIST", project: "SHADOWS OF KOCHI", match: 98, deadline: "24H", tags: ["INTENSE", "MALAYALAM"] },
+          { id: 2, title: "SUPPORTING COP", project: "UNTITLED THRILLER", match: 84, deadline: "3D", tags: ["ACTION", "HINDI"] },
+          { id: 3, title: "COMIC RELIEF", project: "CAMPUS DIARIES", match: 72, deadline: "1W", tags: ["FUNNY", "TAMIL"] },
+        ],
+        notifications: notifs || [],
+      });
+    } catch (error) {
+      console.error("Dashboard critical error:", error);
+    } finally {
+      setLoading(false);
+    }
   }, [router]);
 
-  return { data, loading };
+  useEffect(() => {
+    fetchData();
+
+    // --- REAL-TIME SUBSCRIPTION ---
+    const channel = supabase
+      .channel('dashboard-sync')
+      .on('postgres_changes', { 
+        event: '*', 
+        schema: 'public', 
+        table: 'profiles' 
+      }, () => {
+        console.log("PROFILE_SYNC_TRIGGERED");
+        fetchData();
+      })
+      .on('postgres_changes', { 
+        event: 'INSERT', 
+        schema: 'public', 
+        table: 'lumen_log' 
+      }, () => {
+        console.log("LMN_LOG_SYNC_TRIGGERED");
+        fetchData();
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [fetchData]);
+
+  return { data, loading, fetchData };
 };
 
 export default function AgenticDashboard() {
@@ -231,6 +285,13 @@ export default function AgenticDashboard() {
   const [prefLocation, setPrefLocation] = useState("");
   
   const [isUploadingPFP, setIsUploadingPFP] = useState(false);
+
+  // Cropping State
+  const [cropImage, setCropImage] = useState<string | null>(null);
+  const [crop, setCrop] = useState({ x: 0, y: 0 });
+  const [zoom, setZoom] = useState(1);
+  const [croppedAreaPixels, setCroppedAreaPixels] = useState<any>(null);
+  const [showCropModal, setShowCropModal] = useState(false);
 
   // Sync preferences when modal opens or data changes
   useEffect(() => {
@@ -335,13 +396,29 @@ export default function AgenticDashboard() {
   const handlePFPChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!e.target.files?.[0]) return;
     const file = e.target.files[0];
+    const reader = new FileReader();
+    reader.onload = () => {
+      setCropImage(reader.result as string);
+      setShowCropModal(true);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const onCropComplete = useCallback((_area: any, pixels: any) => {
+    setCroppedAreaPixels(pixels);
+  }, []);
+
+  const handleApplyCrop = async () => {
+    if (!cropImage || !croppedAreaPixels) return;
     
     setIsUploadingPFP(true);
+    setShowCropModal(false);
     setMessage({ text: "PROCESSING BIOMETRIC UPLOAD...", type: 'info' });
 
     try {
+      const croppedBlob = await getCroppedImg(cropImage, croppedAreaPixels);
       const formData = new FormData();
-      formData.append('file', file);
+      formData.append('file', croppedBlob, 'pfp.jpg');
       
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Authentication failure");
@@ -349,7 +426,8 @@ export default function AgenticDashboard() {
       const profileUrl = await uploadProfilePicture(formData);
       if (profileUrl) {
         setMessage({ text: "IDENTITY HUD UPDATED.", type: 'success' });
-        setTimeout(() => window.location.reload(), 1000);
+        // Real-time will handle the refresh, but let's clear local state
+        setCropImage(null);
       }
     } catch (err: any) {
       console.error(err);
@@ -642,6 +720,49 @@ export default function AgenticDashboard() {
             </div>
           </section>
 
+          {/* LUMEN Economy Intel */}
+          <section className="glass-panel p-10 brutal-border border-zinc-800 relative overflow-hidden group">
+            <div className="flex items-center gap-4 mb-8">
+              <Zap className="w-5 h-5 text-brand-red-neon" />
+              <h3 className="font-black uppercase tracking-[0.4em] text-[10px]">LUMEN_ECONOMY_INTEL</h3>
+            </div>
+            
+            <div className="space-y-6">
+              <div className="p-4 bg-zinc-900/50 brutal-border border-zinc-800">
+                <p className="text-[10px] font-black text-zinc-500 uppercase tracking-widest mb-2">Base Protocols</p>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="flex flex-col">
+                    <span className="text-white font-black text-xs">AUDITION_TAPE</span>
+                    <span className="text-brand-red-neon font-black text-[9px]">+40 LMN</span>
+                  </div>
+                  <div className="flex flex-col">
+                    <span className="text-white font-black text-xs">PROFILE_SYNC</span>
+                    <span className="text-brand-red-neon font-black text-[9px]">+10 LMN</span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="p-4 bg-brand-red-neon/5 brutal-border border-brand-red-neon/20 relative">
+                <div className="absolute top-2 right-2">
+                  <Crown className="w-3 h-3 text-yellow-500" />
+                </div>
+                <p className="text-[10px] font-black text-brand-red-neon uppercase tracking-widest mb-2">Active Boosters</p>
+                <div className="flex justify-between items-center">
+                  <span className="text-white font-black text-xs">VIP_EARLY_ACCESS</span>
+                  <span className="bg-brand-red-neon text-white font-black text-[10px] px-2 py-1">1.3X MULTIPLIER</span>
+                </div>
+                <p className="text-[8px] text-zinc-500 font-black uppercase tracking-widest mt-3 leading-relaxed">
+                  Your VIP status grants a permanent 30% boost to all LMN gains across the ecosystem.
+                </p>
+              </div>
+
+              <div className="flex items-center gap-3 px-2">
+                <ShieldCheck className="w-4 h-4 text-zinc-600" />
+                <p className="text-[8px] text-zinc-600 font-black uppercase tracking-widest">Floor protection active: Balance cannot drop below 70% of Peak LMN.</p>
+              </div>
+            </div>
+          </section>
+
           {/* Streak & Daily Missions */}
           <section className="glass-panel-red p-10 hover:bg-brand-red-neon/10 transition-all cursor-pointer group relative overflow-hidden clip-brutal-br">
             <div className="relative z-10">
@@ -650,17 +771,13 @@ export default function AgenticDashboard() {
                 <h3 className="font-black uppercase tracking-[0.4em] text-[10px]">DAILY_MISSIONS</h3>
               </div>
               <div className="flex flex-col gap-4">
-                {[
-                  { label: 'UPLOAD AUDITION TAPE', reward: '+40 LMN', done: false },
-                  { label: 'COMPLETE PROFILE FIELD', reward: '+10 LMN', done: false },
-                  { label: 'DAILY LOGIN', reward: '+10 LMN', done: true },
-                ].map(mission => (
+                {data.missions.map((mission: any) => (
                   <div key={mission.label} className={`flex items-center justify-between p-4 brutal-border transition-all ${mission.done ? 'border-green-500/30 bg-green-500/5' : 'border-zinc-800 bg-zinc-950/50'}`}>
                     <div className="flex items-center gap-3">
                       <div className={`w-3 h-3 ${mission.done ? 'bg-green-500' : 'bg-zinc-800'}`} />
                       <span className={`font-black uppercase tracking-widest text-[10px] ${mission.done ? 'text-green-500 line-through' : 'text-zinc-500'}`}>{mission.label}</span>
                     </div>
-                    <span className="font-black text-brand-red-neon text-[10px] tracking-widest">{mission.reward}</span>
+                    <span className="font-black text-brand-red-neon text-[10px] tracking-widest">+{mission.reward} LMN</span>
                   </div>
                 ))}
               </div>
@@ -934,7 +1051,7 @@ export default function AgenticDashboard() {
               </div>
 
               {/* Modal Body - Scrollable */}
-              <div className="flex-1 overflow-y-auto p-8 md:p-12 custom-scrollbar space-y-16">
+              <div className="flex-1 overflow-y-auto p-8 md:p-12 custom-scrollbar space-y-16 max-h-[70vh]">
                 
                 {/* Section 1: Biometric Identity */}
                 <section>
@@ -1161,6 +1278,67 @@ export default function AgenticDashboard() {
                 </button>
               </div>
 
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* Crop Modal */}
+      <AnimatePresence>
+        {showCropModal && cropImage && (
+          <div className="fixed inset-0 z-[200] flex items-center justify-center p-6">
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="absolute inset-0 bg-black/95 backdrop-blur-2xl"
+            />
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.9 }}
+              className="w-full max-w-2xl aspect-square glass-panel brutal-border-red relative z-10 flex flex-col"
+            >
+              <div className="flex-1 relative bg-zinc-950">
+                <Cropper
+                  image={cropImage}
+                  crop={crop}
+                  zoom={zoom}
+                  aspect={1}
+                  onCropChange={setCrop}
+                  onZoomChange={setZoom}
+                  onCropComplete={onCropComplete}
+                />
+              </div>
+              <div className="p-8 bg-zinc-950 flex flex-col gap-6">
+                <div className="flex items-center gap-6">
+                  <span className="text-[10px] font-black text-zinc-500 uppercase tracking-widest w-20">ZOOM_LVL</span>
+                  <input 
+                    type="range" 
+                    min={1} 
+                    max={3} 
+                    step={0.1} 
+                    value={zoom} 
+                    onChange={(e) => setZoom(Number(e.target.value))}
+                    className="flex-1 accent-brand-red-neon"
+                  />
+                </div>
+                <div className="flex gap-4">
+                  <button 
+                    onClick={handleApplyCrop}
+                    disabled={isUploadingPFP}
+                    className="flex-1 py-5 bg-brand-red-neon text-white font-black text-sm uppercase tracking-widest hover:bg-white hover:text-black transition-all brutal-shadow disabled:opacity-50"
+                  >
+                    {isUploadingPFP ? "PROCESSING..." : "FINALIZE BIOMETRIC CROP"}
+                  </button>
+                  <button 
+                    onClick={() => setShowCropModal(false)}
+                    className="px-8 py-5 border-2 border-zinc-800 text-zinc-500 font-black text-sm uppercase tracking-widest hover:border-brand-red-neon hover:text-white transition-all"
+                  >
+                    CANCEL
+                  </button>
+                </div>
+              </div>
             </motion.div>
           </div>
         )}
