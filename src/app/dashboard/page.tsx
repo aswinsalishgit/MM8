@@ -417,6 +417,8 @@ export default function AgenticDashboard() {
 
     try {
       const croppedBlob = await getCroppedImg(cropImage, croppedAreaPixels);
+      if (!croppedBlob) throw new Error("CROP_FAILURE");
+
       const formData = new FormData();
       formData.append('file', croppedBlob, 'pfp.jpg');
       
