@@ -8,6 +8,18 @@ import { supabase } from "@/utils/supabase/client";
 import { useRouter } from "next/navigation";
 import { uploadAuditionTape } from "@/app/actions/driveActions";
 
+const sanitizeAvatarUrl = (url: string | null) => {
+  if (!url) return null;
+  // If it's a legacy Google Drive link, extract ID and use our proxy
+  if (url.includes('drive.google.com')) {
+    const match = url.match(/[?&]id=([^&]+)/) || url.match(/\/d\/([^/]+)/);
+    if (match && match[1]) {
+      return `/api/drive/stream/${match[1]}`;
+    }
+  }
+  return url;
+};
+
 const TIER_CONFIG: Record<string, { color: string; glow: string; label: string }> = {
   'NEW TALENT': { color: 'text-zinc-500', glow: '', label: 'NEW TALENT' },
   'RISING': { color: 'text-blue-400', glow: 'drop-shadow-[0_0_8px_rgba(96,165,250,0.5)]', label: 'RISING' },
@@ -154,7 +166,7 @@ const useDashboardData = () => {
             peakLumen: profile.peak_lumen || 0,
             streakDays: profile.streak_days || 0,
             location: profile.location || "UNKNOWN",
-            avatarUrl: profile.avatar_url_proxy || null,
+            avatarUrl: sanitizeAvatarUrl(profile.avatar_url_proxy),
             mm8Id: profile.mm8_id || null,
             isVip: profile.is_vip || false,
           },
@@ -163,7 +175,7 @@ const useDashboardData = () => {
             id: u.id,
             name: u.full_name || 'UNKNOWN',
             username: u.username || null,
-            avatarUrl: u.avatar_url_proxy || null,
+            avatarUrl: sanitizeAvatarUrl(u.avatar_url_proxy),
             score: u.lumen_points,
             tier: u.lumen_tier,
             isVip: u.is_vip,

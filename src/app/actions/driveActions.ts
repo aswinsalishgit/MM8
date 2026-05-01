@@ -72,13 +72,14 @@ export async function uploadProfilePicture(formData: FormData) {
   }
 
   const driveFile = await uploadToDrive(driveFolderId, fileName, buffer, file.type);
+  const proxyUrl = `/api/drive/stream/${driveFile.id}`;
   
   await supabase
     .from('profiles')
-    .update({ avatar_url_proxy: driveFile.webContentLink })
+    .update({ avatar_url_proxy: proxyUrl })
     .eq('id', user.id);
 
-  return driveFile.webContentLink || null;
+  return proxyUrl;
 }
 
 export async function removeProfilePicture() {

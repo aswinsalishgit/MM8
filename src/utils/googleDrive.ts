@@ -104,3 +104,33 @@ export async function findFilesByName(folderId: string, name: string) {
     return [];
   }
 }
+
+export async function getFileStream(fileId: string) {
+  console.log('MM8_DRIVE_GET_STREAM:', fileId);
+  const drive = await getDriveClient();
+  try {
+    const response = await drive.files.get(
+      { fileId: fileId, alt: 'media' },
+      { responseType: 'stream' }
+    );
+    return response.data;
+  } catch (err) {
+    console.error('MM8_DRIVE_STREAM_ERROR:', err);
+    throw err;
+  }
+}
+
+export async function getFileMetadata(fileId: string) {
+  console.log('MM8_DRIVE_GET_METADATA:', fileId);
+  const drive = await getDriveClient();
+  try {
+    const response = await drive.files.get({
+      fileId: fileId,
+      fields: 'id, name, mimeType, size',
+    });
+    return response.data;
+  } catch (err) {
+    console.error('MM8_DRIVE_METADATA_ERROR:', err);
+    throw err;
+  }
+}
