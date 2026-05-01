@@ -5,7 +5,8 @@ import { motion, AnimatePresence } from "framer-motion";
 import { 
   PlayCircle, Star, Settings, Bell, LogOut, X, 
   ChevronRight, Crown, Upload, Trash2, MapPin, 
-  ChevronDown, Check, User, CheckCircle2, Trophy, Flame, Lock, ShieldCheck, AlertTriangle, Zap
+  ChevronDown, Check, User, CheckCircle2, Trophy, Flame, Lock, ShieldCheck, AlertTriangle, Zap,
+  Menu, Home, Compass, PlusSquare, Briefcase, Target, Rss, Users
 } from "lucide-react";
 import { supabase } from "@/utils/supabase/client";
 import { useRouter } from "next/navigation";
@@ -276,6 +277,21 @@ export default function AgenticDashboard() {
   const [usernameStatus, setUsernameStatus] = useState<"idle" | "checking" | "available" | "taken" | "invalid">("idle");
   const [message, setMessage] = useState<{ text: string, type: 'error' | 'success' | 'info' } | null>(null);
 
+  // Navigation State
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [currentView, setCurrentView] = useState("OVERVIEW");
+
+  const NAVIGATION_ITEMS = [
+    { id: 'CREATE', label: 'CREATE', icon: PlusSquare },
+    { id: 'OVERVIEW', label: 'OVERVIEW', icon: Home },
+    { id: 'ROLES', label: 'ROLES', icon: Briefcase },
+    { id: 'MISSIONS', label: 'MISSIONS', icon: Target },
+    { id: 'LEADERBOARD', label: 'LEADERBOARD', icon: Trophy },
+    { id: 'FEED', label: 'FEED', icon: Rss },
+    { id: 'LMN_REGISTER', label: 'LMN REGISTER', icon: Zap },
+    { id: 'COMMUNITY', label: 'COMMUNITY', icon: Users },
+  ];
+
   // Preference State
   const [prefDesire, setPrefDesire] = useState("");
   const [prefLanguages, setPrefLanguages] = useState<string[]>([]);
@@ -539,14 +555,14 @@ export default function AgenticDashboard() {
   }
 
   return (
-    <main className="min-h-screen bg-black text-white p-4 md:p-12 overflow-x-hidden relative selection:bg-brand-red-neon selection:text-white">
+    <main className="min-h-screen bg-black text-white flex overflow-hidden selection:bg-brand-red-neon selection:text-white">
       
       {/* Status Bar */}
       {message && (
         <motion.div 
           initial={{ y: -50, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
-          className={`fixed top-0 left-0 w-full z-[1000] p-4 text-center font-black uppercase tracking-[0.4em] text-[10px] border-b ${
+          className={`fixed top-0 left-0 w-full z-[2000] p-4 text-center font-black uppercase tracking-[0.4em] text-[10px] border-b ${
             message.type === 'error' ? 'bg-red-500/10 border-brand-red-neon text-brand-red-neon' : 
             message.type === 'success' ? 'bg-green-500/10 border-green-500 text-green-500' :
             'bg-brand-red-neon/10 border-brand-red-neon text-white'
@@ -562,75 +578,146 @@ export default function AgenticDashboard() {
         </motion.div>
       )}
 
-      {/* Header HUD */}
-      <header className="flex flex-col md:flex-row justify-between items-start md:items-end border-b border-zinc-900 pb-12 mb-16 relative z-10">
-        <motion.div
-          initial={{ opacity: 0, x: -30 }}
-          animate={{ opacity: 1, x: 0 }}
-        >
-          <h1 className="text-6xl md:text-9xl font-black uppercase tracking-tighter leading-none text-white">
-            MM8<span className="text-brand-red-neon drop-shadow-[0_0_15px_rgba(255,49,49,0.5)]">//</span>CMD
-          </h1>
-          <div className="flex items-center gap-4 mt-6">
-            <div className="flex gap-1">
-              {[...Array(5)].map((_, i) => (
-                <div key={i} className={`w-1 h-4 ${i < 3 ? 'bg-brand-red-neon' : 'bg-zinc-800'}`} />
-              ))}
+      {/* Sidebar Navigation */}
+      <AnimatePresence>
+        {(isSidebarOpen || (typeof window !== 'undefined' && window.innerWidth > 1024)) && (
+          <motion.aside
+            initial={{ x: -300 }}
+            animate={{ x: 0 }}
+            exit={{ x: -300 }}
+            transition={{ duration: 0.3, ease: "circOut" }}
+            className="fixed lg:static inset-y-0 left-0 w-72 bg-black border-r border-zinc-900 z-[150] flex flex-col overflow-y-auto custom-scrollbar shrink-0"
+          >
+            <div className="p-8 border-b border-zinc-900 flex justify-between items-center shrink-0">
+              <h2 className="text-4xl font-black uppercase tracking-tighter">MM8</h2>
+              <button className="lg:hidden p-2 hover:bg-zinc-900 transition-colors" onClick={() => setIsSidebarOpen(false)}>
+                <X className="w-6 h-6 text-zinc-500 hover:text-white" />
+              </button>
             </div>
-            <p className="text-zinc-600 font-black tracking-[0.4em] uppercase text-[10px] flex items-center gap-2">
-              <span className="w-2 h-2 rounded-full bg-brand-red-neon animate-pulse" />
-              SYSTEM_READY // NODE_ACTIVE
-            </p>
-          </div>
-        </motion.div>
+            
+            <div className="p-8 border-b border-zinc-900 shrink-0 flex flex-col items-center">
+              <div className="w-32 h-32 brutal-border-red bg-zinc-900 mb-6 relative overflow-hidden">
+                {data.profile.avatarUrl ? (
+                  <img src={data.profile.avatarUrl} alt="PFP" className="w-full h-full object-cover" />
+                ) : (
+                  <User className="w-12 h-12 text-zinc-800 absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" />
+                )}
+              </div>
+              <p className="font-black text-center text-sm uppercase tracking-widest text-zinc-500">BIOMETRIC_ID</p>
+            </div>
+
+            <nav className="flex-1 p-4 flex flex-col gap-2">
+              {NAVIGATION_ITEMS.map((item) => (
+                <button
+                  key={item.id}
+                  onClick={() => {
+                    setCurrentView(item.id);
+                    if (window.innerWidth <= 1024) setIsSidebarOpen(false);
+                    if (item.id === 'SETTINGS') setShowSettings(true);
+                    if (item.id === 'LOGOUT') handleLogout();
+                  }}
+                  className={`w-full flex items-center gap-4 p-4 text-left font-black uppercase tracking-widest text-[10px] transition-all ${
+                    currentView === item.id 
+                      ? 'bg-brand-red-neon/10 border-l-4 border-brand-red-neon text-white' 
+                      : 'border-l-4 border-transparent text-zinc-500 hover:bg-zinc-900 hover:text-white'
+                  }`}
+                >
+                  <item.icon className={`w-4 h-4 ${currentView === item.id ? 'text-brand-red-neon' : ''}`} />
+                  {item.label}
+                </button>
+              ))}
+            </nav>
+          </motion.aside>
+        )}
+      </AnimatePresence>
+
+      {/* Main Wrapper */}
+      <div className="flex-1 flex flex-col h-screen overflow-hidden relative w-full">
         
-        <motion.div 
-          initial={{ opacity: 0, x: 30 }}
-          animate={{ opacity: 1, x: 0 }}
-          className="mt-8 md:mt-0 flex flex-col items-end"
-        >
-          <div className="glass-panel brutal-border-red px-8 py-4 clip-brutal-slant flex items-center gap-4">
-            <span className="font-black uppercase tracking-[0.2em] text-[10px] text-zinc-500">MM8_ID:</span>
-            <span className="font-black uppercase tracking-widest text-xs text-brand-red-neon tabular-nums">
-              {data.profile.mm8Id ? `#${String(data.profile.mm8Id).padStart(4, '0')}` : '—'}
-            </span>
-            {data.profile.isVip && (
-              <span className="flex items-center gap-1 px-3 py-1 bg-yellow-500/20 border border-yellow-500/50 text-yellow-400 text-[8px] font-black uppercase tracking-widest">
-                <Crown className="w-3 h-3" /> VIP
-              </span>
-            )}
+        {/* Top Header */}
+        <header className="h-20 border-b border-zinc-900 bg-black flex items-center justify-between px-6 shrink-0 z-[100]">
+          <button 
+            onClick={() => setIsSidebarOpen(true)}
+            className="p-3 hover:bg-zinc-900 transition-colors lg:hidden"
+          >
+            <Menu className="w-6 h-6 text-white" />
+          </button>
+          
+          <div className="hidden lg:block" /> {/* Spacer */}
+
+          <div className="flex items-center gap-6">
+            <div className="flex items-center gap-3">
+              <button onClick={() => setCurrentView('OVERVIEW')} className="p-2 hover:bg-zinc-900 rounded-full transition-colors group">
+                <Home className="w-5 h-5 text-zinc-500 group-hover:text-white" />
+              </button>
+              <button className="p-2 hover:bg-zinc-900 rounded-full transition-colors group">
+                <Compass className="w-5 h-5 text-zinc-500 group-hover:text-white" />
+              </button>
+              <button onClick={() => router.push('/dashboard/notifications')} className="p-2 hover:bg-zinc-900 rounded-full transition-colors group relative">
+                <Bell className="w-5 h-5 text-zinc-500 group-hover:text-white" />
+                {data.notifications?.filter((n: any) => !n.read).length > 0 && (
+                  <span className="absolute top-1 right-1 w-2 h-2 bg-brand-red-neon rounded-full" />
+                )}
+              </button>
+              <button onClick={() => setShowSettings(true)} className="p-2 hover:bg-zinc-900 rounded-full transition-colors group">
+                <Settings className="w-5 h-5 text-zinc-500 group-hover:text-white" />
+              </button>
+            </div>
+            
+            <div className="w-[1px] h-8 bg-zinc-900" />
+            
+            <div className="flex items-center gap-4">
+              <div className="flex flex-col items-end">
+                <span className="font-black text-xs uppercase tracking-widest">{data.profile.name}</span>
+                <span className="font-black text-[9px] text-zinc-500 uppercase tracking-widest">@{data.profile.username || `user_${data.profile.mm8Id}`}</span>
+              </div>
+              <div className="w-10 h-10 rounded-full bg-zinc-900 border border-zinc-800 overflow-hidden shrink-0">
+                {data.profile.avatarUrl ? (
+                  <img src={data.profile.avatarUrl} alt="PFP" className="w-full h-full object-cover" />
+                ) : (
+                  <User className="w-5 h-5 text-zinc-700 m-auto mt-2" />
+                )}
+              </div>
+            </div>
           </div>
-          <div className="flex items-center gap-4 mt-4">
-            <p className="text-[9px] font-black text-brand-red-deep uppercase tracking-widest">SECURE_HANDSHAKE_ESTABLISHED</p>
-            <button 
-              onClick={() => router.push('/dashboard/notifications')}
-              className="p-2 hover:bg-zinc-900 transition-colors cursor-pointer group relative"
-              title="NOTIFICATIONS"
-            >
-              <Bell className="w-4 h-4 text-zinc-500 group-hover:text-white transition-colors" />
-              {data.notifications?.filter((n: any) => !n.read).length > 0 && (
-                <span className="absolute -top-1 -right-1 w-4 h-4 bg-brand-red-neon rounded-full flex items-center justify-center text-[7px] font-black text-white">
-                  {data.notifications.filter((n: any) => !n.read).length}
-                </span>
-              )}
-            </button>
-            <button 
-              onClick={() => setShowSettings(true)}
-              className="p-2 hover:bg-zinc-900 transition-colors cursor-pointer group"
-              title="SYSTEM CONFIG"
-            >
-              <Settings className="w-4 h-4 text-zinc-500 group-hover:text-white transition-colors" />
-            </button>
-            <button 
-              onClick={handleLogout}
-              className="p-2 hover:bg-brand-red-neon/20 transition-colors cursor-pointer group"
-              title="TERMINATE SESSION"
-            >
-              <LogOut className="w-4 h-4 text-zinc-500 group-hover:text-brand-red-neon transition-colors" />
-            </button>
-          </div>
-        </motion.div>
-      </header>
+        </header>
+
+        {/* Content Area */}
+        <div className="flex-1 overflow-y-auto custom-scrollbar p-4 md:p-12 relative z-10 w-full">
+          
+          {currentView === 'OVERVIEW' ? (
+            <div className="animate-in fade-in duration-500">
+              {/* Overview Title */}
+              <div className="mb-12 border-b border-zinc-900 pb-8 flex flex-col md:flex-row justify-between items-start md:items-end">
+                <motion.div
+                  initial={{ opacity: 0, x: -30 }}
+                  animate={{ opacity: 1, x: 0 }}
+                >
+                  <h1 className="text-4xl md:text-6xl font-black uppercase tracking-tighter leading-none text-white">
+                    MM8<span className="text-brand-red-neon drop-shadow-[0_0_15px_rgba(255,49,49,0.5)]">//</span>OVERVIEW
+                  </h1>
+                  <p className="text-zinc-600 font-black tracking-[0.4em] uppercase text-[10px] flex items-center gap-2 mt-4">
+                    <span className="w-2 h-2 rounded-full bg-brand-red-neon animate-pulse" />
+                    SYSTEM_READY // NODE_ACTIVE
+                  </p>
+                </motion.div>
+                
+                <motion.div 
+                  initial={{ opacity: 0, x: 30 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  className="mt-6 md:mt-0 glass-panel brutal-border-red px-6 py-3 clip-brutal-slant flex items-center gap-3"
+                >
+                  <span className="font-black uppercase tracking-[0.2em] text-[10px] text-zinc-500">MM8_ID:</span>
+                  <span className="font-black uppercase tracking-widest text-xs text-brand-red-neon tabular-nums">
+                    {data.profile.mm8Id ? `#${String(data.profile.mm8Id).padStart(4, '0')}` : '—'}
+                  </span>
+                  {data.profile.isVip && (
+                    <span className="flex items-center gap-1 px-2 py-0.5 bg-yellow-500/20 border border-yellow-500/50 text-yellow-400 text-[8px] font-black uppercase tracking-widest">
+                      <Crown className="w-3 h-3" /> VIP
+                    </span>
+                  )}
+                </motion.div>
+              </div>
 
       <div className="max-w-screen-2xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-12 relative z-10 pb-20">
         
@@ -1017,8 +1104,25 @@ export default function AgenticDashboard() {
             </div>
           </section>
 
-        </div>
       </div>
+      </div>
+      </div>
+      ) : currentView === 'SETTINGS' ? (
+        <div className="flex flex-col items-center justify-center h-[60vh] opacity-50 animate-in fade-in duration-500">
+           <Settings className="w-16 h-16 text-brand-red-neon mb-4" />
+           <h2 className="text-2xl font-black uppercase tracking-widest text-center">SYSTEM CONFIGURATION</h2>
+           <p className="text-xs tracking-widest uppercase text-zinc-500 mt-2 text-center">Check the overlay modal.</p>
+           <button onClick={() => setShowSettings(true)} className="mt-8 px-6 py-3 bg-zinc-900 hover:bg-brand-red-neon transition-colors font-black text-xs uppercase tracking-widest border border-zinc-800">OPEN MODAL</button>
+        </div>
+      ) : (
+        <div className="flex flex-col items-center justify-center h-[60vh] opacity-50 animate-in fade-in duration-500">
+           <h2 className="text-4xl font-black uppercase tracking-widest text-center">{currentView} // MODULE</h2>
+           <p className="text-sm tracking-widest uppercase text-brand-red-neon mt-4 text-center">CONSTRUCTION_PENDING</p>
+        </div>
+      )}
+
+      </div> {/* Close Content Area */}
+      </div> {/* Close Main Wrapper */}
 
       {/* Settings Modal */}
       <AnimatePresence>
