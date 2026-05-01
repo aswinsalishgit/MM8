@@ -586,6 +586,7 @@ export default function AgenticDashboard() {
             animate={{ x: 0 }}
             exit={{ x: -300 }}
             transition={{ duration: 0.3, ease: "circOut" }}
+            data-lenis-prevent
             className="fixed lg:static inset-y-0 left-0 w-72 bg-black border-r border-zinc-900 z-[150] flex flex-col overflow-y-auto custom-scrollbar shrink-0"
           >
             <div className="p-8 border-b border-zinc-900 flex justify-between items-center shrink-0">
@@ -645,45 +646,42 @@ export default function AgenticDashboard() {
           
           <div className="hidden lg:block" /> {/* Spacer */}
 
-          <div className="flex items-center gap-6">
-            <div className="flex items-center gap-3">
-              <button onClick={() => setCurrentView('OVERVIEW')} className="p-2 hover:bg-zinc-900 rounded-full transition-colors group">
-                <Home className="w-5 h-5 text-zinc-500 group-hover:text-white" />
+          <div className="flex items-center gap-6 md:gap-12 ml-auto">
+            <div className="flex items-center gap-4 md:gap-8">
+              <button onClick={() => setCurrentView('OVERVIEW')} className="p-2 hover:bg-zinc-900 rounded-full transition-colors group" title="HOME">
+                <Home className="w-5 h-5 text-zinc-500 group-hover:text-white transition-all" />
               </button>
-              <button className="p-2 hover:bg-zinc-900 rounded-full transition-colors group">
-                <Compass className="w-5 h-5 text-zinc-500 group-hover:text-white" />
+              <button className="p-2 hover:bg-zinc-900 rounded-full transition-colors group" title="DISCOVER">
+                <Compass className="w-5 h-5 text-zinc-500 group-hover:text-white transition-all" />
               </button>
-              <button onClick={() => router.push('/dashboard/notifications')} className="p-2 hover:bg-zinc-900 rounded-full transition-colors group relative">
-                <Bell className="w-5 h-5 text-zinc-500 group-hover:text-white" />
+              <button onClick={() => router.push('/dashboard/notifications')} className="p-2 hover:bg-zinc-900 rounded-full transition-colors group relative" title="NOTIFICATIONS">
+                <Bell className="w-5 h-5 text-zinc-500 group-hover:text-white transition-all" />
                 {data.notifications?.filter((n: any) => !n.read).length > 0 && (
                   <span className="absolute top-1 right-1 w-2 h-2 bg-brand-red-neon rounded-full" />
                 )}
               </button>
-              <button onClick={() => setShowSettings(true)} className="p-2 hover:bg-zinc-900 rounded-full transition-colors group">
-                <Settings className="w-5 h-5 text-zinc-500 group-hover:text-white" />
+              <button onClick={() => setShowSettings(true)} className="p-2 hover:bg-zinc-900 rounded-full transition-colors group" title="SETTINGS">
+                <Settings className="w-5 h-5 text-zinc-500 group-hover:text-white transition-all" />
               </button>
             </div>
             
-            <div className="w-[1px] h-8 bg-zinc-900" />
+            <div className="w-[1px] h-8 bg-zinc-900 hidden md:block" />
             
-            <div className="flex items-center gap-4">
-              <div className="flex flex-col items-end">
-                <span className="font-black text-xs uppercase tracking-widest">{data.profile.name}</span>
-                <span className="font-black text-[9px] text-zinc-500 uppercase tracking-widest">@{data.profile.username || `user_${data.profile.mm8Id}`}</span>
-              </div>
-              <div className="w-10 h-10 rounded-full bg-zinc-900 border border-zinc-800 overflow-hidden shrink-0">
-                {data.profile.avatarUrl ? (
-                  <img src={data.profile.avatarUrl} alt="PFP" className="w-full h-full object-cover" />
-                ) : (
-                  <User className="w-5 h-5 text-zinc-700 m-auto mt-2" />
-                )}
-              </div>
+            <div className="w-10 h-10 rounded-full bg-zinc-900 border border-zinc-800 overflow-hidden shrink-0 brutal-border-red">
+              {data.profile.avatarUrl ? (
+                <img src={data.profile.avatarUrl} alt="PFP" className="w-full h-full object-cover" />
+              ) : (
+                <User className="w-5 h-5 text-zinc-700 m-auto mt-2" />
+              )}
             </div>
           </div>
         </header>
 
         {/* Content Area */}
-        <div className="flex-1 overflow-y-auto custom-scrollbar p-4 md:p-12 relative z-10 w-full">
+        <div 
+          className="flex-1 overflow-y-auto custom-scrollbar p-4 md:p-12 relative z-10 w-full"
+          data-lenis-prevent
+        >
           
           {currentView === 'OVERVIEW' ? (
             <div className="animate-in fade-in duration-500">
@@ -1157,7 +1155,10 @@ export default function AgenticDashboard() {
               </div>
 
               {/* Modal Body - Scrollable */}
-              <div className="flex-1 overflow-y-auto p-8 md:p-12 custom-scrollbar space-y-16 max-h-[70vh]">
+              <div 
+                className="flex-1 overflow-y-auto p-8 md:p-12 custom-scrollbar space-y-16"
+                data-lenis-prevent
+              >
                 
                 {/* Section 1: Biometric Identity */}
                 <section>

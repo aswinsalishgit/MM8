@@ -346,7 +346,7 @@ export default function BackgroundCanvas() {
       )}
       
       {/* Advanced Digital Overlays - Always present as fallback visual */}
-      <div className="absolute inset-0 z-0">
+      <div className="absolute inset-0 z-0 pointer-events-none">
         <div className="absolute h-[1px] w-full bg-brand-red-neon/15 top-[25%] animate-scan-slow" />
         <div className="absolute h-[1px] w-full bg-brand-red-neon/10 top-[75%] animate-scan-fast" />
         <div className="absolute inset-0 bg-[linear-gradient(rgba(139,0,0,0.05)_1px,transparent_1px),linear-gradient(90deg,rgba(139,0,0,0.05)_1px,transparent_1px)] bg-[size:60px_60px] [mask-image:radial-gradient(ellipse_at_center,black,transparent_80%)]" />
