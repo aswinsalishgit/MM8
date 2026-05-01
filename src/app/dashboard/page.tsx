@@ -1,12 +1,16 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { motion } from "framer-motion";
-import { User, CheckCircle2, ChevronRight, Trophy, Flame, PlayCircle, Star, Settings, X, Lock, ShieldCheck, LogOut, Bell, Crown, AlertTriangle, Zap } from "lucide-react";
-
+import { useState, useEffect, useCallback, useMemo } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import { 
+  PlayCircle, Star, Settings, Bell, LogOut, X, 
+  ChevronRight, Crown, Upload, Trash2, MapPin, 
+  ChevronDown, Check, User, CheckCircle2, Trophy, Flame, Lock, ShieldCheck, AlertTriangle, Zap
+} from "lucide-react";
 import { supabase } from "@/utils/supabase/client";
 import { useRouter } from "next/navigation";
-import { uploadAuditionTape } from "@/app/actions/driveActions";
+import { uploadProfilePicture, removeProfilePicture, uploadAuditionTape } from "@/app/actions/driveActions";
+import { Country, State, City } from "country-state-city";
 
 const sanitizeAvatarUrl = (url: string | null) => {
   if (!url) return null;
@@ -19,6 +23,11 @@ const sanitizeAvatarUrl = (url: string | null) => {
   }
   return url;
 };
+
+const LANGUAGES_LIST = ["MALAYALAM", "TAMIL", "HINDI", "TELUGU", "ENGLISH", "KANNADA"];
+const PERSONALITIES_LIST = ["INTENSE", "FUNNY", "VILLAIN", "ROMANTIC", "VERSATILE", "ACTION", "INNOCENT", "EMOTIONAL"];
+const AVAILABILITY_LABELS = ["IMMEDIATELY", "THIS MONTH", "IN 3 MONTHS"];
+const DESIRE_LIST = ["FIRST BREAK", "LEAD ROLES", "OTT DEBUT", "COMMERCIALS", "SIDE ROLES", "BUILD PROFILES", "EARN INCOME", "OTHERS"];
 
 const TIER_CONFIG: Record<string, { color: string; glow: string; label: string }> = {
   'NEW TALENT': { color: 'text-zinc-500', glow: '', label: 'NEW TALENT' },
@@ -213,6 +222,28 @@ export default function AgenticDashboard() {
   const [usernameStatus, setUsernameStatus] = useState<"idle" | "checking" | "available" | "taken" | "invalid">("idle");
   const [message, setMessage] = useState<{ text: string, type: 'error' | 'success' | 'info' } | null>(null);
 
+  // Preference State
+  const [prefDesire, setPrefDesire] = useState("");
+  const [prefLanguages, setPrefLanguages] = useState<string[]>([]);
+  const [prefArchetypes, setPrefArchetypes] = useState<string[]>([]);
+  const [prefExperience, setPrefExperience] = useState("");
+  const [prefAvailability, setPrefAvailability] = useState("");
+  const [prefLocation, setPrefLocation] = useState("");
+  
+  const [isUploadingPFP, setIsUploadingPFP] = useState(false);
+
+  // Sync preferences when modal opens or data changes
+  useEffect(() => {
+    if (data?.profile) {
+      setPrefDesire(data.profile.objectivePreference || "");
+      setPrefLanguages(data.profile.languages || []);
+      setPrefArchetypes(data.profile.archetypes || []);
+      setPrefExperience(data.profile.experience || "");
+      setPrefAvailability(data.profile.opportunityReadiness || "");
+      setPrefLocation(data.profile.location || "");
+    }
+  }, [data, showSettings]);
+
   const validateUsername = (username: string) => {
     return /^[a-z]+$/.test(username);
   };
@@ -259,26 +290,83 @@ export default function AgenticDashboard() {
 
     setSettingsLoading(true);
     try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("No user found");
+
       if (newPassword) {
         const { error } = await supabase.auth.updateUser({ password: newPassword });
         if (error) throw error;
       }
 
+      const profileUpdate: any = {
+        objective_preference: prefDesire,
+        languages: prefLanguages,
+        archetypes: prefArchetypes,
+        experience: prefExperience,
+        opportunity_readiness: prefAvailability,
+        location: prefLocation
+      };
+
       if (newUsername) {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (user) {
-          const { error } = await supabase.from('profiles').update({ username: newUsername }).eq('id', user.id);
-          if (error) throw error;
-        }
+        profileUpdate.username = newUsername;
       }
 
+      const { error } = await supabase
+        .from('profiles')
+        .update(profileUpdate)
+        .eq('id', user.id);
+
+      if (error) throw error;
 
       setMessage({ text: "SYSTEM CONFIG UPDATED.", type: 'success' });
-      setTimeout(() => setShowSettings(false), 2000);
+      // Refresh local data by just closing and letting the next open re-sync, 
+      // or we could trigger a re-fetch. For now, let's just close.
+      setTimeout(() => {
+        setShowSettings(false);
+        window.location.reload(); // Simple way to refresh all HUDs
+      }, 1500);
     } catch (err: any) {
       setMessage({ text: `CRITICAL ERROR: ${err.message}`, type: 'error' });
     } finally {
       setSettingsLoading(false);
+    }
+  };
+
+  const handlePFPChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!e.target.files?.[0]) return;
+    const file = e.target.files[0];
+    
+    setIsUploadingPFP(true);
+    setMessage({ text: "PROCESSING BIOMETRIC UPLOAD...", type: 'info' });
+
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("Authentication failure");
+
+      const profileUrl = await uploadProfilePicture(formData);
+      if (profileUrl) {
+        setMessage({ text: "IDENTITY HUD UPDATED.", type: 'success' });
+        setTimeout(() => window.location.reload(), 1000);
+      }
+    } catch (err: any) {
+      console.error(err);
+      setMessage({ text: "PFP_UPLOAD_FAILURE", type: 'error' });
+    } finally {
+      setIsUploadingPFP(false);
+    }
+  };
+
+  const handleRemovePFP = async () => {
+    if (!confirm("PERMANENTLY REMOVE IDENTITY IMAGE?")) return;
+    try {
+      await removeProfilePicture();
+      setMessage({ text: "PFP REMOVED.", type: 'success' });
+      setTimeout(() => window.location.reload(), 1000);
+    } catch (err) {
+      setMessage({ text: "REMOVAL_FAILURE", type: 'error' });
     }
   };
 
@@ -814,114 +902,269 @@ export default function AgenticDashboard() {
       </div>
 
       {/* Settings Modal */}
-      {showSettings && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-6">
-          <div 
-            className="absolute inset-0 bg-black/90 backdrop-blur-md"
-            onClick={() => setShowSettings(false)}
-          />
-          <motion.div 
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            className="w-full max-w-xl glass-panel brutal-border-red p-12 relative z-10"
-          >
-            <button 
+      <AnimatePresence>
+        {showSettings && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 overflow-hidden">
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="absolute inset-0 bg-black/95 backdrop-blur-xl"
               onClick={() => setShowSettings(false)}
-              className="absolute top-8 right-8 text-zinc-500 hover:text-white cursor-pointer"
+            />
+            
+            <motion.div 
+              initial={{ opacity: 0, y: 50, scale: 0.95 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: 50, scale: 0.95 }}
+              className="w-full max-w-4xl h-[85vh] glass-panel brutal-border-red relative z-10 flex flex-col overflow-hidden"
             >
-              <X className="w-6 h-6" />
-            </button>
-
-            <h2 className="text-4xl font-black uppercase tracking-tighter mb-8">SYSTEM CONFIG</h2>
-
-            {message && message.type !== 'success' && (
-              <div className={`mb-8 p-4 text-[9px] font-black uppercase tracking-widest border-l-2 ${
-                message.type === 'error' ? 'bg-red-500/10 border-brand-red-neon text-brand-red-neon' : 'bg-brand-red-neon/10 border-brand-red-neon text-white'
-              }`}>
-                {message.text}
-              </div>
-            )}
-
-            <div className="flex flex-col gap-10">
-              <div className="flex flex-col gap-4">
-                <label className="text-[10px] font-black uppercase tracking-[0.4em] text-brand-red-neon ml-2">UPDATE USERNAME</label>
-                <div className="relative">
-                  <input 
-                    type="text" 
-                    placeholder="lowercaseonly" 
-                    className={`w-full bg-zinc-950 text-white font-black text-xl px-8 py-5 border-2 outline-none transition-all uppercase clip-brutal-tl ${
-                      usernameStatus === "available" ? "border-green-500" : 
-                      usernameStatus === "taken" || usernameStatus === "invalid" ? "border-brand-red-neon" : "border-zinc-800"
-                    }`}
-                    value={newUsername}
-                    onChange={(e) => {
-                      const val = e.target.value.toLowerCase();
-                      setNewUsername(val);
-                      checkUsername(val);
-                    }}
-                  />
-                  {usernameStatus !== "idle" && (
-                    <div className="absolute right-4 top-1/2 -translate-y-1/2 text-[9px] font-black uppercase tracking-widest">
-                      {usernameStatus === "checking" && <span className="text-zinc-500">CHECKING...</span>}
-                      {usernameStatus === "available" && <span className="text-green-500">AVAILABLE</span>}
-                      {usernameStatus === "taken" && <span className="text-brand-red-neon">TAKEN</span>}
-                      {usernameStatus === "invalid" && <span className="text-brand-red-neon">INVALID_FORMAT</span>}
-                    </div>
-                  )}
+              {/* Modal Header */}
+              <div className="p-8 border-b border-zinc-900 flex justify-between items-center shrink-0">
+                <div>
+                  <h2 className="text-4xl md:text-5xl font-black uppercase tracking-tighter leading-none">SYSTEM CONFIG</h2>
+                  <p className="text-[10px] font-black uppercase tracking-[0.4em] text-brand-red-neon mt-2">USER_IDENTITY_AND_PROTOCOLS</p>
                 </div>
-                <p className="text-[9px] text-zinc-600 font-black uppercase tracking-widest ml-2 italic">Lowercase letters only. No spaces or underscores.</p>
-              </div>
-
-              <div className="flex flex-col gap-4">
-                <label className="text-[10px] font-black uppercase tracking-[0.4em] text-brand-red-neon ml-2">UPDATE PASSWORD</label>
-                <div className="relative">
-                  <input 
-                    type="password" 
-                    placeholder="********" 
-                    className={`w-full bg-zinc-950 text-white font-black text-xl px-8 py-5 border-2 outline-none transition-all uppercase clip-brutal-br ${
-                      newPassword && !validatePassword(newPassword) ? "border-brand-red-neon" : 
-                      newPassword && validatePassword(newPassword) ? "border-green-500" : "border-zinc-800"
-                    }`}
-                    value={newPassword}
-                    onChange={(e) => setNewPassword(e.target.value)}
-                  />
-                </div>
-                <div className="grid grid-cols-2 gap-2 ml-2">
-                  {[
-                    { label: "8+ CHARS", met: newPassword.length >= 8 },
-                    { label: "UPPERCASE", met: /[A-Z]/.test(newPassword) },
-                    { label: "NUMBER", met: /[0-9]/.test(newPassword) },
-                    { label: "SPECIAL", met: /[!@#$%^&*(),.?":{}|<>]/.test(newPassword) }
-                  ].map(rule => (
-                    <div key={rule.label} className="flex items-center gap-2">
-                      <div className={`w-1 h-1 rounded-full ${rule.met ? 'bg-green-500' : 'bg-zinc-800'}`} />
-                      <span className={`text-[8px] font-black uppercase tracking-widest ${rule.met ? 'text-green-500' : 'text-zinc-600'}`}>{rule.label}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              <button 
-                onClick={handleUpdateSettings}
-                disabled={settingsLoading || (newUsername.length > 0 && usernameStatus !== "available") || (newPassword.length > 0 && !validatePassword(newPassword))}
-                className="mt-4 w-full py-6 bg-brand-red-neon text-white font-black text-2xl uppercase tracking-tighter hover:bg-white hover:text-black transition-all brutal-shadow disabled:opacity-20 cursor-pointer"
-              >
-                {settingsLoading ? "UPLOADING CONFIG..." : "SAVE CHANGES"}
-              </button>
-
-              <div className="mt-8 border-t border-zinc-900 pt-8">
                 <button 
-                  onClick={handleLogout}
-                  className="w-full py-4 glass-panel brutal-border-red text-brand-red-neon font-black text-xs uppercase tracking-widest hover:bg-brand-red-neon hover:text-white transition-all cursor-pointer flex items-center justify-center gap-3"
+                  onClick={() => setShowSettings(false)}
+                  className="p-4 bg-zinc-900 hover:bg-brand-red-neon transition-all cursor-pointer group"
                 >
-                  <LogOut className="w-4 h-4" />
-                  TERMINATE SESSION
+                  <X className="w-6 h-6 text-zinc-500 group-hover:text-white" />
                 </button>
               </div>
-            </div>
-          </motion.div>
-        </div>
-      )}
+
+              {/* Modal Body - Scrollable */}
+              <div className="flex-1 overflow-y-auto p-8 md:p-12 custom-scrollbar space-y-16">
+                
+                {/* Section 1: Biometric Identity */}
+                <section>
+                  <div className="flex items-center gap-4 mb-8">
+                    <div className="w-1 h-8 bg-brand-red-neon" />
+                    <h3 className="text-xl font-black uppercase tracking-[0.2em]">01_BIOMETRIC_DATA</h3>
+                  </div>
+                  
+                  <div className="flex flex-col md:flex-row gap-12 items-start">
+                    {/* PFP Change */}
+                    <div className="relative group">
+                      <div className="w-48 h-48 brutal-border-red overflow-hidden bg-zinc-900 relative">
+                        {data.profile.avatarUrl ? (
+                          <img 
+                            src={data.profile.avatarUrl} 
+                            alt="Identity" 
+                            className={`w-full h-full object-cover transition-all duration-700 ${isUploadingPFP ? 'opacity-30' : 'grayscale group-hover:grayscale-0'}`} 
+                          />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center text-zinc-800 font-black text-4xl">NO_IMG</div>
+                        )}
+                        {isUploadingPFP && (
+                          <div className="absolute inset-0 flex items-center justify-center">
+                            <div className="w-10 h-10 border-2 border-brand-red-neon border-t-transparent rounded-full animate-spin" />
+                          </div>
+                        )}
+                      </div>
+                      
+                      <div className="mt-4 flex flex-col gap-2">
+                        <label className="flex items-center justify-center gap-2 py-3 bg-zinc-900 text-white font-black uppercase tracking-widest text-[9px] brutal-border border-zinc-800 hover:border-brand-red-neon transition-all cursor-pointer">
+                          <input type="file" className="hidden" accept="image/*" onChange={handlePFPChange} disabled={isUploadingPFP} />
+                          <Upload className="w-3 h-3" /> UPLOAD NEW
+                        </label>
+                        {data.profile.avatarUrl && (
+                          <button 
+                            onClick={handleRemovePFP}
+                            className="flex items-center justify-center gap-2 py-3 bg-transparent text-brand-red-neon font-black uppercase tracking-widest text-[9px] brutal-border border-brand-red-deep hover:bg-brand-red-neon hover:text-white transition-all cursor-pointer"
+                          >
+                            <Trash2 className="w-3 h-3" /> REMOVE
+                          </button>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="flex-1 space-y-10 w-full">
+                      {/* Username Update */}
+                      <div className="flex flex-col gap-4">
+                        <label className="text-[10px] font-black uppercase tracking-[0.4em] text-zinc-500">Update Username</label>
+                        <div className="relative">
+                          <input 
+                            type="text" 
+                            className={`w-full bg-zinc-950 text-white font-black text-2xl px-8 py-5 border-2 outline-none transition-all uppercase clip-brutal-tl ${
+                              usernameStatus === "available" ? "border-green-500" : 
+                              usernameStatus === "taken" || usernameStatus === "invalid" ? "border-brand-red-neon" : "border-zinc-800"
+                            }`}
+                            placeholder={data.profile.username || "USERNAME"}
+                            value={newUsername}
+                            onChange={(e) => {
+                              const val = e.target.value.toLowerCase();
+                              setNewUsername(val);
+                              checkUsername(val);
+                            }}
+                          />
+                          {usernameStatus !== "idle" && (
+                            <div className="absolute right-4 top-1/2 -translate-y-1/2 text-[9px] font-black uppercase tracking-widest">
+                              {usernameStatus === "available" && <span className="text-green-500">AVAILABLE</span>}
+                              {usernameStatus === "taken" && <span className="text-brand-red-neon">TAKEN</span>}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Password Update */}
+                      <div className="flex flex-col gap-4">
+                        <label className="text-[10px] font-black uppercase tracking-[0.4em] text-zinc-500">Update Access Code</label>
+                        <input 
+                          type="password" 
+                          className={`w-full bg-zinc-950 text-white font-black text-2xl px-8 py-5 border-2 outline-none transition-all uppercase clip-brutal-br ${
+                            newPassword && !validatePassword(newPassword) ? "border-brand-red-neon" : 
+                            newPassword && validatePassword(newPassword) ? "border-green-500" : "border-zinc-800"
+                          }`}
+                          placeholder="********"
+                          value={newPassword}
+                          onChange={(e) => setNewPassword(e.target.value)}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </section>
+
+                {/* Section 2: Ambition & Casting */}
+                <section>
+                  <div className="flex items-center gap-4 mb-8">
+                    <div className="w-1 h-8 bg-brand-red-neon" />
+                    <h3 className="text-xl font-black uppercase tracking-[0.2em]">02_PROFESSIONAL_PREFS</h3>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
+                    {/* Objective Selection */}
+                    <div className="flex flex-col gap-4">
+                      <label className="text-[10px] font-black uppercase tracking-[0.4em] text-zinc-500">Primary Objective</label>
+                      <div className="grid grid-cols-2 gap-3">
+                        {DESIRE_LIST.map((opt) => (
+                          <button
+                            key={opt}
+                            onClick={() => setPrefDesire(opt)}
+                            className={`p-4 text-[10px] font-black uppercase tracking-widest brutal-border transition-all text-center ${
+                              prefDesire === opt ? 'bg-brand-red-neon text-white border-brand-red-neon' : 'bg-zinc-900 text-zinc-500 border-zinc-800 hover:border-zinc-600'
+                            }`}
+                          >
+                            {opt}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Language Selection */}
+                    <div className="flex flex-col gap-4">
+                      <label className="text-[10px] font-black uppercase tracking-[0.4em] text-zinc-500">Languages</label>
+                      <div className="flex flex-wrap gap-3">
+                        {LANGUAGES_LIST.map((lang) => {
+                          const isSelected = prefLanguages.includes(lang);
+                          return (
+                            <button
+                              key={lang}
+                              onClick={() => {
+                                setPrefLanguages(prev => 
+                                  prev.includes(lang) ? prev.filter(l => l !== lang) : [...prev, lang]
+                                );
+                              }}
+                              className={`px-5 py-3 text-[10px] font-black uppercase tracking-widest brutal-border transition-all ${
+                                isSelected ? 'bg-white text-black border-white shadow-[0_0_20px_rgba(255,255,255,0.2)]' : 'bg-zinc-900 text-zinc-600 border-zinc-800 hover:border-zinc-700'
+                              }`}
+                            >
+                              {lang}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+
+                    {/* Archetype Selection */}
+                    <div className="flex flex-col gap-4">
+                      <label className="text-[10px] font-black uppercase tracking-[0.4em] text-zinc-500">Core Archetypes</label>
+                      <div className="flex flex-wrap gap-3">
+                        {PERSONALITIES_LIST.map((arch) => {
+                          const isSelected = prefArchetypes.includes(arch);
+                          return (
+                            <button
+                              key={arch}
+                              onClick={() => {
+                                setPrefArchetypes(prev => 
+                                  prev.includes(arch) ? prev.filter(a => a !== arch) : [...prev, arch]
+                                );
+                              }}
+                              className={`px-5 py-3 text-[10px] font-black uppercase tracking-widest brutal-border transition-all ${
+                                isSelected ? 'bg-brand-red-deep text-white border-brand-red-neon' : 'bg-zinc-900 text-zinc-600 border-zinc-800 hover:border-zinc-700'
+                              }`}
+                            >
+                              {arch}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+
+                    {/* Availability Selection */}
+                    <div className="flex flex-col gap-4">
+                      <label className="text-[10px] font-black uppercase tracking-[0.4em] text-zinc-500">Opportunity Readiness</label>
+                      <div className="space-y-3">
+                        {AVAILABILITY_LABELS.map((label) => (
+                          <button
+                            key={label}
+                            onClick={() => setPrefAvailability(label)}
+                            className={`w-full p-5 text-[10px] font-black uppercase tracking-widest brutal-border transition-all text-left flex items-center justify-between ${
+                              prefAvailability === label ? 'bg-white/5 border-brand-red-neon text-white' : 'bg-zinc-900 border-zinc-800 text-zinc-600 hover:border-zinc-700'
+                            }`}
+                          >
+                            {label}
+                            {prefAvailability === label && <Check className="w-4 h-4 text-brand-red-neon" />}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                </section>
+
+                {/* Section 3: Geographic Parameters */}
+                <section>
+                  <div className="flex items-center gap-4 mb-8">
+                    <div className="w-1 h-8 bg-brand-red-neon" />
+                    <h3 className="text-xl font-black uppercase tracking-[0.2em]">03_LOC_COORDINATES</h3>
+                  </div>
+                  
+                  <div className="flex flex-col gap-4">
+                    <label className="text-[10px] font-black uppercase tracking-[0.4em] text-zinc-500">Deployment Base (City, State, Country)</label>
+                    <input 
+                      type="text" 
+                      className="w-full bg-zinc-950 text-white font-black text-2xl px-8 py-5 border-2 border-zinc-800 outline-none focus:border-brand-red-neon transition-all uppercase clip-brutal-tl"
+                      value={prefLocation}
+                      onChange={(e) => setPrefLocation(e.target.value)}
+                    />
+                    <p className="text-[9px] text-zinc-600 font-black uppercase tracking-widest ml-2 italic">Format: CITY, STATE, COUNTRY (e.g., MUMBAI, MAHARASHTRA, INDIA)</p>
+                  </div>
+                </section>
+
+              </div>
+
+              {/* Modal Footer */}
+              <div className="p-8 border-t border-zinc-900 bg-zinc-950/50 flex flex-col md:flex-row gap-6 shrink-0">
+                <button 
+                  onClick={handleUpdateSettings}
+                  disabled={settingsLoading || (newUsername.length > 0 && usernameStatus !== "available") || (newPassword.length > 0 && !validatePassword(newPassword))}
+                  className="flex-1 py-8 bg-brand-red-neon text-white font-black text-3xl uppercase tracking-tighter hover:bg-white hover:text-black transition-all brutal-shadow disabled:opacity-20 cursor-pointer"
+                >
+                  {settingsLoading ? "PROCESSING..." : "UPDATE HUD PROTOCOLS"}
+                </button>
+                <button 
+                  onClick={handleLogout}
+                  className="px-10 py-8 glass-panel brutal-border-red text-brand-red-neon font-black text-xs uppercase tracking-widest hover:bg-brand-red-neon hover:text-white transition-all cursor-pointer flex items-center justify-center gap-3"
+                >
+                  <LogOut className="w-5 h-5" />
+                  TERMINATE
+                </button>
+              </div>
+
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </main>
   );
 }
