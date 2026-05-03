@@ -6,12 +6,13 @@ import {
   PlayCircle, Star, Settings, Bell, LogOut, X, 
   ChevronRight, Crown, Upload, Trash2, MapPin, 
   ChevronDown, Check, User, CheckCircle2, Trophy, Flame, Lock, ShieldCheck, AlertTriangle, Zap,
-  Menu, Home, Compass, PlusSquare, Briefcase, Target, Rss, Users, Video, Mic2, Database, BookOpen, BarChart3
+  Menu, Home, Compass, PlusSquare, Briefcase, Target, Rss, Users, Video, Mic2, Database, BookOpen, BarChart3, Sun, Moon
 } from "lucide-react";
 import { supabase } from "@/utils/supabase/client";
 import { useRouter } from "next/navigation";
 import { uploadProfilePicture, removeProfilePicture, uploadAuditionTape } from "@/app/actions/driveActions";
 import { Country, State, City } from "country-state-city";
+import { useTheme } from "@/components/ThemeProvider";
 import "./dashboard.css";
 import Cropper from "react-easy-crop";
 import getCroppedImg from "@/utils/cropImage";
@@ -302,6 +303,7 @@ const useDashboardData = () => {
 
 export default function AgenticDashboard() {
   const router = useRouter();
+  const { theme, toggleTheme } = useTheme();
   const { data, loading, fetchData } = useDashboardData();
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
@@ -2733,6 +2735,39 @@ export default function AgenticDashboard() {
                     <p className="text-[9px] text-zinc-600 font-black uppercase tracking-widest ml-2 italic">Format: CITY, STATE, COUNTRY (e.g., MUMBAI, MAHARASHTRA, INDIA)</p>
                   </div>
                 </section>
+
+                {/* Section 4: Interface Theme */}
+                <section>
+                  <div className="flex items-center gap-4 mb-8">
+                    <div className="w-1 h-8 bg-gradient-to-r from-[#ff1a1a] to-[#8a0303]" />
+                    <h3 className="text-xl font-black uppercase tracking-[0.2em]">04_INTERFACE_THEME</h3>
+                  </div>
+                  
+                  <div className="flex flex-col gap-4">
+                    <label className="text-[10px] font-black uppercase tracking-[0.4em] text-zinc-500">Toggle Brutalist Contrast</label>
+                    <div className="flex bg-zinc-950 border border-zinc-800 p-2 relative rounded-3xl w-full md:w-64">
+                      <motion.div 
+                        layout
+                        className="absolute inset-y-2 w-[calc(50%-8px)] bg-zinc-800 rounded-3xl"
+                        style={{ left: theme === 'DARK' ? '8px' : 'calc(50%)' }}
+                        transition={{ type: "spring", stiffness: 300, damping: 30 }}
+                      />
+                      <button
+                        onClick={() => theme !== 'DARK' && toggleTheme()}
+                        className={`relative z-10 flex-1 py-4 flex items-center justify-center gap-2 font-black text-[10px] tracking-widest uppercase transition-colors ${theme === 'DARK' ? 'text-white' : 'text-zinc-500 hover:text-white'}`}
+                      >
+                        <Moon className="w-4 h-4" /> DARK
+                      </button>
+                      <button
+                        onClick={() => theme !== 'LIGHT' && toggleTheme()}
+                        className={`relative z-10 flex-1 py-4 flex items-center justify-center gap-2 font-black text-[10px] tracking-widest uppercase transition-colors ${theme === 'LIGHT' ? 'text-white' : 'text-zinc-500 hover:text-white'}`}
+                      >
+                        <Sun className="w-4 h-4" /> LIGHT
+                      </button>
+                    </div>
+                  </div>
+                </section>
+
 
               </div>
 
