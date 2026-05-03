@@ -341,6 +341,7 @@ export default function AgenticDashboard() {
     { id: 'LEADERBOARD', label: 'LEADERBOARD', icon: Trophy },
     { id: 'FEED', label: 'FEED', icon: Rss },
     { id: 'LMN_REGISTER', label: 'LMN REGISTER', icon: Zap },
+    { id: 'NOTIFICATIONS', label: 'NOTIFICATIONS', icon: Bell },
   ];
 
   // Preference State
@@ -683,6 +684,7 @@ export default function AgenticDashboard() {
                   onClick={() => {
                     setCurrentView(item.id);
                     if (window.innerWidth <= 1024) setIsSidebarOpen(false);
+                    if (item.id === 'NOTIFICATIONS') router.push('/dashboard/notifications');
                     if (item.id === 'SETTINGS') setShowSettings(true);
                     if (item.id === 'LOGOUT') handleLogout();
                   }}
