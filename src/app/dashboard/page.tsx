@@ -1419,6 +1419,148 @@ export default function AgenticDashboard() {
              </div>
           </div>
         </div>
+      ) : currentView === 'LMN_REGISTER' ? (
+        <div className="flex flex-col gap-16 py-12 animate-in slide-in-from-bottom-8 duration-700">
+          <div className="flex items-center justify-between px-4">
+            <div className="flex items-center gap-6">
+              <div className="p-5 bg-brand-red-neon/10 brutal-border-red clip-brutal-slant">
+                <Zap className="w-10 h-10 text-brand-red-neon" />
+              </div>
+              <div>
+                <h1 className="text-7xl font-black uppercase tracking-tighter leading-none">LMN_REGISTER</h1>
+                <p className="text-[10px] font-black uppercase tracking-[0.5em] text-zinc-600 mt-2">DECENTRALIZED_RESOURCE_LEDGER</p>
+              </div>
+            </div>
+            
+            <div className="text-right hidden md:block">
+               <p className="text-[10px] font-black text-zinc-600 uppercase tracking-widest">VERIFIED_BALANCE</p>
+               <p className="text-3xl font-black text-white tabular-nums">{data.profile.lumenPoints.toLocaleString()} LMN</p>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 px-4">
+             {/* Economy Walkthrough */}
+             <div className="lg:col-span-8 flex flex-col gap-10">
+                <div className="glass-panel p-10 brutal-border border-zinc-800 bg-zinc-950/50">
+                   <div className="flex items-center gap-4 mb-10 border-b border-zinc-900 pb-6">
+                      <BookOpen className="w-6 h-6 text-brand-red-neon" />
+                      <h3 className="text-2xl font-black uppercase tracking-tighter">ECONOMY_101 // THE_PROTOCOL</h3>
+                   </div>
+                   
+                   <div className="space-y-12">
+                      <div className="flex gap-8 group">
+                         <div className="text-5xl font-black text-zinc-800 group-hover:text-brand-red-neon transition-colors tabular-nums">01</div>
+                         <div>
+                            <h4 className="text-xl font-black uppercase tracking-tight mb-3">WHAT IS LUMEN?</h4>
+                            <p className="text-zinc-500 text-sm leading-relaxed max-w-2xl font-medium">
+                               LUMEN (LMN) is the foundational utility resource of the MM8 ecosystem. It represents your "Talent Index" — a measurable metric of your activity, reliability, and match-potential within the decentralized casting pipeline.
+                            </p>
+                         </div>
+                      </div>
+
+                      <div className="flex gap-8 group">
+                         <div className="text-5xl font-black text-zinc-800 group-hover:text-brand-red-neon transition-colors tabular-nums">02</div>
+                         <div>
+                            <h4 className="text-xl font-black uppercase tracking-tight mb-3">THE_VALUE_PROP</h4>
+                            <p className="text-zinc-500 text-sm leading-relaxed max-w-2xl font-medium">
+                               LMN is not just a score. It dictates your visibility to AI agents. High-LMN nodes receive priority matching for premium roles, early access to "Urgent" casting calls, and higher resource multipliers.
+                            </p>
+                         </div>
+                      </div>
+
+                      <div className="flex gap-8 group">
+                         <div className="text-5xl font-black text-zinc-800 group-hover:text-brand-red-neon transition-colors tabular-nums">03</div>
+                         <div>
+                            <h4 className="text-xl font-black uppercase tracking-tight mb-3">YIELD_CALCULATION</h4>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-6">
+                               {[
+                                  { label: 'DAILY_LOGIN', base: '10 LMN', logic: 'x STREAK_MULT' },
+                                  { label: 'AUDITION_UPLOAD', base: '100 LMN', logic: 'BASE_REWARD' },
+                                  { label: 'PROFILE_SYNC', base: '50 LMN', logic: 'ONE_TIME_GRANT' },
+                                  { label: 'VIP_STATUS', base: '+30%', logic: 'GLOBAL_MULTIPLIER' },
+                               ].map((m: any) => (
+                                  <div key={m.label} className="p-4 bg-zinc-900 brutal-border border-zinc-800">
+                                     <p className="text-[9px] font-black text-zinc-500 uppercase tracking-widest mb-1">{m.label}</p>
+                                     <div className="flex items-center justify-between">
+                                        <span className="text-lg font-black text-white tabular-nums">{m.base}</span>
+                                        <span className="text-[8px] font-black text-brand-red-neon uppercase">{m.logic}</span>
+                                     </div>
+                                  </div>
+                               ))}
+                            </div>
+                         </div>
+                      </div>
+                   </div>
+                </div>
+
+                {/* Detailed Metrics */}
+                <div className="glass-panel p-10 brutal-border border-zinc-800">
+                   <div className="flex items-center gap-4 mb-10 border-b border-zinc-900 pb-6">
+                      <BarChart3 className="w-6 h-6 text-brand-red-neon" />
+                      <h3 className="text-2xl font-black uppercase tracking-tighter">YIELD_METRICS</h3>
+                   </div>
+                   <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+                      <div className="text-center p-8 bg-zinc-950 brutal-border border-zinc-900">
+                         <p className="text-[10px] font-black text-zinc-600 uppercase tracking-widest mb-4">AVG_DAILY_YIELD</p>
+                         <p className="text-4xl font-black text-white tabular-nums">142</p>
+                         <p className="text-[8px] font-black text-green-500 mt-2 uppercase tracking-tighter">+12% VS LAST_WEEK</p>
+                      </div>
+                      <div className="text-center p-8 bg-zinc-950 brutal-border border-zinc-900">
+                         <p className="text-[10px] font-black text-zinc-600 uppercase tracking-widest mb-4">ACCUMULATION_RATE</p>
+                         <p className="text-4xl font-black text-white tabular-nums">0.85</p>
+                         <p className="text-[8px] font-black text-zinc-500 mt-2 uppercase tracking-tighter">LMN / HR</p>
+                      </div>
+                      <div className="text-center p-8 bg-zinc-950 brutal-border border-zinc-900">
+                         <p className="text-[10px] font-black text-zinc-600 uppercase tracking-widest mb-4">TOTAL_DISTRIBUTED</p>
+                         <p className="text-4xl font-black text-white tabular-nums">1.2M</p>
+                         <p className="text-[8px] font-black text-zinc-500 mt-2 uppercase tracking-tighter">ACROSS_GLOBAL_INDEX</p>
+                      </div>
+                   </div>
+                </div>
+             </div>
+
+             {/* Sidebar Info & Tips */}
+             <div className="lg:col-span-4 flex flex-col gap-10">
+                <div className="glass-panel-red p-10 brutal-border-red clip-brutal-tl shadow-[0_0_40px_rgba(255,49,49,0.1)]">
+                   <h3 className="font-black uppercase tracking-widest text-[10px] mb-8">MY_LMN_RECORD</h3>
+                   <div className="space-y-8">
+                      <div className="flex justify-between items-end border-b border-white/10 pb-4">
+                         <span className="text-[10px] font-black uppercase text-white/60">LIFETIME_POINTS</span>
+                         <span className="text-2xl font-black text-white tabular-nums">{data.profile.lumenPoints}</span>
+                      </div>
+                      <div className="flex justify-between items-end border-b border-white/10 pb-4">
+                         <span className="text-[10px] font-black uppercase text-white/60">CURRENT_TIER</span>
+                         <span className="text-2xl font-black text-white uppercase">{data.profile.lumenTier}</span>
+                      </div>
+                      <div className="flex justify-between items-end border-b border-white/10 pb-4">
+                         <span className="text-[10px] font-black uppercase text-white/60">ACTIVE_MULTIPLIER</span>
+                         <span className="text-2xl font-black text-brand-red-neon tabular-nums">x{data.profile.multiplier.toFixed(1)}</span>
+                      </div>
+                   </div>
+                </div>
+
+                <div className="glass-panel p-10 brutal-border border-zinc-900 bg-zinc-950/50">
+                   <h3 className="font-black uppercase tracking-widest text-[10px] mb-8 text-zinc-600">STRATEGIC_TIPS</h3>
+                   <div className="space-y-6">
+                      {[
+                         { title: 'STREAK_MAINTENANCE', desc: 'Login for 7 consecutive days to activate a x1.5 multiplier.' },
+                         { title: 'ROLE_INTERACTION', desc: 'Viewing and saving roles boosts your match-score by 5 LMN/action.' },
+                         { title: 'NODE_UPGRADE', desc: 'Activate VIP status to permanently boost all LMN yield by 30%.' },
+                         { title: 'AUDITION_MASTERY', desc: 'Weekly video submissions grant a massive 500 LMN consistency bonus.' },
+                      ].map((tip: any, i: number) => (
+                         <div key={i} className="group cursor-pointer">
+                            <h4 className="text-[10px] font-black uppercase text-white mb-2 group-hover:text-brand-red-neon transition-colors flex items-center gap-2">
+                               <div className="w-1.5 h-1.5 bg-brand-red-neon" />
+                               {tip.title}
+                            </h4>
+                            <p className="text-[9px] font-bold text-zinc-600 leading-relaxed uppercase">{tip.desc}</p>
+                         </div>
+                      ))}
+                   </div>
+                </div>
+             </div>
+          </div>
+        </div>
       ) : currentView === 'SETTINGS' ? (
         <div className="flex flex-col items-center justify-center h-[60vh] opacity-50 animate-in fade-in duration-500">
            <Settings className="w-16 h-16 text-brand-red-neon mb-4" />
