@@ -1291,6 +1291,135 @@ export default function AgenticDashboard() {
              ))}
           </div>
         </div>
+      ) : currentView === 'MISSIONS' ? (
+        <div className="flex flex-col gap-16 py-12 animate-in slide-in-from-bottom-8 duration-700">
+          <div className="flex items-center justify-between px-4">
+            <div className="flex items-center gap-6">
+              <div className="p-5 bg-brand-red-neon/10 brutal-border-red clip-brutal-slant">
+                <Target className="w-10 h-10 text-brand-red-neon" />
+              </div>
+              <div>
+                <h1 className="text-7xl font-black uppercase tracking-tighter leading-none">MISSIONS_HUB</h1>
+                <p className="text-[10px] font-black uppercase tracking-[0.5em] text-zinc-600 mt-2">RESOURCE_ACQUISITION_PROTOCOLS</p>
+              </div>
+            </div>
+            
+            <div className="bg-zinc-900/50 p-6 brutal-border border-zinc-800 flex flex-col gap-2">
+               <span className="text-[8px] font-black text-zinc-600 uppercase tracking-widest">ACTIVE_MULTIPLIER</span>
+               <div className="flex items-center gap-3">
+                  <Zap className="w-4 h-4 text-brand-red-neon" />
+                  <span className="text-2xl font-black text-white tabular-nums">x{data.profile.multiplier.toFixed(1)}</span>
+               </div>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 px-4">
+             {/* Main Missions Column */}
+             <div className="lg:col-span-8 flex flex-col gap-10">
+                <div className="glass-panel p-10 brutal-border border-zinc-800">
+                   <div className="flex items-center gap-4 mb-10 border-b border-zinc-900 pb-6">
+                      <Flame className="w-6 h-6 text-brand-red-neon" />
+                      <h3 className="text-2xl font-black uppercase tracking-tighter">DAILY_MISSIONS</h3>
+                      <span className="text-[10px] font-black text-zinc-600 uppercase tracking-widest ml-auto">RESETS_IN 14H</span>
+                   </div>
+
+                   <div className="flex flex-col gap-6">
+                      {data.missions.map((mission: any) => (
+                        <div 
+                          key={mission.label} 
+                          className={`flex items-center justify-between p-8 brutal-border transition-all relative overflow-hidden group ${
+                            mission.done 
+                              ? 'border-green-500/50 bg-green-500/5' 
+                              : 'border-zinc-900 bg-zinc-950/50 hover:border-zinc-700'
+                          }`}
+                        >
+                          {mission.done && (
+                            <div className="absolute top-0 left-0 w-1 h-full bg-green-500 shadow-[0_0_10px_rgba(34,197,94,0.5)]" />
+                          )}
+                          
+                          <div className="flex items-center gap-6">
+                            <div className={`w-12 h-12 flex items-center justify-center brutal-border ${
+                               mission.done ? 'border-green-500/30 bg-green-500/10' : 'border-zinc-800 bg-zinc-900'
+                            }`}>
+                               {mission.done ? (
+                                 <CheckCircle2 className="w-6 h-6 text-green-500" />
+                               ) : (
+                                 <div className="w-2 h-2 bg-zinc-700 rounded-full group-hover:bg-brand-red-neon transition-colors" />
+                               )}
+                            </div>
+                            <div>
+                               <h4 className={`text-xl font-black uppercase tracking-tight ${mission.done ? 'text-green-500' : 'text-white'}`}>
+                                  {mission.label}
+                               </h4>
+                               <p className="text-[10px] font-black text-zinc-600 uppercase tracking-widest mt-1">
+                                  {mission.done ? 'MISSION_ACKNOWLEDGED' : 'PENDING_VALIDATION'}
+                               </p>
+                            </div>
+                          </div>
+
+                          <div className="text-right">
+                             <span className={`text-3xl font-black tabular-nums ${mission.done ? 'text-green-500' : 'text-brand-red-neon'}`}>
+                                {mission.done ? 'DONE' : `+${mission.reward}`}
+                             </span>
+                             <span className="text-[10px] font-black text-zinc-600 ml-2">LMN</span>
+                          </div>
+                        </div>
+                      ))}
+                   </div>
+                </div>
+
+                {/* Achievement/Milestone Section */}
+                <div className="glass-panel p-10 brutal-border border-zinc-800 opacity-50">
+                   <div className="flex items-center gap-4 mb-10 border-b border-zinc-900 pb-6">
+                      <Trophy className="w-6 h-6 text-zinc-600" />
+                      <h3 className="text-2xl font-black uppercase tracking-tighter">MILESTONES // LOCKED</h3>
+                   </div>
+                   <div className="flex items-center justify-center py-20 border-2 border-dashed border-zinc-900">
+                      <Lock className="w-10 h-10 text-zinc-800" />
+                   </div>
+                </div>
+             </div>
+
+             {/* Sidebar Info */}
+             <div className="lg:col-span-4 flex flex-col gap-10">
+                <div className="glass-panel-red p-10 brutal-border-red clip-brutal-hero-primary shadow-[0_0_40px_rgba(255,49,49,0.1)]">
+                   <h3 className="font-black uppercase tracking-widest text-[10px] mb-6">PROGRESS_REPORT</h3>
+                   <div className="flex items-end justify-between mb-4">
+                      <span className="text-[9px] font-black uppercase text-white/60 tracking-widest">TIER_REACH: {data.profile.lumenTier}</span>
+                      <span className="text-sm font-black text-white">{data.profile.lumenPoints} / 6000</span>
+                   </div>
+                   <div className="w-full h-2 bg-black/40 relative overflow-hidden">
+                      <div 
+                         className="absolute top-0 left-0 h-full bg-white shadow-[0_0_15px_rgba(255,255,255,0.5)] transition-all duration-1000"
+                         style={{ width: `${Math.min((data.profile.lumenPoints / 6000) * 100, 100)}%` }}
+                      />
+                   </div>
+                   <p className="text-[8px] font-black uppercase tracking-widest mt-6 text-white/50 leading-relaxed">
+                      Collect 6,000 LMN to activate the "ACTIVE TALENT" node. This unlocks priority matchmaking and advanced analytics.
+                   </p>
+                </div>
+
+                <div className="glass-panel p-10 brutal-border border-zinc-900">
+                   <h3 className="font-black uppercase tracking-widest text-[10px] mb-8 text-zinc-600">MISSION_HISTORY</h3>
+                   <div className="space-y-6">
+                      {[
+                         { action: 'DAILY_LOGIN', date: '03.05.2026', points: Math.floor(10 * data.profile.multiplier) },
+                         { action: 'PROFILE_SYNC', date: '02.05.2026', points: Math.floor(40 * data.profile.multiplier) },
+                         { action: 'NODE_ACTIVATION', date: '01.05.2026', points: 100 },
+                      ].map((log, i) => (
+                         <div key={i} className="flex justify-between items-center border-l-2 border-zinc-900 pl-4 py-2">
+                            <div>
+                               <p className="text-[10px] font-black uppercase text-white">{log.action}</p>
+                               <p className="text-[8px] font-black text-zinc-600">{log.date}</p>
+                            </div>
+                            <span className="text-xs font-black text-brand-red-neon">+{log.points}</span>
+                         </div>
+                      ))}
+                   </div>
+                </div>
+             </div>
+          </div>
+        </div>
       ) : currentView === 'SETTINGS' ? (
         <div className="flex flex-col items-center justify-center h-[60vh] opacity-50 animate-in fade-in duration-500">
            <Settings className="w-16 h-16 text-brand-red-neon mb-4" />
