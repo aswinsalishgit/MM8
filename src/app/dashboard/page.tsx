@@ -285,6 +285,8 @@ export default function AgenticDashboard() {
   const [usernameStatus, setUsernameStatus] = useState<"idle" | "checking" | "available" | "taken" | "invalid">("idle");
   const [message, setMessage] = useState<{ text: string, type: 'error' | 'success' | 'info' } | null>(null);
 
+  const [selectedFeed, setSelectedFeed] = useState<any>(null);
+
   // Navigation State
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [currentView, setCurrentView] = useState("OVERVIEW");
@@ -1706,6 +1708,172 @@ export default function AgenticDashboard() {
                 </div>
              </div>
           </div>
+        </div>
+      ) : currentView === 'FEED' ? (
+        <div className="flex flex-col gap-16 py-12 animate-in slide-in-from-bottom-8 duration-700">
+          <div className="flex items-center justify-between px-4">
+            <div className="flex items-center gap-6">
+              <div className="p-5 bg-brand-red-neon/10 brutal-border-red clip-brutal-slant">
+                <Rss className="w-10 h-10 text-brand-red-neon" />
+              </div>
+              <div>
+                <h1 className="text-7xl font-black uppercase tracking-tighter leading-none">FEED_HUB</h1>
+                <p className="text-[10px] font-black uppercase tracking-[0.5em] text-zinc-600 mt-2">TRANSMISSIONS // INDUSTRY_INTEL</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 px-4">
+            {[
+              {
+                id: 1,
+                title: "BOLLYWOOD REVOLUTION: AI-DRIVEN CASTING BECOMES INDUSTRY STANDARD",
+                category: "INDUSTRY_TRENDS",
+                image: "https://images.unsplash.com/photo-1485846234645-a62644f84728?auto=format&fit=crop&q=80&w=1000",
+                timestamp: "2H AGO",
+                summary: "Major production houses in Mumbai are officially integrating MM8-style neural matching to streamline their casting processes for upcoming 2026 tentpoles.",
+                details: "Following the massive success of decentralized platforms, three major studios have announced a shift towards data-driven talent discovery. This move is expected to open doors for independent actors who have maintained high LMN scores and verified audition packets. The industry is moving away from traditional gatekeeping towards a meritocratic system where your digital performance index matters more than your pedigree."
+              },
+              {
+                id: 2,
+                title: "MOLALYOOD BREAKTHROUGH: HYPER-LOCAL TALENT SOUGHT FOR GLOBAL STREAMING SENSATIONS",
+                category: "REGIONAL_HUB",
+                image: "https://images.unsplash.com/photo-1598897652147-3be66e387e05?auto=format&fit=crop&q=80&w=1000",
+                timestamp: "5H AGO",
+                summary: "A new wave of Malayalam cinema is taking the global stage, with a sudden surge in demand for actors from Kochi and Trivandrum with 'authentic' archetypes.",
+                details: "The 'New Gen' wave in Kerala has caught the eye of international streamers like Netflix and Prime. Casting directors are now scanning regional nodes for fresh faces that fit specific cultural archetypes. If you are a Kochi-based actor with high-match ratings for 'Realistic/Grit' archetypes, your pipeline sync frequency is expected to double in the coming weeks."
+              },
+              {
+                id: 3,
+                title: "KOLALYOOD TECH: CHENNAI PRODUCTION HOUSES ADOPT DECENTRALIZED DATA PROTOCOLS",
+                category: "TECH_INTEGRATION",
+                image: "https://images.unsplash.com/photo-1478720568477-152d9b164e26?auto=format&fit=crop&q=80&w=1000",
+                timestamp: "12H AGO",
+                summary: "Tamil cinema's biggest production houses are shifting their entire talent databases to secure decentralized clusters to prevent data leaks.",
+                details: "In a landmark move, the Tamil Film Producers Council has recommended the adoption of decentralized protocols for talent management. This ensures that actors' biometric and performance data remain private while being instantly accessible to authorized casting nodes. MM8 users with 'Verified' badges will receive priority indexing in these new secure clusters."
+              },
+              {
+                id: 4,
+                title: "INDIAN INDIE SCENE: LOW-BUDGET MASTERPIECES SOURCING TALENT VIA NEURAL NODES",
+                category: "INDIE_PULSE",
+                image: "https://images.unsplash.com/photo-1492691527719-9d1e07e534b4?auto=format&fit=crop&q=80&w=1000",
+                timestamp: "1D AGO",
+                summary: "Independent filmmakers across India are bypassing traditional agents and using AI-matching to find 'undiscovered' talent for festival-circuit films.",
+                details: "The rise of indie masterpieces from India has a new secret weapon: neural casting. Directors are no longer looking for stars, but for 'vibe-matches' that can carry complex emotional arcs. MM8's personality archetypes have become a key filtering metric for these visionary directors who value craft over commercial viability."
+              }
+            ].map((news: any, index: number) => (
+              <motion.div
+                key={news.id}
+                initial={{ opacity: 0, y: 30 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: index * 0.1 }}
+                onClick={() => setSelectedFeed(news)}
+                className="glass-panel brutal-border border-zinc-900 group cursor-pointer overflow-hidden flex flex-col hover:border-brand-red-neon transition-all"
+              >
+                <div className="relative h-64 overflow-hidden">
+                  <img 
+                    src={news.image} 
+                    alt={news.title} 
+                    className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110 grayscale hover:grayscale-0" 
+                  />
+                  <div className="absolute top-4 left-4 bg-brand-red-neon px-3 py-1 text-[8px] font-black uppercase tracking-widest text-white clip-brutal-slant">
+                    {news.category}
+                  </div>
+                </div>
+                <div className="p-8 flex-1 flex flex-col">
+                  <div className="flex justify-between items-center mb-4">
+                    <span className="text-[9px] font-black text-zinc-600 uppercase tracking-widest">{news.timestamp}</span>
+                    <span className="text-[9px] font-black text-brand-red-neon uppercase tracking-widest">TRANSMISSION_LIVE</span>
+                  </div>
+                  <h3 className="text-xl font-black uppercase tracking-tighter leading-tight mb-4 group-hover:text-brand-red-neon transition-colors">
+                    {news.title}
+                  </h3>
+                  <p className="text-[11px] font-bold text-zinc-500 uppercase leading-relaxed line-clamp-3">
+                    {news.summary}
+                  </p>
+                  <div className="mt-auto pt-8 flex items-center gap-4 border-t border-zinc-900">
+                    <div className="w-1 h-1 bg-brand-red-neon" />
+                    <span className="text-[8px] font-black text-zinc-600 uppercase tracking-[0.3em]">CLICK_FOR_FULL_INTEL</span>
+                  </div>
+                </div>
+              </motion.div>
+            ))}
+          </div>
+
+          {/* Details Modal (Nested in the view for simplicity) */}
+          <AnimatePresence>
+            {selectedFeed && (
+              <div className="fixed inset-0 z-[500] flex items-center justify-center p-4 md:p-12 overflow-hidden">
+                <motion.div 
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  className="absolute inset-0 bg-black/98 backdrop-blur-2xl"
+                  onClick={() => setSelectedFeed(null)}
+                />
+                <motion.div 
+                  initial={{ opacity: 0, scale: 0.9, y: 50 }}
+                  animate={{ opacity: 1, scale: 1, y: 0 }}
+                  exit={{ opacity: 0, scale: 0.9, y: 50 }}
+                  className="w-full max-w-4xl max-h-[90vh] glass-panel brutal-border-red relative z-10 flex flex-col overflow-hidden"
+                >
+                  <div className="relative h-64 md:h-96 shrink-0">
+                    <img 
+                      src={selectedFeed.image} 
+                      alt={selectedFeed.title} 
+                      className="w-full h-full object-cover grayscale" 
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black to-transparent" />
+                    <button 
+                      onClick={() => setSelectedFeed(null)}
+                      className="absolute top-6 right-6 p-4 bg-zinc-900 hover:bg-brand-red-neon transition-all cursor-pointer group z-20"
+                    >
+                      <X className="w-6 h-6 text-zinc-500 group-hover:text-white" />
+                    </button>
+                    <div className="absolute bottom-8 left-8 right-8">
+                       <span className="bg-brand-red-neon px-4 py-2 text-[10px] font-black uppercase tracking-widest text-white mb-4 inline-block clip-brutal-slant">
+                         {selectedFeed.category}
+                       </span>
+                       <h2 className="text-3xl md:text-5xl font-black uppercase tracking-tighter leading-none text-white max-w-2xl">
+                         {selectedFeed.title}
+                       </h2>
+                    </div>
+                  </div>
+                  <div className="flex-1 overflow-y-auto p-8 md:p-12 custom-scrollbar">
+                    <div className="flex items-center justify-between mb-10 border-b border-zinc-900 pb-6">
+                       <div className="flex items-center gap-4">
+                          <div className="w-2 h-2 rounded-full bg-brand-red-neon animate-pulse" />
+                          <span className="text-xs font-black uppercase tracking-widest text-zinc-600">INTEL_SOURCE: MM8_NEURAL_NETWORK</span>
+                       </div>
+                       <span className="text-xs font-black uppercase tracking-widest text-zinc-400">{selectedFeed.timestamp}</span>
+                    </div>
+                    <p className="text-xl md:text-2xl font-bold text-zinc-300 leading-relaxed uppercase mb-12 border-l-4 border-brand-red-neon pl-8 italic">
+                      {selectedFeed.summary}
+                    </p>
+                    <div className="space-y-8">
+                       <p className="text-zinc-500 text-lg leading-relaxed font-medium">
+                         {selectedFeed.details}
+                       </p>
+                       <div className="p-8 bg-brand-red-neon/5 brutal-border-red flex flex-col gap-4">
+                          <h4 className="text-xs font-black uppercase tracking-[0.5em] text-brand-red-neon">MM8_ACTION_PROTOCOL</h4>
+                          <p className="text-[11px] font-black text-white uppercase leading-relaxed tracking-wider">
+                             Based on this transmission, actors matching the <span className="text-brand-red-neon">AUTHENTIC/GRIT</span> archetype should ensure their <span className="text-brand-red-neon">PROFILE_SYNC</span> is at 100% and a fresh audition tape is uploaded within the next 48 hours for maximum visibility.
+                          </p>
+                       </div>
+                    </div>
+                  </div>
+                  <div className="p-8 border-t border-zinc-900 bg-zinc-950/50 flex justify-end">
+                     <button 
+                        onClick={() => setSelectedFeed(null)}
+                        className="px-12 py-5 bg-zinc-900 hover:bg-brand-red-neon text-white font-black uppercase tracking-widest text-xs transition-all brutal-border border-zinc-800 cursor-pointer"
+                     >
+                        CLOSE_TRANSMISSION
+                     </button>
+                  </div>
+                </motion.div>
+              </div>
+            )}
+          </AnimatePresence>
         </div>
       ) : (
         <div className="flex flex-col items-center justify-center h-[60vh] opacity-50 animate-in fade-in duration-500">
