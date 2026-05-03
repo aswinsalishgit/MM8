@@ -333,6 +333,21 @@ export default function AgenticDashboard() {
     return minLength && hasUpper && hasNumber && hasSpecial;
   };
 
+  const completionProgress = useMemo(() => {
+    if (!data?.profile) return 0;
+    const fields = [
+      data.profile.avatarUrl,
+      data.profile.username,
+      data.profile.location && data.profile.location !== 'UNKNOWN',
+      data.profile.objectivePreference,
+      data.profile.languages?.length > 0,
+      data.profile.archetypes?.length > 0,
+      data.profile.opportunityReadiness
+    ];
+    const filled = fields.filter(Boolean).length;
+    return Math.round((filled / fields.length) * 100);
+  }, [data]);
+
   const checkUsername = async (username: string) => {
     if (!username) {
       setUsernameStatus("idle");
@@ -692,12 +707,8 @@ export default function AgenticDashboard() {
                   animate={{ opacity: 1, x: 0 }}
                 >
                   <h1 className="text-4xl md:text-6xl font-black uppercase tracking-tighter leading-none text-white">
-                    MM8<span className="text-brand-red-neon drop-shadow-[0_0_15px_rgba(255,49,49,0.5)]">//</span>OVERVIEW
+                    ACTOR DASHBOARD
                   </h1>
-                  <p className="text-zinc-600 font-black tracking-[0.4em] uppercase text-[10px] flex items-center gap-2 mt-4">
-                    <span className="w-2 h-2 rounded-full bg-brand-red-neon animate-pulse" />
-                    SYSTEM_READY // NODE_ACTIVE
-                  </p>
                 </motion.div>
                 
                 <motion.div 
@@ -705,7 +716,7 @@ export default function AgenticDashboard() {
                   animate={{ opacity: 1, x: 0 }}
                   className="mt-6 md:mt-0 glass-panel brutal-border-red px-6 py-3 clip-brutal-slant flex items-center gap-3"
                 >
-                  <span className="font-black uppercase tracking-[0.2em] text-[10px] text-zinc-500">MM8_ID:</span>
+                  <span className="font-black uppercase tracking-[0.2em] text-[10px] text-zinc-500">MM8 ID:</span>
                   <span className="font-black uppercase tracking-widest text-xs text-brand-red-neon tabular-nums">
                     {data.profile.mm8Id ? `#${String(data.profile.mm8Id).padStart(4, '0')}` : '—'}
                   </span>
@@ -748,105 +759,59 @@ export default function AgenticDashboard() {
                 <h2 className="text-5xl font-black uppercase tracking-tighter leading-none">{data.profile.name}</h2>
                 <p className="text-brand-red-neon font-black uppercase tracking-[0.3em] text-xs mt-3 flex items-center gap-2">
                   <span className="w-2 h-[1px] bg-brand-red-neon" />
-                  {data.profile.location} // OPS
+                  {data.profile.location}
                 </p>
               </div>
             </div>
 
             <div className="border-t border-zinc-900 pt-10">
-              <div className="flex justify-between items-end mb-4">
-                <div>
-                  <h3 className="font-black text-zinc-600 uppercase tracking-[0.4em] text-[10px]">LUMEN_CORE</h3>
-                  <div className={`flex items-center gap-2 mt-2 ${TIER_CONFIG[data.profile.lumenTier]?.color || 'text-zinc-500'}`}>
-                    <Zap className={`w-4 h-4 ${TIER_CONFIG[data.profile.lumenTier]?.glow || ''}`} />
-                    <span className="font-black uppercase tracking-widest text-[10px]">{data.profile.lumenTier}</span>
-                  </div>
+              {/* Profile Completion progress bar */}
+              <div className="mt-8">
+                <div className="flex justify-between items-center mb-3">
+                  <h3 className="font-black text-zinc-600 uppercase tracking-[0.4em] text-[10px]">PROFILE_STRENGTH</h3>
+                  <span className="text-white font-black text-[10px] tabular-nums">{completionProgress}%</span>
                 </div>
-                <div className="text-right">
-                  <span className="text-5xl font-black tracking-tighter text-white tabular-nums">
-                    {data.profile.lumenPoints.toLocaleString()}
-                  </span>
-                  <span className="text-lg font-black text-brand-red-neon ml-1">LMN</span>
+                <div className="w-full h-3 bg-zinc-950 relative overflow-hidden clip-brutal-slant">
+                  <motion.div 
+                    initial={{ width: 0 }}
+                    animate={{ width: `${completionProgress}%` }}
+                    transition={{ duration: 1.5, ease: "circOut" }}
+                    className="absolute top-0 left-0 h-full bg-brand-red-neon shadow-[0_0_20px_rgba(255,49,49,0.8)]"
+                  />
                 </div>
               </div>
+            </div>
+          </section>
 
-              {/* Streak */}
+          {/* Status Hub */}
+          <section className="glass-panel p-10 brutal-border border-zinc-800 relative overflow-hidden group">
+            <div className="flex items-center justify-between mb-8">
+              <div className="flex items-center gap-4">
+                <Zap className="w-5 h-5 text-brand-red-neon" />
+                <h3 className="font-black uppercase tracking-[0.4em] text-[10px]">STATUS</h3>
+              </div>
+              <div className={`flex items-center gap-2 ${TIER_CONFIG[data.profile.lumenTier]?.color || 'text-zinc-500'}`}>
+                <Zap className={`w-3 h-3 ${TIER_CONFIG[data.profile.lumenTier]?.glow || ''}`} />
+                <span className="font-black uppercase tracking-widest text-[9px]">{data.profile.lumenTier}</span>
+              </div>
+            </div>
+            
+            <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
+              <div className="text-left">
+                <span className="text-6xl font-black tracking-tighter text-white tabular-nums leading-none">
+                  {data.profile.lumenPoints.toLocaleString()}
+                </span>
+                <span className="text-xl font-black text-brand-red-neon ml-2">LMN</span>
+              </div>
+              
               {data.profile.streakDays > 0 && (
-                <div className="flex items-center gap-2 mb-6">
+                <div className="flex items-center gap-3 bg-orange-500/10 border border-orange-500/20 px-4 py-2 clip-brutal-slant">
                   <Flame className="w-4 h-4 text-orange-500" />
                   <span className="text-[10px] font-black text-orange-500 uppercase tracking-widest tabular-nums">
                     {data.profile.streakDays} DAY STREAK
                   </span>
                 </div>
               )}
-
-              {/* Tier progress bar */}
-              {(() => {
-                const tiers = [0, 2000, 6000, 15000, 40000];
-                const pts = data.profile.lumenPoints;
-                let currentIdx = 0;
-                for (let i = tiers.length - 1; i >= 0; i--) {
-                  if (pts >= tiers[i]) { currentIdx = i; break; }
-                }
-                const nextThreshold = tiers[currentIdx + 1] || tiers[tiers.length - 1];
-                const prevThreshold = tiers[currentIdx];
-                const progress = nextThreshold > prevThreshold 
-                  ? Math.min(((pts - prevThreshold) / (nextThreshold - prevThreshold)) * 100, 100) 
-                  : 100;
-                return (
-                  <div className="w-full h-3 bg-zinc-950 relative overflow-hidden clip-brutal-slant">
-                    <motion.div 
-                      initial={{ width: 0 }}
-                      animate={{ width: `${progress}%` }}
-                      transition={{ duration: 1.5, ease: "circOut" }}
-                      className="absolute top-0 left-0 h-full bg-brand-red-neon shadow-[0_0_20px_rgba(255,49,49,0.8)]"
-                    />
-                  </div>
-                );
-              })()}
-            </div>
-          </section>
-
-          {/* LUMEN Economy Intel */}
-          <section className="glass-panel p-10 brutal-border border-zinc-800 relative overflow-hidden group">
-            <div className="flex items-center gap-4 mb-8">
-              <Zap className="w-5 h-5 text-brand-red-neon" />
-              <h3 className="font-black uppercase tracking-[0.4em] text-[10px]">LUMEN_ECONOMY_INTEL</h3>
-            </div>
-            
-            <div className="space-y-6">
-              <div className="p-4 bg-zinc-900/50 brutal-border border-zinc-800">
-                <p className="text-[10px] font-black text-zinc-500 uppercase tracking-widest mb-2">Base Protocols</p>
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="flex flex-col">
-                    <span className="text-white font-black text-xs">AUDITION_TAPE</span>
-                    <span className="text-brand-red-neon font-black text-[9px]">+40 LMN</span>
-                  </div>
-                  <div className="flex flex-col">
-                    <span className="text-white font-black text-xs">PROFILE_SYNC</span>
-                    <span className="text-brand-red-neon font-black text-[9px]">+10 LMN</span>
-                  </div>
-                </div>
-              </div>
-
-              <div className="p-4 bg-brand-red-neon/5 brutal-border border-brand-red-neon/20 relative">
-                <div className="absolute top-2 right-2">
-                  <Crown className="w-3 h-3 text-yellow-500" />
-                </div>
-                <p className="text-[10px] font-black text-brand-red-neon uppercase tracking-widest mb-2">Active Boosters</p>
-                <div className="flex justify-between items-center">
-                  <span className="text-white font-black text-xs">VIP_EARLY_ACCESS</span>
-                  <span className="bg-brand-red-neon text-white font-black text-[10px] px-2 py-1">1.3X MULTIPLIER</span>
-                </div>
-                <p className="text-[8px] text-zinc-500 font-black uppercase tracking-widest mt-3 leading-relaxed">
-                  Your VIP status grants a permanent 30% boost to all LMN gains across the ecosystem.
-                </p>
-              </div>
-
-              <div className="flex items-center gap-3 px-2">
-                <ShieldCheck className="w-4 h-4 text-zinc-600" />
-                <p className="text-[8px] text-zinc-600 font-black uppercase tracking-widest">Floor protection active: Balance cannot drop below 70% of Peak LMN.</p>
-              </div>
             </div>
           </section>
 
@@ -857,17 +822,23 @@ export default function AgenticDashboard() {
                 <Flame className="w-6 h-6 text-brand-red-neon" />
                 <h3 className="font-black uppercase tracking-[0.4em] text-[10px]">DAILY_MISSIONS</h3>
               </div>
-              <div className="flex flex-col gap-4">
-                {data.missions.map((mission: any) => (
-                  <div key={mission.label} className={`flex items-center justify-between p-4 brutal-border transition-all ${mission.done ? 'border-green-500/30 bg-green-500/5' : 'border-zinc-800 bg-zinc-950/50'}`}>
-                    <div className="flex items-center gap-3">
-                      <div className={`w-3 h-3 ${mission.done ? 'bg-green-500' : 'bg-zinc-800'}`} />
-                      <span className={`font-black uppercase tracking-widest text-[10px] ${mission.done ? 'text-green-500 line-through' : 'text-zinc-500'}`}>{mission.label}</span>
+                <div className="flex flex-col gap-4">
+                  {data.missions.map((mission: any) => (
+                    <div key={mission.label} className={`flex items-center justify-between p-4 brutal-border transition-all ${mission.done ? 'border-green-500 bg-green-500/10' : 'border-zinc-800 bg-zinc-950/50'}`}>
+                      <div className="flex items-center gap-3">
+                        {mission.done ? (
+                          <CheckCircle2 className="w-4 h-4 text-green-500" />
+                        ) : (
+                          <div className="w-4 h-4 border border-zinc-700 bg-zinc-900" />
+                        )}
+                        <span className={`font-black uppercase tracking-widest text-[10px] ${mission.done ? 'text-green-500' : 'text-zinc-500'}`}>{mission.label}</span>
+                      </div>
+                      <span className={`font-black text-[10px] tracking-widest ${mission.done ? 'text-green-500' : 'text-brand-red-neon'}`}>
+                        {mission.done ? 'COMPLETED' : `+${mission.reward} LMN`}
+                      </span>
                     </div>
-                    <span className="font-black text-brand-red-neon text-[10px] tracking-widest">+{mission.reward} LMN</span>
-                  </div>
-                ))}
-              </div>
+                  ))}
+                </div>
             </div>
           </section>
 
@@ -926,7 +897,7 @@ export default function AgenticDashboard() {
             <div className="flex items-center justify-between mb-8 border-b border-zinc-900 pb-6">
               <div className="flex items-center gap-4">
                 <Bell className="w-6 h-6 text-brand-red-neon" />
-                <h3 className="font-black uppercase tracking-[0.4em] text-[10px]">LATEST_SIGNALS</h3>
+                <h3 className="font-black uppercase tracking-[0.4em] text-[10px]">LATEST_UPDATES</h3>
               </div>
               <button 
                 onClick={() => router.push('/dashboard/notifications')}
@@ -1011,7 +982,7 @@ export default function AgenticDashboard() {
                 <div className="flex items-center gap-4 mb-6">
                   <div className="w-12 h-[2px] bg-white opacity-60" />
                   <p className="font-black uppercase tracking-[0.5em] text-[10px] text-white/70">
-                    {uploading ? "UPLINK_ESTABLISHED" : "BYPASS_THE_GATEKEEPERS"}
+                    {uploading ? "UPLINK_ESTABLISHED" : ""}
                   </p>
                 </div>
                 <h2 className="text-6xl md:text-9xl font-black uppercase tracking-tighter leading-[0.8] text-white">
