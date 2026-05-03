@@ -231,11 +231,7 @@ const useDashboardData = () => {
           streakDays: u.streak_days || 0,
           isUser: u.id === session.user.id,
         })),
-        roles: [
-          { id: 1, title: "LEAD ANTAGONIST", project: "SHADOWS OF KOCHI", match: 98, deadline: "24H", tags: ["INTENSE", "MALAYALAM"] },
-          { id: 2, title: "SUPPORTING COP", project: "UNTITLED THRILLER", match: 84, deadline: "3D", tags: ["ACTION", "HINDI"] },
-          { id: 3, title: "COMIC RELIEF", project: "CAMPUS DIARIES", match: 72, deadline: "1W", tags: ["FUNNY", "TAMIL"] },
-        ],
+        roles: [],
         notifications: notifs || [],
       });
     } catch (error) {
@@ -1021,6 +1017,7 @@ export default function AgenticDashboard() {
           </section>
 
           {/* AI Matching Grid */}
+          {data.roles.length > 0 && (
           <section className="flex-1 flex flex-col min-h-0 mt-8">
             <div className="flex items-end justify-between mb-12 px-2">
               <div className="flex items-center gap-6">
@@ -1087,6 +1084,7 @@ export default function AgenticDashboard() {
               ))}
             </div>
           </section>
+          )}
 
       </div>
       </div>
