@@ -20,25 +20,26 @@
 }
 
 :root {
-  --background: #000000;
+  --background: #050000;
   --foreground: #ffffff;
   font-size: 75%; /* Scales down all rem units to 75% (12px base) */
 }
 
 body {
-  background: var(--background);
+  background: radial-gradient(circle at 50% 0%, #2a0000 0%, #000000 60%, #000000 100%);
+  background-attachment: fixed;
   color: var(--foreground);
   overflow-x: hidden;
   -webkit-font-smoothing: antialiased;
 }
 
-/* Extreme Glassmorphism */
+/* Extreme Glassmorphism - Blood Red Variant */
 .glass-panel {
-  background: rgba(255, 255, 255, 0.01);
+  background: rgba(40, 0, 0, 0.2);
   backdrop-filter: blur(40px) saturate(180%);
   -webkit-backdrop-filter: blur(40px) saturate(180%);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.8);
+  border: 1px solid rgba(255, 49, 49, 0.15);
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.9);
   position: relative;
   overflow: hidden;
 }
@@ -49,20 +50,20 @@ body {
   inset: 0;
   background: linear-gradient(
     135deg,
-    rgba(255, 255, 255, 0.1),
+    rgba(255, 49, 49, 0.05),
     transparent 40%,
     transparent 60%,
-    rgba(255, 255, 255, 0.05)
+    rgba(255, 49, 49, 0.02)
   );
   pointer-events: none;
 }
 
 .glass-panel-red {
-  background: rgba(255, 49, 49, 0.05);
+  background: rgba(255, 49, 49, 0.1);
   backdrop-filter: blur(40px) saturate(200%);
   -webkit-backdrop-filter: blur(40px) saturate(200%);
-  border: 1px solid rgba(255, 49, 49, 0.2);
-  box-shadow: 0 8px 32px 0 rgba(255, 49, 49, 0.2);
+  border: 1px solid rgba(255, 49, 49, 0.3);
+  box-shadow: 0 8px 32px 0 rgba(255, 49, 49, 0.15);
 }
 
 /* Polygonal Clip Paths */
