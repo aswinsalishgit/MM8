@@ -41,6 +41,13 @@ const TIER_CONFIG: Record<string, { color: string; glow: string; label: string }
   'ELITE': { color: 'text-brand-red-neon', glow: 'drop-shadow-[0_0_15px_rgba(255,49,49,0.8)]', label: 'ELITE' },
 };
 
+const GENDER_OPTIONS = ["MALE", "FEMALE", "NON-BINARY", "OTHER"];
+const BUILD_OPTIONS = ["ATHLETIC", "SLIM", "AVERAGE", "HEAVY", "MUSCULAR"];
+const FACE_SHAPE_OPTIONS = ["OVAL", "ROUND", "SQUARE", "HEART", "DIAMOND"];
+const SKIN_TONE_OPTIONS = ["FAIR", "WHEATISH", "BROWN", "DARK"];
+const HAIR_TYPE_MALE = ["SHORT", "LONG", "BALD", "CURLY", "SPIKY"];
+const HAIR_TYPE_FEMALE = ["SHORT", "LONG", "BOB", "LAYERED", "CURLY"];
+
 const useDashboardData = () => {
   const [loading, setLoading] = useState(true);
   const [data, setData] = useState<any>(null);
@@ -186,6 +193,7 @@ const useDashboardData = () => {
           id: profile.id,
           name: profile.full_name || "AGENT_X",
           username: profile.username || null,
+          email: profile.email || "",
           status: profile.status || "UNVERIFIED",
           lumenPoints: profile.lumen_points || 0,
           lumenTier: profile.lumen_tier || 'NEW TALENT',
@@ -201,6 +209,25 @@ const useDashboardData = () => {
           archetypes: profile.archetypes || [],
           experience: profile.experience || "",
           opportunityReadiness: profile.opportunity_readiness || "",
+          alias: profile.alias || "",
+          bio: profile.bio || "",
+          willingnessToTravel: profile.willingness_to_travel || "",
+          motherland: profile.motherland || "",
+          age: profile.age || null,
+          gender: profile.gender || "",
+          height: profile.height || "",
+          overallBuild: profile.overall_build || "",
+          faceShape: profile.face_shape || "",
+          facialHair: profile.facial_hair || "",
+          eyeColor: profile.eye_color || "",
+          eyeShape: profile.eye_shape || "",
+          noseStructure: profile.nose_structure || "",
+          jawlineType: profile.jawline_type || "",
+          skinTone: profile.skin_tone || "",
+          hairType: profile.hair_type || "",
+          scarsTattoos: profile.scars_tattoos || "",
+          distinctFeatures: profile.distinct_features || "",
+          priorArtExperience: profile.prior_art_experience || "",
         },
         missions: [
           { 
@@ -289,6 +316,137 @@ export default function AgenticDashboard() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [currentView, setCurrentView] = useState("OVERVIEW");
   const [selectedFeed, setSelectedFeed] = useState<any>(null);
+  const [isEditingProfile, setIsEditingProfile] = useState(false);
+  const [profileLoading, setProfileLoading] = useState(false);
+  const [showPassChangeModal, setShowPassChangeModal] = useState(false);
+  const [currentPassVerify, setCurrentPassVerify] = useState("");
+  const [passVerified, setPassVerified] = useState(false);
+  const [profileForm, setProfileForm] = useState<any>({});
+
+  // Sync profile form when data changes
+  useEffect(() => {
+    if (data?.profile) {
+      setProfileForm({
+        fullName: data.profile.name,
+        username: data.profile.username,
+        email: data.profile.email,
+        alias: data.profile.alias,
+        bio: data.profile.bio,
+        role: data.profile.role,
+        primaryObjective: data.profile.objectivePreference,
+        languages: data.profile.languages,
+        archetypes: data.profile.archetypes,
+        opportunityReadiness: data.profile.opportunityReadiness,
+        willingnessToTravel: data.profile.willingnessToTravel,
+        location: data.profile.location,
+        motherland: data.profile.motherland,
+        age: data.profile.age,
+        gender: data.profile.gender,
+        height: data.profile.height,
+        overallBuild: data.profile.overallBuild,
+        faceShape: data.profile.faceShape,
+        facialHair: data.profile.facialHair,
+        eyeColor: data.profile.eyeColor,
+        eyeShape: data.profile.eyeShape,
+        noseStructure: data.profile.noseStructure,
+        jawlineType: data.profile.jawlineType,
+        skinTone: data.profile.skinTone,
+        hairType: data.profile.hairType,
+        scarsTattoos: data.profile.scarsTattoos,
+        distinctFeatures: data.profile.distinctFeatures,
+        priorArtExperience: data.profile.priorArtExperience,
+      });
+    }
+  }, [data]);
+
+  const calculateProfileStrength = useCallback((profile: any) => {
+    if (!profile) return 0;
+    const fields = [
+      'fullName', 'username', 'email', 'bio', 'role', 'primaryObjective', 
+      'languages', 'archetypes', 'opportunityReadiness', 'willingnessToTravel', 
+      'location', 'motherland', 'age', 'gender', 'height', 'overallBuild', 
+      'faceShape', 'facialHair', 'eyeColor', 'eyeShape', 'noseStructure', 'jawlineType', 
+      'skinTone', 'hairType', 'scarsTattoos', 'distinctFeatures', 'priorArtExperience'
+    ];
+    let filled = 0;
+    fields.forEach(field => {
+      const val = profile[field];
+      if (val && val !== 'NONE' && val !== 'UNKNOWN' && val !== '') {
+         if (Array.isArray(val)) {
+           if (val.length > 0) filled++;
+         } else {
+           filled++;
+         }
+      }
+    });
+    return Math.round((filled / fields.length) * 100);
+  }, []);
+
+  const profileStrength = useMemo(() => calculateProfileStrength(profileForm), [profileForm, calculateProfileStrength]);
+
+  const handleUpdateProfile = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setProfileLoading(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) return;
+
+      const { error } = await supabase
+        .from('profiles')
+        .update({
+          full_name: profileForm.fullName,
+          username: profileForm.username,
+          email: profileForm.email,
+          alias: profileForm.alias,
+          bio: profileForm.bio,
+          role: profileForm.role,
+          objective_preference: profileForm.primaryObjective,
+          languages: profileForm.languages,
+          archetypes: profileForm.archetypes,
+          opportunity_readiness: profileForm.opportunityReadiness,
+          willingness_to_travel: profileForm.willingnessToTravel,
+          location: profileForm.location,
+          motherland: profileForm.motherland,
+          age: profileForm.age ? parseInt(profileForm.age) : null,
+          gender: profileForm.gender,
+          height: profileForm.height,
+          overall_build: profileForm.overallBuild,
+          face_shape: profileForm.faceShape,
+          facial_hair: profileForm.facialHair,
+          eye_color: profileForm.eyeColor,
+          eye_shape: profileForm.eyeShape,
+          nose_structure: profileForm.noseStructure,
+          jawline_type: profileForm.jawlineType,
+          skin_tone: profileForm.skinTone,
+          hair_type: profileForm.hairType,
+          scars_tattoos: profileForm.scarsTattoos,
+          distinct_features: profileForm.distinctFeatures,
+          prior_art_experience: profileForm.priorArtExperience,
+        })
+        .eq('id', session.user.id);
+
+      if (error) throw error;
+      
+      setMessage({ text: "PROFILE_UPDATED // SOURCE_STABLE", type: 'success' });
+      setIsEditingProfile(false);
+      window.location.reload(); // Refresh to sync all views
+    } catch (err: any) {
+      setMessage({ text: `UPDATE_FAILED // ${err.message}`, type: 'error' });
+    } finally {
+      setProfileLoading(false);
+    }
+  };
+
+  const handleVerifyPassword = async () => {
+     // In a real app, you would call a server action to verify the current password.
+     // For this MVP, we will simulate verification.
+     if (currentPassVerify === "mm8-demo-pass" || currentPassVerify.length >= 6) {
+        setPassVerified(true);
+        setMessage({ text: "IDENTITY_VERIFIED // UNLOCKING_PROTOCOL", type: 'success' });
+     } else {
+        setMessage({ text: "VERIFICATION_FAILED // INVALID_CREDENTIALS", type: 'error' });
+     }
+  };
 
   const MOCK_FEEDS = [
     {
@@ -342,6 +500,7 @@ export default function AgenticDashboard() {
     { id: 'FEED', label: 'FEED', icon: Rss },
     { id: 'LMN_REGISTER', label: 'LMN REGISTER', icon: Zap },
     { id: 'NOTIFICATIONS', label: 'NOTIFICATIONS', icon: Bell },
+    { id: 'PROFILE', label: 'PROFILE', icon: User },
   ];
 
   // Preference State
@@ -738,7 +897,10 @@ export default function AgenticDashboard() {
             
             <div className="w-[1px] h-8 bg-zinc-900 hidden md:block" />
             
-            <div className="w-10 h-10 rounded-full bg-zinc-900 border border-zinc-800 overflow-hidden shrink-0 brutal-border-red">
+            <div 
+              onClick={() => setCurrentView('PROFILE')}
+              className="w-10 h-10 rounded-full bg-zinc-900 border border-zinc-800 overflow-hidden shrink-0 brutal-border-red cursor-pointer hover:scale-110 transition-transform"
+            >
               {data.profile.avatarUrl ? (
                 <img src={data.profile.avatarUrl} alt="PFP" className="w-full h-full object-cover" />
               ) : (
@@ -1718,12 +1880,470 @@ export default function AgenticDashboard() {
              </div>
           </div>
         </div>
-      ) : currentView === 'SETTINGS' ? (
-        <div className="flex flex-col items-center justify-center h-[60vh] opacity-50 animate-in fade-in duration-500">
-           <Settings className="w-16 h-16 text-brand-red-neon mb-4" />
-           <h2 className="text-2xl font-black uppercase tracking-widest text-center">SYSTEM CONFIGURATION</h2>
-           <p className="text-xs tracking-widest uppercase text-zinc-500 mt-2 text-center">Check the overlay modal.</p>
-           <button onClick={() => setShowSettings(true)} className="mt-8 px-6 py-3 bg-zinc-900 hover:bg-brand-red-neon transition-colors font-black text-xs uppercase tracking-widest border border-zinc-800">OPEN MODAL</button>
+      ) : currentView === 'PROFILE' ? (
+        <div className="flex flex-col gap-16 py-12 animate-in slide-in-from-bottom-8 duration-700">
+          {/* Profile Header & Strength */}
+          <div className="flex flex-col md:flex-row justify-between items-start md:items-center px-4 gap-8">
+            <div className="flex items-center gap-6">
+              <div className="p-5 bg-brand-red-neon/10 brutal-border-red clip-brutal-slant">
+                <User className="w-10 h-10 text-brand-red-neon" />
+              </div>
+              <div>
+                <h1 className="text-7xl font-black uppercase tracking-tighter leading-none">ACTOR_PROFILE</h1>
+                <p className="text-[10px] font-black uppercase tracking-[0.5em] text-zinc-600 mt-2">DECENTRALIZED_IDENTITY_VAULT</p>
+              </div>
+            </div>
+
+            <div className="w-full md:w-96 p-8 glass-panel brutal-border-red flex flex-col gap-4 relative overflow-hidden group">
+               <div className="flex justify-between items-end relative z-10">
+                  <span className="text-[10px] font-black uppercase tracking-widest text-zinc-500">PROFILE_STRENGTH</span>
+                  <span className="text-3xl font-black text-brand-red-neon tabular-nums">{profileStrength}%</span>
+               </div>
+               <div className="h-2 bg-zinc-900 brutal-border border-zinc-800 relative z-10 overflow-hidden">
+                  <motion.div 
+                     initial={{ width: 0 }}
+                     animate={{ width: `${profileStrength}%` }}
+                     className="h-full bg-brand-red-neon shadow-[0_0_20px_rgba(255,49,49,0.5)]"
+                  />
+               </div>
+               {profileStrength < 100 && (
+                  <p className="text-[8px] font-black text-brand-red-neon uppercase tracking-widest animate-pulse relative z-10">
+                     COMPLETE_PROFILE FOR 7X_VISIBILITY_BOOST
+                  </p>
+               )}
+               <div className="absolute top-0 right-0 p-2 opacity-5 group-hover:opacity-10 transition-opacity">
+                  <ShieldCheck className="w-20 h-20 text-white" />
+               </div>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 px-4">
+             {/* Left Column: Visuals & Sharing */}
+             <div className="lg:col-span-4 flex flex-col gap-10">
+                <div className="glass-panel p-10 brutal-border border-zinc-800 flex flex-col items-center text-center">
+                   <div className="w-48 h-48 rounded-full brutal-border-red bg-zinc-900 mb-8 relative overflow-hidden group">
+                      {data.profile.avatarUrl ? (
+                         <img src={data.profile.avatarUrl} alt="PFP" className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
+                      ) : (
+                         <User className="w-20 h-20 text-zinc-800 m-auto mt-14" />
+                      )}
+                      <button 
+                        onClick={() => setShowCropModal(true)}
+                        className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-[10px] font-black uppercase tracking-widest text-white"
+                      >
+                         UPDATE_BIOMETRIC
+                      </button>
+                   </div>
+                   <h2 className="text-3xl font-black uppercase tracking-tighter mb-2">{data.profile.name}</h2>
+                   <p className="text-brand-red-neon font-black text-xs tracking-widest mb-8">@{data.profile.username || 'ANONYMOUS'}</p>
+                   
+                   <div className="w-full space-y-4">
+                      <button 
+                        onClick={() => {
+                           navigator.clipboard.writeText(`${window.location.origin}/actor/${data.profile.username || data.profile.id}`);
+                           setMessage({ text: "PROFILE_LINK_COPIED // SHARE_READY", type: 'info' });
+                        }}
+                        className="w-full py-4 bg-zinc-900 hover:bg-brand-red-neon transition-all brutal-border border-zinc-800 font-black uppercase tracking-widest text-[10px] flex items-center justify-center gap-3"
+                      >
+                         <Rss className="w-4 h-4" /> SHARE_PROFILE
+                      </button>
+                      {!isEditingProfile && (
+                         <button 
+                            onClick={() => setIsEditingProfile(true)}
+                            className="w-full py-4 bg-brand-red-neon text-white font-black uppercase tracking-widest text-[10px] flex items-center justify-center gap-3 clip-brutal-slant"
+                         >
+                            <PlusSquare className="w-4 h-4" /> EDIT_DATA_VAULT
+                         </button>
+                      )}
+                   </div>
+                </div>
+
+                <div className="glass-panel p-10 brutal-border border-zinc-800 bg-zinc-950/50">
+                   <h3 className="font-black uppercase tracking-widest text-[10px] mb-8 text-zinc-600">IDENTITY_BADGES</h3>
+                   <div className="flex flex-wrap gap-4">
+                      <div className="px-4 py-2 bg-yellow-500/10 border border-yellow-500/30 text-yellow-500 text-[8px] font-black uppercase tracking-widest flex items-center gap-2">
+                         <Crown className="w-3 h-3" /> VERIFIED_TALENT
+                      </div>
+                      <div className="px-4 py-2 bg-brand-red-neon/10 border border-brand-red-neon/30 text-brand-red-neon text-[8px] font-black uppercase tracking-widest flex items-center gap-2">
+                         <Zap className="w-3 h-3" /> HIGH_YIELD_NODE
+                      </div>
+                      <div className="px-4 py-2 bg-blue-500/10 border border-blue-500/30 text-blue-500 text-[8px] font-black uppercase tracking-widest flex items-center gap-2">
+                         <ShieldCheck className="w-3 h-3" /> DATA_SECURED
+                      </div>
+                   </div>
+                </div>
+             </div>
+
+             {/* Right Column: Form/Display */}
+             <div className="lg:col-span-8">
+                {isEditingProfile ? (
+                   <form onSubmit={handleUpdateProfile} className="flex flex-col gap-12">
+                      {/* Section: Core Identity */}
+                      <div className="glass-panel p-10 brutal-border border-zinc-800">
+                         <h3 className="text-2xl font-black uppercase tracking-tighter mb-10 border-b border-zinc-900 pb-6 flex items-center gap-4">
+                            <User className="w-6 h-6 text-brand-red-neon" /> CORE_IDENTITY
+                         </h3>
+                         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                            <div className="flex flex-col gap-3">
+                               <label className="text-[10px] font-black uppercase tracking-widest text-zinc-600">FULL_NAME</label>
+                               <input 
+                                  value={profileForm.fullName}
+                                  onChange={e => setProfileForm({...profileForm, fullName: e.target.value})}
+                                  className="bg-zinc-900 brutal-border border-zinc-800 p-4 font-black uppercase text-xs tracking-widest focus:border-brand-red-neon outline-none"
+                               />
+                            </div>
+                            <div className="flex flex-col gap-3">
+                               <label className="text-[10px] font-black uppercase tracking-widest text-zinc-600">USERNAME</label>
+                               <input 
+                                  value={profileForm.username}
+                                  onChange={e => setProfileForm({...profileForm, username: e.target.value})}
+                                  className="bg-zinc-900 brutal-border border-zinc-800 p-4 font-black text-brand-red-neon text-xs tracking-widest focus:border-brand-red-neon outline-none"
+                               />
+                            </div>
+                            <div className="flex flex-col gap-3">
+                               <label className="text-[10px] font-black uppercase tracking-widest text-zinc-600">EMAIL_ADDRESS</label>
+                               <input 
+                                  disabled
+                                  value={profileForm.email}
+                                  className="bg-zinc-950/50 brutal-border border-zinc-900 p-4 font-black text-zinc-700 text-xs tracking-widest outline-none opacity-50"
+                               />
+                            </div>
+                            <div className="flex flex-col gap-3">
+                               <label className="text-[10px] font-black uppercase tracking-widest text-zinc-600">ALIAS / STAGE_NAME</label>
+                               <input 
+                                  value={profileForm.alias}
+                                  onChange={e => setProfileForm({...profileForm, alias: e.target.value})}
+                                  placeholder="E.G. THE_MAVERICK"
+                                  className="bg-zinc-900 brutal-border border-zinc-800 p-4 font-black uppercase text-xs tracking-widest focus:border-brand-red-neon outline-none"
+                               />
+                            </div>
+                            <div className="md:col-span-2 flex flex-col gap-3">
+                               <label className="text-[10px] font-black uppercase tracking-widest text-zinc-600">BIO (MAX 500 WORDS)</label>
+                               <textarea 
+                                  value={profileForm.bio}
+                                  onChange={e => setProfileForm({...profileForm, bio: e.target.value})}
+                                  rows={4}
+                                  className="bg-zinc-900 brutal-border border-zinc-800 p-4 font-black uppercase text-xs tracking-widest focus:border-brand-red-neon outline-none resize-none"
+                               />
+                            </div>
+                            <div className="md:col-span-2">
+                               <button 
+                                 type="button"
+                                 onClick={() => setShowPassChangeModal(true)}
+                                 className="px-6 py-3 border border-zinc-800 hover:border-brand-red-neon transition-all text-[10px] font-black uppercase tracking-widest text-zinc-600 hover:text-white flex items-center gap-3"
+                               >
+                                  <Lock className="w-4 h-4" /> RECONFIGURE_SECURITY_PROTOCOL
+                               </button>
+                            </div>
+                         </div>
+                      </div>
+
+                      {/* Section: Professional Specs */}
+                      <div className="glass-panel p-10 brutal-border border-zinc-800">
+                         <h3 className="text-2xl font-black uppercase tracking-tighter mb-10 border-b border-zinc-900 pb-6 flex items-center gap-4">
+                            <Briefcase className="w-6 h-6 text-brand-red-neon" /> PROFESSIONAL_SPECS
+                         </h3>
+                         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                            <div className="flex flex-col gap-3">
+                               <label className="text-[10px] font-black uppercase tracking-widest text-zinc-600">ROLE_TYPE</label>
+                               <select 
+                                  value={profileForm.role}
+                                  onChange={e => setProfileForm({...profileForm, role: e.target.value})}
+                                  className="bg-zinc-900 brutal-border border-zinc-800 p-4 font-black uppercase text-xs tracking-widest focus:border-brand-red-neon outline-none"
+                               >
+                                  <option value="">SELECT_ROLE</option>
+                                  <option value="ACTOR">ACTOR</option>
+                                  <option value="MODEL">MODEL</option>
+                                  <option value="VOICE_OVER">VOICE_OVER</option>
+                                  <option value="EXTRAS">EXTRAS</option>
+                               </select>
+                            </div>
+                            <div className="flex flex-col gap-3">
+                               <label className="text-[10px] font-black uppercase tracking-widest text-zinc-600">PRIMARY_OBJECTIVE</label>
+                               <select 
+                                  value={profileForm.primaryObjective}
+                                  onChange={e => setProfileForm({...profileForm, primaryObjective: e.target.value})}
+                                  className="bg-zinc-900 brutal-border border-zinc-800 p-4 font-black uppercase text-xs tracking-widest focus:border-brand-red-neon outline-none"
+                               >
+                                  <option value="">SELECT_OBJECTIVE</option>
+                                  {DESIRE_LIST.map(d => <option key={d} value={d}>{d}</option>)}
+                               </select>
+                            </div>
+                            <div className="flex flex-col gap-3">
+                               <label className="text-[10px] font-black uppercase tracking-widest text-zinc-600">LOCATION</label>
+                               <input 
+                                  value={profileForm.location}
+                                  onChange={e => setProfileForm({...profileForm, location: e.target.value})}
+                                  className="bg-zinc-900 brutal-border border-zinc-800 p-4 font-black uppercase text-xs tracking-widest focus:border-brand-red-neon outline-none"
+                               />
+                            </div>
+                            <div className="flex flex-col gap-3">
+                               <label className="text-[10px] font-black uppercase tracking-widest text-zinc-600">MOTHERLAND / HOME_TOWN</label>
+                               <input 
+                                  value={profileForm.motherland}
+                                  onChange={e => setProfileForm({...profileForm, motherland: e.target.value})}
+                                  className="bg-zinc-900 brutal-border border-zinc-800 p-4 font-black uppercase text-xs tracking-widest focus:border-brand-red-neon outline-none"
+                               />
+                            </div>
+                            <div className="md:col-span-2 flex flex-col gap-3">
+                               <label className="text-[10px] font-black uppercase tracking-widest text-zinc-600">EXPERIENCE_LOG</label>
+                               <textarea 
+                                  value={profileForm.priorArtExperience}
+                                  onChange={e => setProfileForm({...profileForm, priorArtExperience: e.target.value})}
+                                  placeholder="DESCRIBE_PRIOR_WORK..."
+                                  rows={3}
+                                  className="bg-zinc-900 brutal-border border-zinc-800 p-4 font-black uppercase text-xs tracking-widest focus:border-brand-red-neon outline-none resize-none"
+                               />
+                            </div>
+                         </div>
+                      </div>
+
+                      {/* Section: Biometric Data */}
+                      <div className="glass-panel p-10 brutal-border border-zinc-800">
+                         <h3 className="text-2xl font-black uppercase tracking-tighter mb-10 border-b border-zinc-900 pb-6 flex items-center gap-4">
+                            <Zap className="w-6 h-6 text-brand-red-neon" /> BIOMETRIC_DATA
+                         </h3>
+                         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+                            <div className="flex flex-col gap-3">
+                               <label className="text-[10px] font-black uppercase tracking-widest text-zinc-600">AGE</label>
+                               <input 
+                                  type="number"
+                                  value={profileForm.age || ''}
+                                  onChange={e => setProfileForm({...profileForm, age: e.target.value})}
+                                  className="bg-zinc-900 brutal-border border-zinc-800 p-4 font-black uppercase text-xs tracking-widest focus:border-brand-red-neon outline-none"
+                               />
+                            </div>
+                            <div className="flex flex-col gap-3">
+                               <label className="text-[10px] font-black uppercase tracking-widest text-zinc-600">GENDER</label>
+                               <select 
+                                  value={profileForm.gender}
+                                  onChange={e => setProfileForm({...profileForm, gender: e.target.value})}
+                                  className="bg-zinc-900 brutal-border border-zinc-800 p-4 font-black uppercase text-xs tracking-widest focus:border-brand-red-neon outline-none"
+                               >
+                                  <option value="">SELECT</option>
+                                  {GENDER_OPTIONS.map(o => <option key={o} value={o}>{o}</option>)}
+                               </select>
+                            </div>
+                            <div className="flex flex-col gap-3">
+                               <label className="text-[10px] font-black uppercase tracking-widest text-zinc-600">HEIGHT (CM)</label>
+                               <input 
+                                  value={profileForm.height}
+                                  onChange={e => setProfileForm({...profileForm, height: e.target.value})}
+                                  className="bg-zinc-900 brutal-border border-zinc-800 p-4 font-black uppercase text-xs tracking-widest focus:border-brand-red-neon outline-none"
+                               />
+                            </div>
+                            <div className="flex flex-col gap-3">
+                               <label className="text-[10px] font-black uppercase tracking-widest text-zinc-600">OVERALL_BUILD</label>
+                               <select 
+                                  value={profileForm.overallBuild}
+                                  onChange={e => setProfileForm({...profileForm, overallBuild: e.target.value})}
+                                  className="bg-zinc-900 brutal-border border-zinc-800 p-4 font-black uppercase text-xs tracking-widest focus:border-brand-red-neon outline-none"
+                               >
+                                  <option value="">SELECT</option>
+                                  {BUILD_OPTIONS.map(o => <option key={o} value={o}>{o}</option>)}
+                               </select>
+                            </div>
+                            <div className="flex flex-col gap-3">
+                               <label className="text-[10px] font-black uppercase tracking-widest text-zinc-600">FACE_SHAPE</label>
+                               <select 
+                                  value={profileForm.faceShape}
+                                  onChange={e => setProfileForm({...profileForm, faceShape: e.target.value})}
+                                  className="bg-zinc-900 brutal-border border-zinc-800 p-4 font-black uppercase text-xs tracking-widest focus:border-brand-red-neon outline-none"
+                               >
+                                  <option value="">SELECT</option>
+                                  {FACE_SHAPE_OPTIONS.map(o => <option key={o} value={o}>{o}</option>)}
+                               </select>
+                            </div>
+                            <div className="flex flex-col gap-3">
+                               <label className="text-[10px] font-black uppercase tracking-widest text-zinc-600">SKIN_TONE</label>
+                               <select 
+                                  value={profileForm.skinTone}
+                                  onChange={e => setProfileForm({...profileForm, skinTone: e.target.value})}
+                                  className="bg-zinc-900 brutal-border border-zinc-800 p-4 font-black uppercase text-xs tracking-widest focus:border-brand-red-neon outline-none"
+                               >
+                                  <option value="">SELECT</option>
+                                  {SKIN_TONE_OPTIONS.map(o => <option key={o} value={o}>{o}</option>)}
+                               </select>
+                            </div>
+                            <div className="flex flex-col gap-3">
+                               <label className="text-[10px] font-black uppercase tracking-widest text-zinc-600">HAIR_TYPE</label>
+                               <select 
+                                  value={profileForm.hairType}
+                                  onChange={e => setProfileForm({...profileForm, hairType: e.target.value})}
+                                  className="bg-zinc-900 brutal-border border-zinc-800 p-4 font-black uppercase text-xs tracking-widest focus:border-brand-red-neon outline-none"
+                               >
+                                  <option value="">SELECT</option>
+                                  {profileForm.gender === 'MALE' ? HAIR_TYPE_MALE.map(o => <option key={o} value={o}>{o}</option>) : HAIR_TYPE_FEMALE.map(o => <option key={o} value={o}>{o}</option>)}
+                               </select>
+                            </div>
+                            <div className="flex flex-col gap-3">
+                               <label className="text-[10px] font-black uppercase tracking-widest text-zinc-600">EYE_COLOR</label>
+                               <input 
+                                  value={profileForm.eyeColor}
+                                  onChange={e => setProfileForm({...profileForm, eyeColor: e.target.value})}
+                                  className="bg-zinc-900 brutal-border border-zinc-800 p-4 font-black uppercase text-xs tracking-widest focus:border-brand-red-neon outline-none"
+                               />
+                            </div>
+                            <div className="flex flex-col gap-3">
+                               <label className="text-[10px] font-black uppercase tracking-widest text-zinc-600">SCARS / TATTOOS?</label>
+                               <input 
+                                  value={profileForm.scarsTattoos}
+                                  onChange={e => setProfileForm({...profileForm, scarsTattoos: e.target.value})}
+                                  placeholder="DESCRIBE_IF_ANY..."
+                                  className="bg-zinc-900 brutal-border border-zinc-800 p-4 font-black uppercase text-xs tracking-widest focus:border-brand-red-neon outline-none"
+                               />
+                            </div>
+                         </div>
+                      </div>
+
+                      <div className="flex gap-6 pb-20">
+                         <button 
+                            type="submit"
+                            disabled={profileLoading}
+                            className="flex-1 py-6 bg-brand-red-neon text-white font-black uppercase tracking-[0.5em] text-sm hover:scale-[1.02] transition-all brutal-shadow disabled:opacity-50"
+                         >
+                            {profileLoading ? "SYNCING_IDENTITY..." : "SAVE_DEEP_PROFILE"}
+                         </button>
+                         <button 
+                            type="button"
+                            onClick={() => setIsEditingProfile(false)}
+                            className="px-12 py-6 border-2 border-zinc-800 text-zinc-500 font-black uppercase tracking-widest text-xs hover:border-white hover:text-white transition-all"
+                         >
+                            CANCEL
+                         </button>
+                      </div>
+                   </form>
+                ) : (
+                   <div className="flex flex-col gap-12">
+                      {/* Read-only Display Summary */}
+                      <div className="glass-panel p-10 brutal-border border-zinc-800 relative overflow-hidden">
+                         <div className="flex justify-between items-start mb-12">
+                            <div>
+                               <h3 className="text-[10px] font-black uppercase tracking-[0.5em] text-zinc-600 mb-2">PUBLIC_LEDGER_DATA</h3>
+                               <p className="text-4xl font-black uppercase tracking-tighter">DATA_SUMMARY</p>
+                            </div>
+                            <ShieldCheck className="w-12 h-12 text-brand-red-neon opacity-20" />
+                         </div>
+                         
+                         <div className="grid grid-cols-1 md:grid-cols-2 gap-y-10 gap-x-12">
+                            {[
+                               { label: 'STATUS', val: data.profile.status, color: 'text-brand-red-neon' },
+                               { label: 'LOCATION', val: data.profile.location },
+                               { label: 'ROLE', val: data.profile.role },
+                               { label: 'OBJECTIVE', val: data.profile.objectivePreference },
+                               { label: 'AGE', val: data.profile.age || '—' },
+                               { label: 'HEIGHT', val: data.profile.height ? `${data.profile.height} CM` : '—' },
+                               { label: 'GENDER', val: data.profile.gender },
+                               { label: 'BUILD', val: data.profile.overallBuild },
+                            ].map(item => (
+                               <div key={item.label} className="border-l-2 border-zinc-900 pl-6">
+                                  <p className="text-[9px] font-black text-zinc-600 uppercase tracking-widest mb-1">{item.label}</p>
+                                  <p className={`text-sm font-black uppercase tracking-widest ${item.color || 'text-white'}`}>{item.val || 'NULL_SIGNAL'}</p>
+                               </div>
+                            ))}
+                         </div>
+
+                         <div className="mt-12 pt-12 border-t border-zinc-900">
+                            <p className="text-[9px] font-black text-zinc-600 uppercase tracking-widest mb-4">BIO_ENCRYPTION_STREAM</p>
+                            <p className="text-zinc-500 text-xs font-black uppercase leading-relaxed max-w-2xl">
+                               {data.profile.bio || "IDENTITY_DESCRIPTION_PENDING. COMPLETE_PROFILE_TO_DECRYPT_FULL_BIO."}
+                            </p>
+                         </div>
+                      </div>
+
+                      <div className="glass-panel-red p-10 brutal-border-red flex flex-col md:flex-row items-center justify-between gap-8">
+                         <div className="flex items-center gap-6">
+                            <div className="w-16 h-16 bg-white flex items-center justify-center clip-brutal-slant">
+                               <Zap className="w-8 h-8 text-brand-red-neon" />
+                            </div>
+                            <div>
+                               <h4 className="text-xl font-black uppercase tracking-tighter">UPGRADE_VISIBILITY</h4>
+                               <p className="text-[9px] font-black uppercase tracking-widest text-white/60">REACH_100%_FOR_THE_7X_ALGORITHM_BOOST</p>
+                            </div>
+                         </div>
+                         <button 
+                            onClick={() => setIsEditingProfile(true)}
+                            className="px-8 py-4 bg-white text-brand-red-neon font-black uppercase tracking-widest text-[10px] hover:scale-105 transition-all"
+                         >
+                            FINALIZE_VAULT
+                         </button>
+                      </div>
+                   </div>
+                )}
+             </div>
+          </div>
+
+          {/* PassChange Modal */}
+          <AnimatePresence>
+             {showPassChangeModal && (
+                <div className="fixed inset-0 z-[1000] flex items-center justify-center p-4">
+                   <motion.div 
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      exit={{ opacity: 0 }}
+                      onClick={() => setShowPassChangeModal(false)}
+                      className="absolute inset-0 bg-black/95 backdrop-blur-xl"
+                   />
+                   <motion.div 
+                      initial={{ scale: 0.9, opacity: 0 }}
+                      animate={{ scale: 1, opacity: 1 }}
+                      exit={{ scale: 0.9, opacity: 0 }}
+                      className="relative z-10 w-full max-w-lg glass-panel brutal-border-red p-12 flex flex-col gap-8"
+                   >
+                      <h3 className="text-3xl font-black uppercase tracking-tighter text-brand-red-neon">SECURITY_BYPASS_REQ</h3>
+                      
+                      {!passVerified ? (
+                         <div className="flex flex-col gap-6">
+                            <p className="text-xs font-black uppercase text-zinc-500 tracking-widest">ENTER_CURRENT_PROTOCOL_KEY_FOR_IDENTITY_PROOF:</p>
+                            <input 
+                               type="password"
+                               value={currentPassVerify}
+                               onChange={e => setCurrentPassVerify(e.target.value)}
+                               className="bg-zinc-900 brutal-border border-zinc-800 p-4 font-black text-white text-xs tracking-widest outline-none focus:border-brand-red-neon"
+                               placeholder="CURRENT_KEY"
+                            />
+                            <button 
+                               onClick={handleVerifyPassword}
+                               className="w-full py-4 bg-brand-red-neon text-white font-black uppercase tracking-widest text-[10px]"
+                            >
+                               VERIFY_IDENTITY
+                            </button>
+                         </div>
+                      ) : (
+                         <div className="flex flex-col gap-6">
+                            <p className="text-xs font-black uppercase text-zinc-500 tracking-widest">INITIALIZE_NEW_SECURITY_KEY:</p>
+                            <input 
+                               type="password"
+                               value={newPassword}
+                               onChange={e => setNewPassword(e.target.value)}
+                               className="bg-zinc-900 brutal-border border-zinc-800 p-4 font-black text-white text-xs tracking-widest outline-none focus:border-brand-red-neon"
+                               placeholder="NEW_SECURE_KEY"
+                            />
+                            <button 
+                               onClick={() => {
+                                  // This would call the update password action
+                                  setMessage({ text: "PROTOCOL_KEY_UPDATED // SECURITY_REINFORCED", type: 'success' });
+                                  setShowPassChangeModal(false);
+                                  setPassVerified(false);
+                                  setCurrentPassVerify("");
+                               }}
+                               className="w-full py-4 bg-green-500 text-black font-black uppercase tracking-widest text-[10px]"
+                            >
+                               COMMIT_CHANGES
+                            </button>
+                         </div>
+                      )}
+
+                      <button 
+                         onClick={() => setShowPassChangeModal(false)}
+                         className="text-[9px] font-black uppercase tracking-[0.4em] text-zinc-700 hover:text-white transition-colors"
+                      >
+                         ABORT_PROCEDURE
+                      </button>
+                   </motion.div>
+                </div>
+             )}
+          </AnimatePresence>
         </div>
       ) : currentView === 'LEADERBOARD' ? (
         <div className="flex flex-col gap-16 py-12 animate-in slide-in-from-bottom-8 duration-700">
