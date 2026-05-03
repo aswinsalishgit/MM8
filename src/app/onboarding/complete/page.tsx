@@ -28,7 +28,7 @@ export default function CompletionTransitionFlow() {
   };
 
   return (
-    <main className="min-h-screen bg-black text-white flex flex-col justify-center px-6 md:px-16 overflow-hidden relative">
+    <main className="min-h-screen bg-[#050000] text-white flex flex-col justify-center px-6 md:px-16 overflow-hidden relative">
       
       <button 
         onClick={() => router.push("/onboarding/actor")}
@@ -43,7 +43,7 @@ export default function CompletionTransitionFlow() {
         animate={{ opacity: 1, y: 0 }}
         className="flex flex-col w-full max-w-6xl mx-auto z-10"
       >
-        <div className="border-l-[16px] border-brand-red-neon pl-10 md:pl-16 mb-24">
+        <div className="border-l-[16px] border-[#ff1a1a] pl-10 md:pl-16 mb-24">
           <motion.h2 
             initial={{ opacity: 0, x: -30 }}
             animate={{ opacity: 1, x: 0 }}
@@ -52,7 +52,7 @@ export default function CompletionTransitionFlow() {
           >
             You’re all set.<br />
             Your profile is now ready to be discovered.<br />
-            <span className="text-brand-red-neon drop-shadow-[0_0_20px_rgba(255,49,49,0.5)]">
+            <span className="text-[#ff1a1a] drop-shadow-[0_0_20px_rgba(255,49,49,0.5)]">
               Enter your dashboard to unlock opportunities tailored to your potential.
             </span>
           </motion.h2>
@@ -63,7 +63,7 @@ export default function CompletionTransitionFlow() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 1.2 }}
           onClick={enterDashboard}
-          className="w-full relative group p-12 bg-brand-red-neon text-white transition-all duration-700 shadow-[0_0_80px_rgba(255,49,49,0.4)] clip-brutal-hero-primary hover:bg-white hover:text-black hover:shadow-[0_0_120px_rgba(255,49,49,0.6)] cursor-pointer"
+          className="w-full relative group p-12 bg-gradient-to-r from-[#ff1a1a] to-[#8a0303] text-white transition-all duration-700 shadow-[0_0_80px_rgba(255,49,49,0.4)] rounded-full hover:bg-white hover:text-black hover:shadow-[0_0_120px_rgba(255,49,49,0.6)] cursor-pointer"
         >
           <div className="relative z-10 flex items-center justify-center group-hover:scale-105 transition-transform duration-500">
             <span className="text-3xl md:text-7xl font-black uppercase tracking-tighter text-center">ENTER DASHBOARD</span>

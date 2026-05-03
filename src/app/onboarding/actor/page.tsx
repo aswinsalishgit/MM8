@@ -357,7 +357,7 @@ export default function ActorOnboardingFlow() {
   const progress = (stepIndex / (STEPS.length - 1)) * 100;
 
   return (
-    <main className="min-h-screen bg-black text-white flex flex-col relative overflow-hidden">
+    <main className="min-h-screen bg-[#050000] text-white flex flex-col relative overflow-hidden">
       
       <button 
         onClick={prevStep}
@@ -370,7 +370,7 @@ export default function ActorOnboardingFlow() {
       {/* Progress Bar */}
       <div className="fixed top-0 left-0 w-full h-2 bg-zinc-900 z-50">
         <motion.div
-          className="h-full bg-brand-red-neon shadow-[0_0_20px_rgba(255,49,49,0.5)]"
+          className="h-full bg-gradient-to-r from-[#ff1a1a] to-[#8a0303] shadow-[0_0_20px_rgba(255,49,49,0.5)]"
           initial={{ width: 0 }}
           animate={{ width: `${progress}%` }}
           transition={{ duration: 0.5, ease: "circOut" }}
@@ -389,10 +389,10 @@ export default function ActorOnboardingFlow() {
               className="flex flex-col items-start"
             >
               <h1 className="text-6xl md:text-9xl font-black uppercase tracking-tighter leading-none mb-8">
-                PROFILE<br /><span className="text-brand-red-neon">CREATION</span>
+                PROFILE<br /><span className="gradient-text-blood">CREATION</span>
               </h1>
               
-              <div className="border-l-4 border-brand-red-neon pl-6 py-2 mb-12">
+              <div className="border-l-4 border-[#ff1a1a] pl-6 py-2 mb-12">
                 <p className="text-zinc-500 font-bold uppercase tracking-widest text-lg md:text-xl italic">
                   "You are 6 steps away from being discoverable."
                 </p>
@@ -403,7 +403,7 @@ export default function ActorOnboardingFlow() {
 
               <button
                 onClick={nextStep}
-                className="group relative px-12 py-8 bg-brand-red-neon text-white font-black text-3xl md:text-5xl uppercase tracking-tighter hover:bg-white hover:text-black transition-all duration-500 shadow-[0_0_50px_rgba(255,49,49,0.3)] clip-brutal-hero-primary cursor-pointer"
+                className="group relative px-12 py-8 bg-gradient-to-r from-[#ff1a1a] to-[#8a0303] text-white font-black text-3xl md:text-5xl uppercase tracking-tighter hover:bg-white hover:text-black transition-all duration-500 shadow-[0_0_50px_rgba(255,49,49,0.3)] rounded-full cursor-pointer"
               >
                 START NOW
               </button>
@@ -419,7 +419,7 @@ export default function ActorOnboardingFlow() {
               className="flex flex-col gap-8 w-full"
             >
               <h2 className="text-5xl md:text-8xl font-black uppercase tracking-tighter leading-none">
-                WHAT DO YOU WANT MOST<br /><span className="text-brand-red-neon">RIGHT NOW?</span>
+                WHAT DO YOU WANT MOST<br /><span className="gradient-text-blood">RIGHT NOW?</span>
               </h2>
               <p className="text-zinc-500 font-bold uppercase tracking-widest text-xs max-w-2xl border-l-4 border-brand-red-dark pl-4">
                 Choose the opportunities that match your current ambition. This helps us surface roles aligned with where you want to rise next.
@@ -438,9 +438,9 @@ export default function ActorOnboardingFlow() {
                         nextStep(); 
                       }
                     }}
-                    className={`p-10 glass-panel brutal-border-red text-left hover:border-brand-red-neon transition-all duration-300 group cursor-pointer ${desire === opt ? 'bg-brand-red-deep border-brand-red-neon' : ''}`}
+                    className={`p-10 glass-panel-premium border border-[#ff1a1a]/30 shadow-[0_0_15px_rgba(255,26,26,0.1)] rounded-3xl text-left hover:border-[#ff1a1a] transition-all duration-300 group cursor-pointer ${desire === opt ? 'bg-[#8a0303]/20 border-[#ff1a1a]' : ''}`}
                   >
-                    <span className="text-3xl font-black uppercase tracking-tighter group-hover:text-brand-red-neon transition-colors">{opt}</span>
+                    <span className="text-3xl font-black uppercase tracking-tighter group-hover:gradient-text-blood transition-colors">{opt}</span>
                   </button>
                 ))}
               </div>
@@ -456,7 +456,7 @@ export default function ActorOnboardingFlow() {
                     <input 
                       type="text"
                       placeholder="DESCRIBE YOUR GOAL..."
-                      className="w-full bg-zinc-950 text-white font-black text-3xl px-8 py-10 brutal-border-red outline-none focus:border-brand-red-neon transition-all placeholder:text-zinc-800 uppercase"
+                      className="w-full bg-zinc-950 text-white font-black text-3xl px-8 py-10 border border-[#ff1a1a]/30 shadow-[0_0_15px_rgba(255,26,26,0.1)] rounded-3xl outline-none focus:border-[#ff1a1a] transition-all placeholder:text-zinc-800 uppercase"
                       value={otherObjective}
                       onChange={(e) => setOtherObjective(e.target.value)}
                       onKeyDown={(e) => e.key === 'Enter' && otherObjective && nextStep()}
@@ -464,7 +464,7 @@ export default function ActorOnboardingFlow() {
                     <button 
                       disabled={!otherObjective}
                       onClick={nextStep}
-                      className="mt-4 w-full py-6 bg-brand-red-neon text-white font-black uppercase tracking-widest text-sm hover:bg-white hover:text-black transition-all cursor-pointer disabled:opacity-30"
+                      className="mt-4 w-full py-6 bg-gradient-to-r from-[#ff1a1a] to-[#8a0303] text-white font-black uppercase tracking-widest text-sm hover:bg-white hover:text-black transition-all cursor-pointer disabled:opacity-30"
                     >
                       CONFIRM GOAL
                     </button>
@@ -483,7 +483,7 @@ export default function ActorOnboardingFlow() {
               className="flex flex-col gap-8 w-full"
             >
               <h2 className="text-5xl md:text-8xl font-black uppercase tracking-tighter leading-none">
-                WHICH LANGUAGES CAN YOU<br /><span className="text-brand-red-neon">PERFORM IN?</span>
+                WHICH LANGUAGES CAN YOU<br /><span className="gradient-text-blood">PERFORM IN?</span>
               </h2>
               <p className="text-zinc-500 font-bold uppercase tracking-widest text-xs max-w-2xl border-l-4 border-brand-red-dark pl-4">
                 Select every language you can confidently speak or perform in. This helps match you with roles, scripts, and markets where you can deliver naturally on screen.
@@ -496,7 +496,7 @@ export default function ActorOnboardingFlow() {
                     <button
                       key={lang}
                       onClick={() => handleLanguageToggle(lang)}
-                      className={`p-6 brutal-border transition-all duration-300 text-left cursor-pointer ${isSelected ? 'border-brand-red-neon bg-brand-red-deep text-white shadow-[0_0_15px_rgba(255,49,49,0.3)]' : 'border-zinc-800 text-zinc-500 hover:border-zinc-400'}`}
+                      className={`p-6 border border-white/10 rounded-3xl transition-all duration-300 text-left cursor-pointer ${isSelected ? 'border-[#ff1a1a] bg-[#8a0303]/20 text-white shadow-[0_0_15px_rgba(255,49,49,0.3)]' : 'border-zinc-800 text-zinc-500 hover:border-zinc-400'}`}
                     >
                       <span className="text-2xl font-black uppercase tracking-tighter">{lang}</span>
                     </button>
@@ -507,7 +507,7 @@ export default function ActorOnboardingFlow() {
                   <button
                     key={lang}
                     onClick={() => handleLanguageToggle(lang)}
-                    className="p-6 brutal-border border-brand-red-neon bg-brand-red-deep text-white shadow-[0_0_15px_rgba(255,49,49,0.3)] transition-all duration-300 text-left cursor-pointer"
+                    className="p-6 border border-white/10 rounded-3xl border-[#ff1a1a] bg-[#8a0303]/20 text-white shadow-[0_0_15px_rgba(255,49,49,0.3)] transition-all duration-300 text-left cursor-pointer"
                   >
                     <span className="text-2xl font-black uppercase tracking-tighter">{lang}</span>
                   </button>
@@ -516,7 +516,7 @@ export default function ActorOnboardingFlow() {
                 <div className="relative">
                   <button
                     onClick={() => setShowLanguageDropdown(!showLanguageDropdown)}
-                    className="w-full p-6 brutal-border border-zinc-800 text-zinc-500 hover:border-brand-red-neon hover:text-brand-red-neon transition-all duration-300 text-left cursor-pointer"
+                    className="w-full p-6 border border-white/10 rounded-3xl border-zinc-800 text-zinc-500 hover:border-[#ff1a1a] hover:gradient-text-blood transition-all duration-300 text-left cursor-pointer"
                   >
                     <span className="text-2xl font-black uppercase tracking-tighter">OTHERS +</span>
                   </button>
@@ -528,7 +528,7 @@ export default function ActorOnboardingFlow() {
                         animate={{ opacity: 1, y: 0 }}
                         exit={{ opacity: 0, y: 10 }}
                         data-lenis-prevent
-                        className="absolute top-full left-0 w-full max-h-[300px] overflow-y-auto bg-black brutal-border-red z-[100] mt-2 p-2 hide-scrollbar"
+                        className="absolute top-full left-0 w-full max-h-[300px] overflow-y-auto bg-[#050000] border border-[#ff1a1a]/30 shadow-[0_0_15px_rgba(255,26,26,0.1)] rounded-3xl z-[100] mt-2 p-2 hide-scrollbar"
                       >
                         {ISO6391.getAllNames().map((name) => (
                           <button
@@ -539,7 +539,7 @@ export default function ActorOnboardingFlow() {
                               }
                               setShowLanguageDropdown(false);
                             }}
-                            className="w-full p-4 text-left hover:bg-brand-red-neon hover:text-white font-black uppercase text-xs tracking-widest transition-colors cursor-pointer"
+                            className="w-full p-4 text-left hover:bg-gradient-to-r from-[#ff1a1a] to-[#8a0303] hover:text-white font-black uppercase text-xs tracking-widest transition-colors cursor-pointer"
                           >
                             {name}
                           </button>
@@ -553,7 +553,7 @@ export default function ActorOnboardingFlow() {
               <button
                 disabled={languages.length === 0}
                 onClick={nextStep}
-                className="mt-8 px-10 py-6 bg-white text-black font-black text-2xl uppercase tracking-tighter disabled:opacity-30 hover:bg-brand-red-neon hover:text-white transition-all brutal-border cursor-pointer"
+                className="mt-8 px-10 py-6 bg-white text-black font-black text-2xl uppercase tracking-tighter disabled:opacity-30 hover:bg-gradient-to-r from-[#ff1a1a] to-[#8a0303] hover:text-white transition-all border border-white/10 rounded-3xl cursor-pointer"
               >
                 CONFIRM SELECTION
               </button>
@@ -569,7 +569,7 @@ export default function ActorOnboardingFlow() {
               className="flex flex-col gap-8 w-full"
             >
               <h2 className="text-5xl md:text-8xl font-black uppercase tracking-tighter leading-none">
-                WHAT DESCRIBES YOU<br /><span className="text-brand-red-neon">BEST?</span>
+                WHAT DESCRIBES YOU<br /><span className="gradient-text-blood">BEST?</span>
               </h2>
               <p className="text-zinc-500 font-bold uppercase tracking-widest text-xs max-w-2xl border-l-4 border-brand-red-dark pl-4">
                 Select the three archetypes you embody most naturally. This helps us match you to roles where your presence feels authentic, powerful, and instantly believable.
@@ -589,7 +589,7 @@ export default function ActorOnboardingFlow() {
                           setPersonalities(prev => [...prev, opt.label]);
                         }
                       }}
-                      className={`snap-center shrink-0 w-[280px] md:w-auto h-[400px] md:h-[500px] glass-panel brutal-border overflow-hidden relative flex flex-col justify-end p-8 text-left transition-all duration-500 group cursor-pointer ${isSelected ? 'border-brand-red-neon shadow-[0_0_30px_rgba(255,49,49,0.4)]' : 'border-zinc-800 hover:border-zinc-500'}`}
+                      className={`snap-center shrink-0 w-[280px] md:w-auto h-[400px] md:h-[500px] glass-panel-premium border border-white/10 rounded-3xl overflow-hidden relative flex flex-col justify-end p-8 text-left transition-all duration-500 group cursor-pointer ${isSelected ? 'border-[#ff1a1a] shadow-[0_0_30px_rgba(255,49,49,0.4)]' : 'border-zinc-800 hover:border-zinc-500'}`}
                     >
                       {/* Cinematic Background */}
                       <div className="absolute inset-0 z-0">
@@ -602,14 +602,14 @@ export default function ActorOnboardingFlow() {
                       </div>
 
                       <div className="relative z-10">
-                        <div className={`w-8 h-1 bg-brand-red-neon mb-4 transition-all duration-500 ${isSelected ? 'w-full' : 'w-0 group-hover:w-12'}`} />
+                        <div className={`w-8 h-1 bg-gradient-to-r from-[#ff1a1a] to-[#8a0303] mb-4 transition-all duration-500 ${isSelected ? 'w-full' : 'w-0 group-hover:w-12'}`} />
                         <span className={`text-3xl font-black uppercase tracking-tighter transition-colors ${isSelected ? 'text-white' : 'text-zinc-500 group-hover:text-white'}`}>
                           {opt.label}
                         </span>
                       </div>
                       
                       {isSelected && (
-                        <div className="absolute top-6 right-6 w-8 h-8 rounded-full bg-brand-red-neon flex items-center justify-center text-white font-black text-xs animate-in zoom-in duration-300">
+                        <div className="absolute top-6 right-6 w-8 h-8 rounded-full bg-gradient-to-r from-[#ff1a1a] to-[#8a0303] flex items-center justify-center text-white font-black text-xs animate-in zoom-in duration-300">
                           {personalities.indexOf(opt.label) + 1}
                         </div>
                       )}
@@ -621,7 +621,7 @@ export default function ActorOnboardingFlow() {
               <button
                 disabled={personalities.length === 0}
                 onClick={nextStep}
-                className="mt-8 px-10 py-6 bg-white text-black font-black text-2xl uppercase tracking-tighter disabled:opacity-30 hover:bg-brand-red-neon hover:text-white transition-all brutal-border cursor-pointer"
+                className="mt-8 px-10 py-6 bg-white text-black font-black text-2xl uppercase tracking-tighter disabled:opacity-30 hover:bg-gradient-to-r from-[#ff1a1a] to-[#8a0303] hover:text-white transition-all border border-white/10 rounded-3xl cursor-pointer"
               >
                 CONFIRM ARCHETYPES ({personalities.length}/3)
               </button>
@@ -637,7 +637,7 @@ export default function ActorOnboardingFlow() {
               className="flex flex-col gap-8 w-full"
             >
               <h2 className="text-5xl md:text-7xl font-black uppercase tracking-tighter leading-none">
-                DROP 1 PHOTO TO GET<br /><span className="text-brand-red-neon">3X MORE VISIBILITY</span>
+                DROP 1 PHOTO TO GET<br /><span className="gradient-text-blood">3X MORE VISIBILITY</span>
               </h2>
               <p className="text-zinc-500 font-bold uppercase tracking-widest text-xs max-w-2xl border-l-4 border-brand-red-dark pl-4">
                 Upload a clear profile photo that captures your natural presence. First impressions matter — this helps casting teams see you instantly.
@@ -645,7 +645,7 @@ export default function ActorOnboardingFlow() {
               
               <div 
                 data-lenis-prevent
-                className="relative w-full aspect-square max-w-[500px] mx-auto brutal-border overflow-hidden bg-zinc-950/50"
+                className="relative w-full aspect-square max-w-[500px] mx-auto border border-white/10 rounded-3xl overflow-hidden bg-zinc-950/50"
               >
                 {isCropping && previewUrl ? (
                   <div className="relative w-full h-full">
@@ -664,7 +664,7 @@ export default function ActorOnboardingFlow() {
                     <button 
                       type="button"
                       onClick={handleConfirmCrop}
-                      className="absolute bottom-6 left-1/2 -translate-x-1/2 z-30 px-10 py-4 bg-brand-red-neon text-white font-black uppercase text-sm tracking-[0.2em] brutal-shadow hover:bg-white hover:text-black transition-all cursor-pointer"
+                      className="absolute bottom-6 left-1/2 -translate-x-1/2 z-30 px-10 py-4 bg-gradient-to-r from-[#ff1a1a] to-[#8a0303] text-white font-black uppercase text-sm tracking-[0.2em] shadow-[0_0_30px_rgba(255,26,26,0.3)] hover:shadow-[0_0_50px_rgba(255,26,26,0.5)] hover:bg-white hover:text-black transition-all cursor-pointer"
                     >
                       CONFIRM CROP
                     </button>
@@ -677,7 +677,7 @@ export default function ActorOnboardingFlow() {
                         <img src={previewUrl} alt="Preview" className="w-full h-full object-cover grayscale hover:grayscale-0 transition-all duration-700" />
                         <div 
                           onClick={() => setIsCropping(true)}
-                          className="absolute inset-0 flex items-center justify-center bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity"
+                          className="absolute inset-0 flex items-center justify-center bg-[#050000]/60 opacity-0 group-hover:opacity-100 transition-opacity"
                         >
                           <span className="text-white font-black uppercase text-xs tracking-widest">ADJUST CROP</span>
                         </div>
@@ -696,7 +696,7 @@ export default function ActorOnboardingFlow() {
                   type="button"
                   onClick={uploadPhoto}
                   disabled={uploading || !file || isCropping}
-                  className="flex-1 px-8 py-8 bg-brand-red-dark text-white font-black text-3xl uppercase tracking-tighter disabled:opacity-20 transition-all hover:bg-brand-red-neon cursor-pointer"
+                  className="flex-1 px-8 py-8 bg-brand-red-dark text-white font-black text-3xl uppercase tracking-tighter disabled:opacity-20 transition-all hover:bg-gradient-to-r from-[#ff1a1a] to-[#8a0303] cursor-pointer"
                 >
                   {uploading || isUploadingBackground ? "PROCESSING..." : "ADD IMAGE"}
                 </button>
@@ -704,7 +704,7 @@ export default function ActorOnboardingFlow() {
                   <button
                     type="button"
                     onClick={handleRemovePhoto}
-                    className="px-8 py-8 glass-panel brutal-border-red text-brand-red-neon font-black text-xl uppercase tracking-tighter hover:bg-brand-red-neon hover:text-white transition-all cursor-pointer"
+                    className="px-8 py-8 glass-panel-premium border border-[#ff1a1a]/30 shadow-[0_0_15px_rgba(255,26,26,0.1)] rounded-3xl gradient-text-blood font-black text-xl uppercase tracking-tighter hover:bg-gradient-to-r from-[#ff1a1a] to-[#8a0303] hover:text-white transition-all cursor-pointer"
                   >
                     REMOVE
                   </button>
@@ -712,7 +712,7 @@ export default function ActorOnboardingFlow() {
                 {!file && (
                   <button
                     onClick={nextStep}
-                    className="px-8 py-8 glass-panel brutal-border text-zinc-500 font-black text-xl uppercase tracking-tighter hover:text-white hover:border-white transition-all cursor-pointer"
+                    className="px-8 py-8 glass-panel-premium border border-white/10 rounded-3xl text-zinc-500 font-black text-xl uppercase tracking-tighter hover:text-white hover:border-white transition-all cursor-pointer"
                   >
                     CONTINUE ANONYMOUSLY
                   </button>
@@ -730,7 +730,7 @@ export default function ActorOnboardingFlow() {
               className="flex flex-col gap-8 w-full"
             >
               <h2 className="text-5xl md:text-8xl font-black uppercase tracking-tighter leading-none">
-                HAVE YOU<br /><span className="text-brand-red-neon">ACTED BEFORE?</span>
+                HAVE YOU<br /><span className="gradient-text-blood">ACTED BEFORE?</span>
               </h2>
               <p className="text-zinc-500 font-bold uppercase tracking-widest text-xs max-w-2xl border-l-4 border-brand-red-dark pl-4">
                 Tell us where you are in your journey. Whether beginner or seasoned, we’ll tailor opportunities to match your current level and next leap.
@@ -740,9 +740,9 @@ export default function ActorOnboardingFlow() {
                   <button
                     key={opt}
                     onClick={() => { setExperience(opt); nextStep(); }}
-                    className="p-10 glass-panel brutal-border-red text-left hover:border-brand-red-neon hover:bg-brand-red-deep/20 transition-all group cursor-pointer"
+                    className="p-10 glass-panel-premium border border-[#ff1a1a]/30 shadow-[0_0_15px_rgba(255,26,26,0.1)] rounded-3xl text-left hover:border-[#ff1a1a] hover:bg-[#8a0303]/20/20 transition-all group cursor-pointer"
                   >
-                    <span className="text-4xl font-black uppercase tracking-tighter group-hover:text-brand-red-neon transition-colors">{opt}</span>
+                    <span className="text-4xl font-black uppercase tracking-tighter group-hover:gradient-text-blood transition-colors">{opt}</span>
                   </button>
                 ))}
               </div>
@@ -758,7 +758,7 @@ export default function ActorOnboardingFlow() {
               className="flex flex-col gap-12 w-full"
             >
               <h2 className="text-5xl md:text-8xl font-black uppercase tracking-tighter leading-none">
-                READY FOR<br /><span className="text-brand-red-neon">WORK?</span>
+                READY FOR<br /><span className="gradient-text-blood">WORK?</span>
               </h2>
               <p className="text-zinc-500 font-bold uppercase tracking-widest text-xs max-w-2xl border-l-4 border-brand-red-dark pl-4">
                 Let us know when you’re ready to move. We’ll prioritize opportunities that match your ideal timeline.
@@ -769,7 +769,7 @@ export default function ActorOnboardingFlow() {
                   <button
                     key={label}
                     onClick={() => setAvailability(i)}
-                    className={`p-10 glass-panel brutal-border transition-all duration-300 text-center group cursor-pointer ${availability === i ? 'border-brand-red-neon bg-brand-red-deep shadow-[0_0_20px_rgba(255,49,49,0.3)]' : 'border-zinc-800 hover:border-zinc-500'}`}
+                    className={`p-10 glass-panel-premium border border-white/10 rounded-3xl transition-all duration-300 text-center group cursor-pointer ${availability === i ? 'border-[#ff1a1a] bg-[#8a0303]/20 shadow-[0_0_20px_rgba(255,49,49,0.3)]' : 'border-zinc-800 hover:border-zinc-500'}`}
                   >
                     <span className={`text-2xl font-black uppercase tracking-tighter transition-colors ${availability === i ? 'text-white' : 'text-zinc-600 group-hover:text-white'}`}>
                       {label}
@@ -780,7 +780,7 @@ export default function ActorOnboardingFlow() {
 
               <button
                 onClick={nextStep}
-                className="mt-8 px-12 py-8 bg-brand-red-dark text-white font-black text-3xl uppercase tracking-tighter hover:bg-brand-red-neon transition-all brutal-border cursor-pointer"
+                className="mt-8 px-12 py-8 bg-brand-red-dark text-white font-black text-3xl uppercase tracking-tighter hover:bg-gradient-to-r from-[#ff1a1a] to-[#8a0303] transition-all border border-white/10 rounded-3xl cursor-pointer"
               >
                 CONTINUE
               </button>
@@ -796,7 +796,7 @@ export default function ActorOnboardingFlow() {
               className="flex flex-col gap-8 w-full"
             >
               <h2 className="text-5xl md:text-8xl font-black uppercase tracking-tighter leading-none">
-                FINAL<br /><span className="text-brand-red-neon">STEPS</span>
+                FINAL<br /><span className="gradient-text-blood">STEPS</span>
               </h2>
               <p className="text-zinc-500 font-bold uppercase tracking-widest text-xs max-w-2xl border-l-4 border-brand-red-dark pl-4">
                 You’re one step away from entering the network. Complete access now to unlock opportunities aligned with your profile, timing, and potential.
@@ -808,14 +808,14 @@ export default function ActorOnboardingFlow() {
                   
                   {/* Country Selection */}
                   <div className="flex flex-col gap-2 relative">
-                    <label className="text-brand-red-neon font-black uppercase tracking-widest text-[10px]">Country</label>
+                    <label className="gradient-text-blood font-black uppercase tracking-widest text-[10px]">Country</label>
                     <button 
                       onClick={() => {
                         setShowCountryDropdown(!showCountryDropdown);
                         setShowStateDropdown(false);
                         setShowCityDropdown(false);
                       }}
-                      className="w-full bg-zinc-950/50 text-white font-black px-6 py-5 brutal-border-red outline-none text-left uppercase text-sm hover:border-brand-red-neon transition-colors flex justify-between items-center cursor-pointer"
+                      className="w-full bg-zinc-950/50 text-white font-black px-6 py-5 border border-[#ff1a1a]/30 shadow-[0_0_15px_rgba(255,26,26,0.1)] rounded-3xl outline-none text-left uppercase text-sm hover:border-[#ff1a1a] transition-colors flex justify-between items-center cursor-pointer"
                     >
                       <span>{countryCode ? Country.getCountryByCode(countryCode)?.name.toUpperCase() : "SELECT COUNTRY"}</span>
                       <svg className={`w-4 h-4 transition-transform ${showCountryDropdown ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="square" strokeWidth="3" d="M19 9l-7 7-7-7"></path></svg>
@@ -828,7 +828,7 @@ export default function ActorOnboardingFlow() {
                           animate={{ opacity: 1, y: 0 }}
                           exit={{ opacity: 0, y: 10 }}
                           data-lenis-prevent
-                          className="absolute top-full left-0 w-full max-h-[300px] overflow-y-auto bg-black brutal-border-red z-[100] mt-2 p-2 hide-scrollbar"
+                          className="absolute top-full left-0 w-full max-h-[300px] overflow-y-auto bg-[#050000] border border-[#ff1a1a]/30 shadow-[0_0_15px_rgba(255,26,26,0.1)] rounded-3xl z-[100] mt-2 p-2 hide-scrollbar"
                         >
                           {Country.getAllCountries().map(c => (
                             <button
@@ -840,7 +840,7 @@ export default function ActorOnboardingFlow() {
                                 updateLocationValue("", "", c.isoCode);
                                 setShowCountryDropdown(false);
                               }}
-                              className="w-full p-4 text-left hover:bg-brand-red-neon hover:text-white font-black uppercase text-xs tracking-widest transition-colors cursor-pointer"
+                              className="w-full p-4 text-left hover:bg-gradient-to-r from-[#ff1a1a] to-[#8a0303] hover:text-white font-black uppercase text-xs tracking-widest transition-colors cursor-pointer"
                             >
                               {c.name}
                             </button>
@@ -852,7 +852,7 @@ export default function ActorOnboardingFlow() {
 
                   {/* State Selection */}
                   <div className="flex flex-col gap-2 relative">
-                    <label className="text-brand-red-neon font-black uppercase tracking-widest text-[10px]">State</label>
+                    <label className="gradient-text-blood font-black uppercase tracking-widest text-[10px]">State</label>
                     <button 
                       disabled={!countryCode}
                       onClick={() => {
@@ -860,7 +860,7 @@ export default function ActorOnboardingFlow() {
                         setShowCountryDropdown(false);
                         setShowCityDropdown(false);
                       }}
-                      className="w-full bg-zinc-950/50 text-white font-black px-6 py-5 brutal-border-red outline-none text-left uppercase text-sm hover:border-brand-red-neon transition-colors flex justify-between items-center disabled:opacity-20 cursor-pointer"
+                      className="w-full bg-zinc-950/50 text-white font-black px-6 py-5 border border-[#ff1a1a]/30 shadow-[0_0_15px_rgba(255,26,26,0.1)] rounded-3xl outline-none text-left uppercase text-sm hover:border-[#ff1a1a] transition-colors flex justify-between items-center disabled:opacity-20 cursor-pointer"
                     >
                       <span>{stateCode ? State.getStateByCodeAndCountry(stateCode, countryCode)?.name.toUpperCase() : "SELECT STATE"}</span>
                       <svg className={`w-4 h-4 transition-transform ${showStateDropdown ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="square" strokeWidth="3" d="M19 9l-7 7-7-7"></path></svg>
@@ -873,7 +873,7 @@ export default function ActorOnboardingFlow() {
                           animate={{ opacity: 1, y: 0 }}
                           exit={{ opacity: 0, y: 10 }}
                           data-lenis-prevent
-                          className="absolute top-full left-0 w-full max-h-[300px] overflow-y-auto bg-black brutal-border-red z-[100] mt-2 p-2 hide-scrollbar"
+                          className="absolute top-full left-0 w-full max-h-[300px] overflow-y-auto bg-[#050000] border border-[#ff1a1a]/30 shadow-[0_0_15px_rgba(255,26,26,0.1)] rounded-3xl z-[100] mt-2 p-2 hide-scrollbar"
                         >
                           {State.getStatesOfCountry(countryCode).map(s => (
                             <button
@@ -884,7 +884,7 @@ export default function ActorOnboardingFlow() {
                                 updateLocationValue("", s.isoCode);
                                 setShowStateDropdown(false);
                               }}
-                              className="w-full p-4 text-left hover:bg-brand-red-neon hover:text-white font-black uppercase text-xs tracking-widest transition-colors cursor-pointer"
+                              className="w-full p-4 text-left hover:bg-gradient-to-r from-[#ff1a1a] to-[#8a0303] hover:text-white font-black uppercase text-xs tracking-widest transition-colors cursor-pointer"
                             >
                               {s.name}
                             </button>
@@ -896,7 +896,7 @@ export default function ActorOnboardingFlow() {
 
                   {/* City Selection */}
                   <div className="flex flex-col gap-2 relative">
-                    <label className="text-brand-red-neon font-black uppercase tracking-widest text-[10px]">District/City</label>
+                    <label className="gradient-text-blood font-black uppercase tracking-widest text-[10px]">District/City</label>
                     <button 
                       disabled={!stateCode}
                       onClick={() => {
@@ -904,7 +904,7 @@ export default function ActorOnboardingFlow() {
                         setShowCountryDropdown(false);
                         setShowStateDropdown(false);
                       }}
-                      className="w-full bg-zinc-950/50 text-white font-black px-6 py-5 brutal-border-red outline-none text-left uppercase text-sm hover:border-brand-red-neon transition-colors flex justify-between items-center disabled:opacity-20 cursor-pointer"
+                      className="w-full bg-zinc-950/50 text-white font-black px-6 py-5 border border-[#ff1a1a]/30 shadow-[0_0_15px_rgba(255,26,26,0.1)] rounded-3xl outline-none text-left uppercase text-sm hover:border-[#ff1a1a] transition-colors flex justify-between items-center disabled:opacity-20 cursor-pointer"
                     >
                       <span>{cityCode ? cityCode.toUpperCase() : "SELECT CITY"}</span>
                       <svg className={`w-4 h-4 transition-transform ${showCityDropdown ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="square" strokeWidth="3" d="M19 9l-7 7-7-7"></path></svg>
@@ -917,7 +917,7 @@ export default function ActorOnboardingFlow() {
                           animate={{ opacity: 1, y: 0 }}
                           exit={{ opacity: 0, y: 10 }}
                           data-lenis-prevent
-                          className="absolute top-full left-0 w-full max-h-[300px] overflow-y-auto bg-black brutal-border-red z-[100] mt-2 p-2 hide-scrollbar"
+                          className="absolute top-full left-0 w-full max-h-[300px] overflow-y-auto bg-[#050000] border border-[#ff1a1a]/30 shadow-[0_0_15px_rgba(255,26,26,0.1)] rounded-3xl z-[100] mt-2 p-2 hide-scrollbar"
                         >
                           {City.getCitiesOfState(countryCode, stateCode).map(c => (
                             <button
@@ -927,7 +927,7 @@ export default function ActorOnboardingFlow() {
                                 updateLocationValue(c.name);
                                 setShowCityDropdown(false);
                               }}
-                              className="w-full p-4 text-left hover:bg-brand-red-neon hover:text-white font-black uppercase text-xs tracking-widest transition-colors cursor-pointer"
+                              className="w-full p-4 text-left hover:bg-gradient-to-r from-[#ff1a1a] to-[#8a0303] hover:text-white font-black uppercase text-xs tracking-widest transition-colors cursor-pointer"
                             >
                               {c.name}
                             </button>
@@ -946,14 +946,14 @@ export default function ActorOnboardingFlow() {
                   value={acquisition}
                   onChange={(e) => setAcquisition(e.target.value)}
                   placeholder="INSTAGRAM, FRIEND, TALENT AGENT, ETC." 
-                  className="w-full bg-zinc-950/50 text-white font-black text-4xl px-8 py-10 brutal-border-red outline-none focus:border-brand-red-neon transition-all placeholder:text-zinc-800 uppercase"
+                  className="w-full bg-zinc-950/50 text-white font-black text-4xl px-8 py-10 border border-[#ff1a1a]/30 shadow-[0_0_15px_rgba(255,26,26,0.1)] rounded-3xl outline-none focus:border-[#ff1a1a] transition-all placeholder:text-zinc-800 uppercase"
                 />
               </div>
 
               <button
                 onClick={nextStep}
                 disabled={!locationValue || !acquisition.trim()}
-                className="mt-12 w-full px-12 py-10 bg-brand-red-neon text-white font-black text-5xl md:text-7xl uppercase tracking-tighter hover:bg-white hover:text-black transition-all brutal-shadow disabled:opacity-20 cursor-pointer"
+                className="mt-12 w-full px-12 py-10 bg-gradient-to-r from-[#ff1a1a] to-[#8a0303] text-white font-black text-5xl md:text-7xl uppercase tracking-tighter hover:bg-white hover:text-black transition-all shadow-[0_0_30px_rgba(255,26,26,0.3)] hover:shadow-[0_0_50px_rgba(255,26,26,0.5)] disabled:opacity-20 cursor-pointer"
               >
                 FINALIZE PROFILE
               </button>
@@ -967,27 +967,27 @@ export default function ActorOnboardingFlow() {
               animate={{ opacity: 1, scale: 1 }}
               className="flex flex-col items-center text-center gap-12"
             >
-              <div className="w-48 h-48 bg-brand-red-neon rounded-full flex items-center justify-center shadow-[0_0_60px_rgba(255,49,49,0.5)]">
+              <div className="w-48 h-48 bg-gradient-to-r from-[#ff1a1a] to-[#8a0303] rounded-full flex items-center justify-center shadow-[0_0_60px_rgba(255,49,49,0.5)]">
                 <CheckCircle2 className="w-24 h-24 text-white" />
               </div>
               
               <div>
                 <h2 className="text-6xl md:text-9xl font-black uppercase tracking-tighter leading-none mb-6">
-                  PROFILE<br /><span className="text-brand-red-neon">INITIALIZED</span>
+                  PROFILE<br /><span className="gradient-text-blood">INITIALIZED</span>
                 </h2>
                 
                 <div className="flex flex-col items-center gap-4 mt-8">
                   <div className="flex items-baseline gap-4">
                     <span className="text-zinc-500 font-black uppercase tracking-widest text-xl">PROFILE STRENGTH</span>
                     <span className="text-6xl md:text-8xl font-black text-white tabular-nums">
-                      {profileStrength}<span className="text-brand-red-neon text-4xl">%</span>
+                      {profileStrength}<span className="gradient-text-blood text-4xl">%</span>
                     </span>
                   </div>
-                  <div className="w-full max-w-md h-2 bg-zinc-900 overflow-hidden brutal-border border-zinc-800">
+                  <div className="w-full max-w-md h-2 bg-zinc-900 overflow-hidden border border-white/10 rounded-3xl border-zinc-800">
                     <motion.div 
                       initial={{ width: 0 }}
                       animate={{ width: `${profileStrength}%` }}
-                      className="h-full bg-brand-red-neon shadow-[0_0_15px_rgba(255,49,49,0.5)]"
+                      className="h-full bg-gradient-to-r from-[#ff1a1a] to-[#8a0303] shadow-[0_0_15px_rgba(255,49,49,0.5)]"
                     />
                   </div>
                   <p className="text-[10px] font-bold text-zinc-600 uppercase tracking-[0.4em] mt-4 italic text-center">
@@ -998,7 +998,7 @@ export default function ActorOnboardingFlow() {
 
               <button
                 onClick={() => router.push("/dashboard")}
-                className="group relative px-12 py-8 bg-white text-black font-black text-3xl md:text-5xl uppercase tracking-tighter hover:bg-brand-red-neon hover:text-white transition-all duration-500 shadow-[0_0_50px_rgba(255,255,255,0.1)] clip-brutal-hero-primary cursor-pointer"
+                className="group relative px-12 py-8 bg-white text-black font-black text-3xl md:text-5xl uppercase tracking-tighter hover:bg-gradient-to-r from-[#ff1a1a] to-[#8a0303] hover:text-white transition-all duration-500 shadow-[0_0_50px_rgba(255,255,255,0.1)] rounded-full cursor-pointer"
               >
                 ENTER DASHBOARD
               </button>
