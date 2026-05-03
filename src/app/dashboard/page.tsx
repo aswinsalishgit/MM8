@@ -1199,6 +1199,98 @@ export default function AgenticDashboard() {
             </div>
           </div>
         </div>
+      ) : currentView === 'ROLES' ? (
+        <div className="flex flex-col gap-16 py-12 animate-in slide-in-from-bottom-8 duration-700">
+          <div className="flex items-center justify-between px-4">
+            <div className="flex items-center gap-6">
+              <div className="p-5 bg-brand-red-neon/10 brutal-border-red clip-brutal-slant">
+                <Star className="w-10 h-10 text-brand-red-neon" />
+              </div>
+              <div>
+                <h1 className="text-7xl font-black uppercase tracking-tighter leading-none">ROLES_HUB</h1>
+                <p className="text-[10px] font-black uppercase tracking-[0.5em] text-zinc-600 mt-2">ACTIVE_PIPELINE_MATCHES</p>
+              </div>
+            </div>
+            
+            <div className="flex gap-4">
+               <div className="hidden md:flex flex-col text-right">
+                  <span className="text-[9px] font-black text-zinc-600 uppercase tracking-widest">REALTIME_MATCHING</span>
+                  <span className="text-sm font-black text-white uppercase tracking-tighter">NODE_SYNC_ACTIVE</span>
+               </div>
+               <div className="w-2 h-2 bg-brand-red-neon rounded-full animate-pulse self-center" />
+            </div>
+          </div>
+
+          <div className="flex flex-wrap gap-4 px-4 border-y border-zinc-900 py-6">
+            {['HIGH_MATCH', 'URGENT', 'NEW_PROJECTS', 'SAVED'].map((filter) => (
+              <button key={filter} className="px-6 py-2 border border-zinc-800 text-[9px] font-black uppercase tracking-widest hover:border-brand-red-neon hover:text-brand-red-neon transition-all cursor-pointer">
+                {filter}
+              </button>
+            ))}
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-10 px-4">
+             {(data.roles.length > 0 ? data.roles : [
+                { id: 1, title: "LEAD ANTAGONIST", project: "SHADOWS OF KOCHI", match: 98, deadline: "24H", tags: ["INTENSE", "MALAYALAM"], budget: "UPSCALE", director: "ANONYMOUS_A" },
+                { id: 2, title: "SUPPORTING COP", project: "UNTITLED THRILLER", match: 84, deadline: "3D", tags: ["ACTION", "HINDI"], budget: "UPSCALE", director: "ANONYMOUS_B" },
+                { id: 3, title: "COMIC RELIEF", project: "CAMPUS DIARIES", match: 72, deadline: "1W", tags: ["FUNNY", "TAMIL"], budget: "STANDARD", director: "ANONYMOUS_C" },
+                { id: 4, title: "STUNT DOUBLE", project: "REBELS", match: 65, deadline: "12H", tags: ["PHYSICAL", "ENGLISH"], budget: "PREMIUM", director: "STUNT_CORP" },
+                { id: 5, title: "VOICE ARTIST", project: "NEON DREAMS", match: 58, deadline: "5D", tags: ["VOICE", "FUTURISTIC"], budget: "MICRO", director: "INDIE_STUDIO" },
+             ]).map((role: any, index: number) => (
+                <motion.div
+                  key={role.id}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: index * 0.1 }}
+                  className="glass-panel brutal-border p-10 flex flex-col hover:border-brand-red-neon/50 transition-all group cursor-pointer relative overflow-hidden h-full"
+                >
+                   <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-100 transition-opacity">
+                      <Star className="w-5 h-5 text-brand-red-neon" />
+                   </div>
+
+                  <div className="flex justify-between items-start mb-8">
+                    <div className="bg-brand-red-neon text-white font-black px-4 py-2 uppercase text-[9px] tracking-widest clip-brutal-slant shadow-[0_0_20px_rgba(255,49,49,0.2)]">
+                      {role.match}% MATCH
+                    </div>
+                    <div className="text-right">
+                       <span className="text-[8px] font-black text-zinc-600 uppercase block tracking-widest">DEADLINE</span>
+                       <span className="text-white font-black uppercase text-xs tabular-nums">{role.deadline}</span>
+                    </div>
+                  </div>
+
+                  <div className="flex-1">
+                    <p className="text-zinc-600 font-black uppercase tracking-[0.3em] text-[9px] mb-2">{role.project}</p>
+                    <h3 className="text-4xl font-black uppercase tracking-tighter leading-none mb-8 group-hover:text-brand-red-neon transition-colors">
+                      {role.title}
+                    </h3>
+                    
+                    <div className="grid grid-cols-2 gap-4 mb-8">
+                       <div className="bg-zinc-950/50 p-4 border border-zinc-900 group-hover:border-zinc-800 transition-colors">
+                          <p className="text-[7px] font-black text-zinc-600 uppercase tracking-widest mb-1">DIRECTOR</p>
+                          <p className="text-[10px] font-black text-white uppercase">{role.director || 'RESTRICTED'}</p>
+                       </div>
+                       <div className="bg-zinc-950/50 p-4 border border-zinc-900 group-hover:border-zinc-800 transition-colors">
+                          <p className="text-[7px] font-black text-zinc-600 uppercase tracking-widest mb-1">BUDGET</p>
+                          <p className="text-[10px] font-black text-white uppercase">{role.budget || 'STANDARD'}</p>
+                       </div>
+                    </div>
+
+                    <div className="flex flex-wrap gap-2">
+                      {role.tags.map((tag: string) => (
+                        <span key={tag} className="bg-zinc-900/30 text-zinc-500 px-3 py-1.5 text-[8px] font-black uppercase tracking-widest border border-zinc-900 group-hover:border-brand-red-neon/20 transition-all">
+                          {tag}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+
+                  <button className="mt-12 w-full py-4 bg-zinc-950 border border-zinc-800 font-black uppercase tracking-[0.3em] text-[10px] hover:bg-brand-red-neon hover:text-white transition-all group-hover:border-brand-red-neon cursor-pointer">
+                    ANALYZE_ROLE
+                  </button>
+                </motion.div>
+             ))}
+          </div>
+        </div>
       ) : currentView === 'SETTINGS' ? (
         <div className="flex flex-col items-center justify-center h-[60vh] opacity-50 animate-in fade-in duration-500">
            <Settings className="w-16 h-16 text-brand-red-neon mb-4" />
