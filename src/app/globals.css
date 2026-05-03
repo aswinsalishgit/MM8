@@ -14,54 +14,6 @@
   --animate-float: float 6s ease-in-out infinite;
 }
 
-/* Light Theme Variable Inversion for Brutalist Aesthetic */
-html.light-theme {
-  --background: #ffffff;
-  --foreground: #000000;
-  --color-background: #ffffff;
-  --color-foreground: #000000;
-  
-  /* Invert core colors */
-  --color-black: #ffffff;
-  --color-white: #000000;
-  
-  /* Invert the zinc scale */
-  --color-zinc-950: #fafafa;
-  --color-zinc-900: #f4f4f5;
-  --color-zinc-800: #e4e4e7;
-  --color-zinc-700: #d4d4d8;
-  --color-zinc-600: #a1a1aa;
-  --color-zinc-500: #71717a;
-  --color-zinc-400: #52525b;
-  --color-zinc-300: #3f3f46;
-  --color-zinc-200: #27272a;
-  --color-zinc-100: #18181b;
-  --color-zinc-50:  #09090b;
-
-  /* Adjust glass panels for light theme */
-  --glass-border: rgba(0, 0, 0, 0.1);
-  --glass-shadow: rgba(0, 0, 0, 0.05);
-}
-
-html.light-theme .glass-panel {
-  background: rgba(255, 255, 255, 0.6);
-  border: 1px solid rgba(0, 0, 0, 0.1);
-  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.05);
-}
-
-html.light-theme .glass-panel-red {
-  background: rgba(255, 49, 49, 0.1);
-}
-
-html.light-theme .brutal-border {
-  border-color: #000000;
-}
-
-html.light-theme .brutal-shadow-white {
-  box-shadow: 12px 12px 0px 0px #000000;
-}
-
-
 @keyframes float {
   0%, 100% { transform: translateY(0); }
   50% { transform: translateY(-20px); }

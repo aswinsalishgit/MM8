@@ -54,8 +54,6 @@ export const metadata: Metadata = {
   },
 };
 
-import { ThemeProvider } from "@/components/ThemeProvider";
-
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -66,13 +64,11 @@ export default function RootLayout({
       lang="en"
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased dark`}
     >
-      <body className="min-h-full bg-black text-white selection:bg-brand-red selection:text-white transition-colors duration-500">
-        <ThemeProvider>
-          <BackgroundCanvas />
-          <SmoothScroll>
-            {children}
-          </SmoothScroll>
-        </ThemeProvider>
+      <body className="min-h-full bg-black text-white selection:bg-brand-red selection:text-white">
+        <BackgroundCanvas />
+        <SmoothScroll>
+          {children}
+        </SmoothScroll>
       </body>
     </html>
   );

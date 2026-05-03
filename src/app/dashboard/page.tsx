@@ -4,15 +4,14 @@ import { useState, useEffect, useCallback, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { 
   PlayCircle, Star, Settings, Bell, LogOut, X, 
-  ChevronRight, Crown, Upload, Trash2, MapPin, 
-  ChevronDown, Check, User, CheckCircle2, Trophy, Flame, Lock, ShieldCheck, AlertTriangle, Zap,
-  Menu, Home, Compass, PlusSquare, Briefcase, Target, Rss, Users, Video, Mic2, Database, BookOpen, BarChart3, Sun, Moon
+  ChevronRight, ChevronLeft, Crown, Upload, Trash2, MapPin, 
+  ChevronDown, Check, User, CheckCircle2, Trophy, Flame, Lock, ShieldCheck, AlertTriangle, Zap, Info,
+  Menu, Home, Compass, PlusSquare, Briefcase, Target, Rss, Users, Video, Mic2, Database, BookOpen, BarChart3
 } from "lucide-react";
 import { supabase } from "@/utils/supabase/client";
 import { useRouter } from "next/navigation";
 import { uploadProfilePicture, removeProfilePicture, uploadAuditionTape } from "@/app/actions/driveActions";
 import { Country, State, City } from "country-state-city";
-import { useTheme } from "@/components/ThemeProvider";
 import "./dashboard.css";
 import Cropper from "react-easy-crop";
 import getCroppedImg from "@/utils/cropImage";
@@ -187,7 +186,7 @@ const useDashboardData = () => {
         .select('*')
         .eq('user_id', session.user.id)
         .order('created_at', { ascending: false })
-        .limit(5);
+        .limit(50);
 
       setData({
         profile: {
@@ -303,7 +302,6 @@ const useDashboardData = () => {
 
 export default function AgenticDashboard() {
   const router = useRouter();
-  const { theme, toggleTheme } = useTheme();
   const { data, loading, fetchData } = useDashboardData();
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
@@ -318,12 +316,51 @@ export default function AgenticDashboard() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [currentView, setCurrentView] = useState("OVERVIEW");
   const [selectedFeed, setSelectedFeed] = useState<any>(null);
+  const [notifFilter, setNotifFilter] = useState<"ALL" | "UNREAD">("ALL");
   const [isEditingProfile, setIsEditingProfile] = useState(false);
   const [profileLoading, setProfileLoading] = useState(false);
   const [showPassChangeModal, setShowPassChangeModal] = useState(false);
   const [currentPassVerify, setCurrentPassVerify] = useState("");
   const [passVerified, setPassVerified] = useState(false);
   const [profileForm, setProfileForm] = useState<any>({});
+
+  const markAsRead = async (id: string) => {
+    await supabase.from("notifications").update({ read: true }).eq("id", id);
+    setData((prev: any) => ({
+      ...prev,
+      notifications: prev.notifications.map((n: any) => n.id === id ? { ...n, read: true } : n)
+    }));
+  };
+
+  const markAllRead = async () => {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) return;
+    await supabase.from("notifications").update({ read: true }).eq("user_id", session.user.id);
+    setData((prev: any) => ({
+      ...prev,
+      notifications: prev.notifications.map((n: any) => ({ ...n, read: true }))
+    }));
+  };
+
+  const getPriorityConfig = (priority: string) => {
+    switch (priority) {
+      case "VERY IMPORTANT": return { color: "border-brand-red-neon bg-brand-red-neon/10", icon: AlertTriangle, iconColor: "text-brand-red-neon", badge: "bg-brand-red-neon" };
+      case "IMPORTANT": return { color: "border-yellow-500/50 bg-yellow-500/5", icon: AlertTriangle, iconColor: "text-yellow-500", badge: "bg-yellow-500" };
+      default: return { color: "border-zinc-800 bg-zinc-950/50", icon: Info, iconColor: "text-zinc-500", badge: "bg-zinc-600" };
+    }
+  };
+
+  const formatTime = (dateStr: string) => {
+    const date = new Date(dateStr);
+    const now = new Date();
+    const diffMs = now.getTime() - date.getTime();
+    const diffMins = Math.floor(diffMs / 60000);
+    if (diffMins < 60) return `${diffMins}M AGO`;
+    const diffHours = Math.floor(diffMins / 60);
+    if (diffHours < 24) return `${diffHours}H AGO`;
+    const diffDays = Math.floor(diffHours / 24);
+    return `${diffDays}D AGO`;
+  };
 
   // Sync profile form when data changes
   useEffect(() => {
@@ -842,7 +879,6 @@ export default function AgenticDashboard() {
                   onClick={() => {
                     setCurrentView(item.id);
                     if (window.innerWidth <= 1024) setIsSidebarOpen(false);
-                    if (item.id === 'NOTIFICATIONS') router.push('/dashboard/notifications');
                     if (item.id === 'SETTINGS') setShowSettings(true);
                     if (item.id === 'LOGOUT') handleLogout();
                   }}
@@ -1879,6 +1915,120 @@ export default function AgenticDashboard() {
              </div>
           </div>
         </div>
+      ) : currentView === 'NOTIFICATIONS' ? (
+        <div className="flex flex-col gap-12 py-12 animate-in slide-in-from-bottom-8 duration-700 max-w-5xl mx-auto w-full px-4">
+          <div className="flex flex-col md:flex-row justify-between items-start md:items-end border-b border-zinc-900 pb-12 mb-4">
+            <div>
+              <h1 className="text-7xl font-black uppercase tracking-tighter leading-none">
+                NOTIF<span className="text-brand-red-neon drop-shadow-[0_0_15px_rgba(255,49,49,0.5)]">//</span>CENTER
+              </h1>
+              <div className="flex items-center gap-4 mt-6">
+                <div className="flex gap-1">
+                  {[...Array(5)].map((_: any, i: number) => {
+                    const unreadCount = data.notifications.filter((n: any) => !n.read).length;
+                    return (
+                      <div key={i} className={`w-1 h-4 ${i < unreadCount ? 'bg-brand-red-neon' : 'bg-zinc-800'}`} />
+                    );
+                  })}
+                </div>
+                <p className="text-zinc-600 font-black tracking-[0.4em] uppercase text-[10px] flex items-center gap-2">
+                  <span className="w-2 h-2 rounded-full bg-brand-red-neon animate-pulse" />
+                  {data.notifications.filter((n: any) => !n.read).length} UNREAD_SIGNALS
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-4 mt-8 md:mt-0">
+              <div className="flex items-center gap-0">
+                {(["ALL", "UNREAD"] as const).map((f: "ALL" | "UNREAD") => (
+                  <button
+                    key={f}
+                    onClick={() => setNotifFilter(f)}
+                    className={`px-6 py-3 font-black uppercase tracking-widest text-[10px] transition-all cursor-pointer ${
+                      notifFilter === f ? 'bg-brand-red-neon text-white' : 'bg-zinc-950 text-zinc-500 hover:text-white brutal-border border-zinc-800'
+                    }`}
+                  >
+                    {f}
+                  </button>
+                ))}
+              </div>
+              {data.notifications.filter((n: any) => !n.read).length > 0 && (
+                <button 
+                  onClick={markAllRead}
+                  className="px-6 py-3 glass-panel brutal-border-red text-brand-red-neon font-black uppercase tracking-widest text-[10px] hover:bg-brand-red-neon hover:text-white transition-all cursor-pointer flex items-center gap-2"
+                >
+                  <Check className="w-3 h-3" /> MARK ALL READ
+                </button>
+              )}
+            </div>
+          </div>
+
+          <div className="space-y-6">
+            <AnimatePresence mode="popLayout">
+              {(notifFilter === 'UNREAD' ? data.notifications.filter((n: any) => !n.read) : data.notifications).length === 0 ? (
+                <motion.div 
+                  initial={{ opacity: 0 }} 
+                  animate={{ opacity: 1 }}
+                  className="text-center py-32"
+                >
+                  <Bell className="w-16 h-16 text-zinc-800 mx-auto mb-8" />
+                  <p className="text-zinc-600 font-black uppercase tracking-[0.5em] text-sm">
+                    {notifFilter === "UNREAD" ? "ALL SIGNALS PROCESSED" : "NO TRANSMISSIONS YET"}
+                  </p>
+                </motion.div>
+              ) : (
+                (notifFilter === 'UNREAD' ? data.notifications.filter((n: any) => !n.read) : data.notifications).map((notif: any, index: number) => {
+                  const config = getPriorityConfig(notif.priority);
+                  const PriorityIcon = config.icon;
+                  return (
+                    <motion.div
+                      key={notif.id}
+                      initial={{ opacity: 0, x: -20 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      exit={{ opacity: 0, x: 20 }}
+                      transition={{ delay: index * 0.05 }}
+                      onClick={() => !notif.read && markAsRead(notif.id)}
+                      className={`p-8 md:p-10 brutal-border transition-all cursor-pointer group relative overflow-hidden ${config.color} ${
+                        !notif.read ? 'hover:border-brand-red-neon' : 'opacity-60 hover:opacity-80'
+                      }`}
+                    >
+                      {!notif.read && (
+                        <div className="absolute top-0 left-0 w-1 h-full bg-brand-red-neon shadow-[0_0_10px_rgba(255,49,49,0.5)]" />
+                      )}
+
+                      <div className="flex items-start gap-6 md:gap-8">
+                        <div className={`p-3 ${notif.priority === 'VERY IMPORTANT' ? 'bg-brand-red-neon/20' : 'bg-zinc-900'} shrink-0`}>
+                          <PriorityIcon className={`w-5 h-5 ${config.iconColor}`} />
+                        </div>
+                        
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-4 mb-3 flex-wrap">
+                            <span className={`px-3 py-1 text-[8px] font-black uppercase tracking-widest text-white ${config.badge}`}>
+                              {notif.priority}
+                            </span>
+                            <span className="text-[9px] font-black text-zinc-600 uppercase tracking-widest tabular-nums">
+                              {formatTime(notif.created_at)}
+                            </span>
+                            {!notif.read && (
+                              <span className="w-2 h-2 rounded-full bg-brand-red-neon animate-pulse" />
+                            )}
+                          </div>
+                          
+                          <h3 className="text-2xl md:text-3xl font-black uppercase tracking-tighter mb-4 group-hover:text-brand-red-neon transition-colors leading-tight">
+                            {notif.title}
+                          </h3>
+                          <p className="text-zinc-400 font-medium text-sm leading-relaxed">
+                            {notif.body}
+                          </p>
+                        </div>
+                      </div>
+                    </motion.div>
+                  );
+                })
+              )}
+            </AnimatePresence>
+          </div>
+        </div>
       ) : currentView === 'PROFILE' ? (
         <div className="flex flex-col gap-16 py-12 animate-in slide-in-from-bottom-8 duration-700">
           {/* Profile Header & Strength */}
@@ -2735,39 +2885,6 @@ export default function AgenticDashboard() {
                     <p className="text-[9px] text-zinc-600 font-black uppercase tracking-widest ml-2 italic">Format: CITY, STATE, COUNTRY (e.g., MUMBAI, MAHARASHTRA, INDIA)</p>
                   </div>
                 </section>
-
-                {/* Section 4: Interface Theme */}
-                <section>
-                  <div className="flex items-center gap-4 mb-8">
-                    <div className="w-1 h-8 bg-gradient-to-r from-[#ff1a1a] to-[#8a0303]" />
-                    <h3 className="text-xl font-black uppercase tracking-[0.2em]">04_INTERFACE_THEME</h3>
-                  </div>
-                  
-                  <div className="flex flex-col gap-4">
-                    <label className="text-[10px] font-black uppercase tracking-[0.4em] text-zinc-500">Toggle Brutalist Contrast</label>
-                    <div className="flex bg-zinc-950 border border-zinc-800 p-2 relative rounded-3xl w-full md:w-64">
-                      <motion.div 
-                        layout
-                        className="absolute inset-y-2 w-[calc(50%-8px)] bg-zinc-800 rounded-3xl"
-                        style={{ left: theme === 'DARK' ? '8px' : 'calc(50%)' }}
-                        transition={{ type: "spring", stiffness: 300, damping: 30 }}
-                      />
-                      <button
-                        onClick={() => theme !== 'DARK' && toggleTheme()}
-                        className={`relative z-10 flex-1 py-4 flex items-center justify-center gap-2 font-black text-[10px] tracking-widest uppercase transition-colors ${theme === 'DARK' ? 'text-white' : 'text-zinc-500 hover:text-white'}`}
-                      >
-                        <Moon className="w-4 h-4" /> DARK
-                      </button>
-                      <button
-                        onClick={() => theme !== 'LIGHT' && toggleTheme()}
-                        className={`relative z-10 flex-1 py-4 flex items-center justify-center gap-2 font-black text-[10px] tracking-widest uppercase transition-colors ${theme === 'LIGHT' ? 'text-white' : 'text-zinc-500 hover:text-white'}`}
-                      >
-                        <Sun className="w-4 h-4" /> LIGHT
-                      </button>
-                    </div>
-                  </div>
-                </section>
-
 
               </div>
 
