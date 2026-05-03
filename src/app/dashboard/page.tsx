@@ -297,7 +297,6 @@ export default function AgenticDashboard() {
     { id: 'LEADERBOARD', label: 'LEADERBOARD', icon: Trophy },
     { id: 'FEED', label: 'FEED', icon: Rss },
     { id: 'LMN_REGISTER', label: 'LMN REGISTER', icon: Zap },
-    { id: 'COMMUNITY', label: 'COMMUNITY', icon: Users },
   ];
 
   // Preference State
@@ -1426,6 +1425,145 @@ export default function AgenticDashboard() {
            <h2 className="text-2xl font-black uppercase tracking-widest text-center">SYSTEM CONFIGURATION</h2>
            <p className="text-xs tracking-widest uppercase text-zinc-500 mt-2 text-center">Check the overlay modal.</p>
            <button onClick={() => setShowSettings(true)} className="mt-8 px-6 py-3 bg-zinc-900 hover:bg-brand-red-neon transition-colors font-black text-xs uppercase tracking-widest border border-zinc-800">OPEN MODAL</button>
+        </div>
+      ) : currentView === 'LEADERBOARD' ? (
+        <div className="flex flex-col gap-16 py-12 animate-in slide-in-from-bottom-8 duration-700">
+          <div className="flex items-center justify-between px-4">
+            <div className="flex items-center gap-6">
+              <div className="p-5 bg-brand-red-neon/10 brutal-border-red clip-brutal-slant">
+                <Trophy className="w-10 h-10 text-brand-red-neon" />
+              </div>
+              <div>
+                <h1 className="text-7xl font-black uppercase tracking-tighter leading-none">GLOBAL_RANKINGS</h1>
+                <p className="text-[10px] font-black uppercase tracking-[0.5em] text-zinc-600 mt-2">DECENTRALIZED_TALENT_INDEX</p>
+              </div>
+            </div>
+            
+            <div className="text-right hidden md:block">
+               <p className="text-[10px] font-black text-zinc-600 uppercase tracking-widest">CURRENT_INDEX_SIZE</p>
+               <p className="text-2xl font-black text-white tabular-nums">{data.leaderboard.length * 124} NODES</p>
+            </div>
+          </div>
+
+          {/* Top 3 Spotlight */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 px-4">
+             {data.leaderboard.slice(0, 3).map((actor, i) => (
+                <div 
+                   key={actor.id} 
+                   className={`relative p-10 brutal-border flex flex-col items-center text-center overflow-hidden transition-all duration-500 hover:-translate-y-2 ${
+                      i === 0 ? 'bg-brand-red-neon border-white scale-105 z-10 shadow-[0_0_50px_rgba(255,49,49,0.4)]' : 'bg-zinc-900/50 border-zinc-800'
+                   }`}
+                >
+                   {i === 0 && (
+                      <div className="absolute top-0 left-0 w-full h-1 bg-white animate-pulse" />
+                   )}
+                   <div className="w-24 h-24 rounded-full border-4 border-white/20 overflow-hidden mb-6 relative group">
+                      {actor.avatarUrl ? (
+                         <img src={actor.avatarUrl} alt="" className="w-full h-full object-cover" />
+                      ) : (
+                         <div className="w-full h-full bg-zinc-800 flex items-center justify-center">
+                            <User className="w-10 h-10 text-zinc-600" />
+                         </div>
+                      )}
+                      {i === 0 && (
+                         <div className="absolute inset-0 bg-white/10 animate-pulse" />
+                      )}
+                   </div>
+                   <div className={`text-5xl font-black mb-2 italic ${i === 0 ? 'text-white' : 'text-brand-red-neon'}`}>#{i + 1}</div>
+                   <h3 className={`text-2xl font-black uppercase tracking-tight ${i === 0 ? 'text-white' : 'text-zinc-200'}`}>{actor.name}</h3>
+                   <p className={`text-[10px] font-black uppercase tracking-widest mt-2 ${i === 0 ? 'text-white/70' : 'text-zinc-600'}`}>{actor.score.toLocaleString()} LMN</p>
+                </div>
+             ))}
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 px-4">
+             {/* Full Rankings List */}
+             <div className="lg:col-span-8">
+                <div className="glass-panel p-10 brutal-border border-zinc-800">
+                   <div className="flex items-center justify-between mb-10 border-b border-zinc-900 pb-6">
+                      <h3 className="text-2xl font-black uppercase tracking-tighter">ALL_NODES</h3>
+                      <div className="flex gap-6">
+                         {['GLOBAL', 'REGION', 'LOCAL'].map(t => (
+                            <button key={t} className="text-[9px] font-black text-zinc-600 hover:text-brand-red-neon uppercase tracking-widest transition-colors cursor-pointer">
+                               {t}
+                            </button>
+                         ))}
+                      </div>
+                   </div>
+
+                   <div className="flex flex-col gap-4">
+                      {data.leaderboard.map((actor: any) => (
+                        <div key={actor.id} className={`flex items-center justify-between p-6 brutal-border transition-all group ${actor.isUser ? 'border-brand-red-neon bg-brand-red-neon/10' : 'border-zinc-900 bg-zinc-950/50 hover:border-zinc-800'}`}>
+                          <div className="flex items-center gap-6">
+                            <span className={`font-black text-3xl tabular-nums w-12 shrink-0 ${actor.rank <= 3 ? 'text-brand-red-neon' : 'text-zinc-800 group-hover:text-zinc-600'}`}>
+                              {String(actor.rank).padStart(2, '0')}
+                            </span>
+                            <div className="w-12 h-12 bg-zinc-900 rounded-full overflow-hidden brutal-border border-zinc-800 shrink-0">
+                               {actor.avatarUrl ? (
+                                 <img src={actor.avatarUrl} alt="" className="w-full h-full object-cover" />
+                               ) : (
+                                 <div className="w-full h-full flex items-center justify-center">
+                                    <User className="w-6 h-6 text-zinc-700" />
+                                 </div>
+                               )}
+                            </div>
+                            <div>
+                               <div className="flex items-center gap-3">
+                                  <span className={`font-black uppercase tracking-tight text-lg ${actor.isUser ? 'text-white' : 'text-zinc-400'}`}>
+                                    {actor.isUser ? 'YOU' : actor.name}
+                                  </span>
+                                  {actor.isVip && <Crown className="w-3 h-3 text-yellow-400" />}
+                                  {actor.streakDays >= 3 && <Flame className="w-3 h-3 text-orange-500" />}
+                               </div>
+                               <p className="text-[9px] font-black text-zinc-600 uppercase tracking-[0.2em]">@{actor.username || 'ANONYMOUS'}</p>
+                            </div>
+                          </div>
+                          <div className="text-right">
+                             <span className="font-black tabular-nums text-brand-red-neon text-xl">{actor.score.toLocaleString()}</span>
+                             <span className="text-[10px] font-black text-zinc-600 ml-2">LMN</span>
+                          </div>
+                        </div>
+                      ))}
+                   </div>
+                </div>
+             </div>
+
+             {/* Personal Stats & Analytics */}
+             <div className="lg:col-span-4 flex flex-col gap-10">
+                <div className="glass-panel-red p-10 brutal-border-red clip-brutal-tr shadow-[0_0_40px_rgba(255,49,49,0.1)]">
+                   <h3 className="font-black uppercase tracking-widest text-[10px] mb-8">MY_RANKING_STATUS</h3>
+                   <div className="space-y-10">
+                      <div>
+                         <p className="text-[9px] font-black text-white/60 uppercase tracking-widest mb-2">GLOBAL_POSITION</p>
+                         <p className="text-6xl font-black text-white tabular-nums">#{data.leaderboard.find(a => a.isUser)?.rank || '??'}</p>
+                      </div>
+                      <div>
+                         <p className="text-[9px] font-black text-white/60 uppercase tracking-widest mb-2">PERCENTILE_REACH</p>
+                         <p className="text-4xl font-black text-white tabular-nums">TOP 12%</p>
+                      </div>
+                      <button className="w-full py-4 bg-white text-brand-red-neon font-black uppercase tracking-[0.3em] text-[10px] hover:bg-black hover:text-white transition-all cursor-pointer">
+                         BOOST_RANKING
+                      </button>
+                   </div>
+                </div>
+
+                <div className="glass-panel p-10 brutal-border border-zinc-900 bg-zinc-950/50">
+                   <h3 className="font-black uppercase tracking-widest text-[10px] mb-8 text-zinc-600">RISING_STARS // 24H</h3>
+                   <div className="space-y-6">
+                      {data.leaderboard.slice(0, 4).reverse().map((actor, i) => (
+                         <div key={i} className="flex items-center gap-4">
+                            <div className="w-8 h-8 rounded-full bg-zinc-900 border border-zinc-800" />
+                            <div className="flex-1">
+                               <p className="text-[10px] font-black uppercase text-zinc-400">{actor.name}</p>
+                               <p className="text-[8px] font-black text-green-500 uppercase">+{Math.floor(Math.random() * 200)} LMN</p>
+                            </div>
+                            <span className="text-[10px] font-black text-zinc-700">+{i + 1}pos</span>
+                         </div>
+                      ))}
+                   </div>
+                </div>
+             </div>
+          </div>
         </div>
       ) : (
         <div className="flex flex-col items-center justify-center h-[60vh] opacity-50 animate-in fade-in duration-500">
