@@ -161,7 +161,7 @@ const useDashboardData = () => {
         .eq('user_id', session.user.id)
         .gte('created_at', todayStart.toISOString());
 
-      const missionActions = (todayLogs || []).map(l => l.action);
+      const missionActions = (todayLogs || []).map((l: any) => l.action);
       
       const multiplier = profile.is_vip ? 1.3 : 1.0;
 
@@ -633,7 +633,7 @@ export default function AgenticDashboard() {
             </div>
 
             <nav className="flex-1 p-4 flex flex-col gap-2">
-              {NAVIGATION_ITEMS.map((item) => (
+              {NAVIGATION_ITEMS.map((item: any) => (
                 <button
                   key={item.id}
                   onClick={() => {
@@ -1145,7 +1145,7 @@ export default function AgenticDashboard() {
                     <h3 className="font-black uppercase tracking-widest text-[10px]">VIDEO_GUIDELINES</h3>
                   </div>
                   <ul className="space-y-4">
-                    {['Horizontal framing only', 'Neutral background', 'Chest-up medium shot', 'Stable lighting (No backlighting)'].map((tip) => (
+                    {['Horizontal framing only', 'Neutral background', 'Chest-up medium shot', 'Stable lighting (No backlighting)'].map((tip: string) => (
                       <li key={tip} className="flex items-center gap-3">
                         <div className="w-1.5 h-1.5 bg-brand-red-neon" />
                         <span className="text-[11px] font-black uppercase tracking-wider text-zinc-400 group-hover:text-zinc-200 transition-colors">{tip}</span>
@@ -1160,7 +1160,7 @@ export default function AgenticDashboard() {
                     <h3 className="font-black uppercase tracking-widest text-[10px]">AUDIO_PROTOCOLS</h3>
                   </div>
                   <ul className="space-y-4">
-                    {['Minimize background noise', 'Clear voice projection', 'No music/overlay', 'Direct mic orientation'].map((tip) => (
+                    {['Minimize background noise', 'Clear voice projection', 'No music/overlay', 'Direct mic orientation'].map((tip: string) => (
                       <li key={tip} className="flex items-center gap-3">
                         <div className="w-1.5 h-1.5 bg-brand-red-neon" />
                         <span className="text-[11px] font-black uppercase tracking-wider text-zinc-400 group-hover:text-zinc-200 transition-colors">{tip}</span>
@@ -1221,7 +1221,7 @@ export default function AgenticDashboard() {
           </div>
 
           <div className="flex flex-wrap gap-4 px-4 border-y border-zinc-900 py-6">
-            {['HIGH_MATCH', 'URGENT', 'NEW_PROJECTS', 'SAVED'].map((filter) => (
+            {['HIGH_MATCH', 'URGENT', 'NEW_PROJECTS', 'SAVED'].map((filter: string) => (
               <button key={filter} className="px-6 py-2 border border-zinc-800 text-[9px] font-black uppercase tracking-widest hover:border-brand-red-neon hover:text-brand-red-neon transition-all cursor-pointer">
                 {filter}
               </button>
@@ -1405,7 +1405,7 @@ export default function AgenticDashboard() {
                          { action: 'DAILY_LOGIN', date: '03.05.2026', points: Math.floor(10 * data.profile.multiplier) },
                          { action: 'PROFILE_SYNC', date: '02.05.2026', points: Math.floor(40 * data.profile.multiplier) },
                          { action: 'NODE_ACTIVATION', date: '01.05.2026', points: 100 },
-                      ].map((log, i) => (
+                      ].map((log: any, i: number) => (
                          <div key={i} className="flex justify-between items-center border-l-2 border-zinc-900 pl-4 py-2">
                             <div>
                                <p className="text-[10px] font-black uppercase text-white">{log.action}</p>
@@ -1447,7 +1447,7 @@ export default function AgenticDashboard() {
 
           {/* Top 3 Spotlight */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8 px-4">
-             {data.leaderboard.slice(0, 3).map((actor, i) => (
+             {data.leaderboard.slice(0, 3).map((actor: any, i: number) => (
                 <div 
                    key={actor.id} 
                    className={`relative p-10 brutal-border flex flex-col items-center text-center overflow-hidden transition-all duration-500 hover:-translate-y-2 ${
@@ -1483,7 +1483,7 @@ export default function AgenticDashboard() {
                    <div className="flex items-center justify-between mb-10 border-b border-zinc-900 pb-6">
                       <h3 className="text-2xl font-black uppercase tracking-tighter">ALL_NODES</h3>
                       <div className="flex gap-6">
-                         {['GLOBAL', 'REGION', 'LOCAL'].map(t => (
+                         {['GLOBAL', 'REGION', 'LOCAL'].map((t: string) => (
                             <button key={t} className="text-[9px] font-black text-zinc-600 hover:text-brand-red-neon uppercase tracking-widest transition-colors cursor-pointer">
                                {t}
                             </button>
@@ -1535,7 +1535,7 @@ export default function AgenticDashboard() {
                    <div className="space-y-10">
                       <div>
                          <p className="text-[9px] font-black text-white/60 uppercase tracking-widest mb-2">GLOBAL_POSITION</p>
-                         <p className="text-6xl font-black text-white tabular-nums">#{data.leaderboard.find(a => a.isUser)?.rank || '??'}</p>
+                         <p className="text-6xl font-black text-white tabular-nums">#{data.leaderboard.find((a: any) => a.isUser)?.rank || '??'}</p>
                       </div>
                       <div>
                          <p className="text-[9px] font-black text-white/60 uppercase tracking-widest mb-2">PERCENTILE_REACH</p>
@@ -1550,7 +1550,7 @@ export default function AgenticDashboard() {
                 <div className="glass-panel p-10 brutal-border border-zinc-900 bg-zinc-950/50">
                    <h3 className="font-black uppercase tracking-widest text-[10px] mb-8 text-zinc-600">RISING_STARS // 24H</h3>
                    <div className="space-y-6">
-                      {data.leaderboard.slice(0, 4).reverse().map((actor, i) => (
+                      {data.leaderboard.slice(0, 4).reverse().map((actor: any, i: number) => (
                          <div key={i} className="flex items-center gap-4">
                             <div className="w-8 h-8 rounded-full bg-zinc-900 border border-zinc-800" />
                             <div className="flex-1">
@@ -1567,7 +1567,7 @@ export default function AgenticDashboard() {
         </div>
       ) : (
         <div className="flex flex-col items-center justify-center h-[60vh] opacity-50 animate-in fade-in duration-500">
-           <h2 className="text-4xl font-black uppercase tracking-widest text-center">{currentView} // MODULE</h2>
+           <h2 className="text-4xl font-black uppercase tracking-widest text-center">{currentView} {/* MODULE */}</h2>
            <p className="text-sm tracking-widest uppercase text-brand-red-neon mt-4 text-center">CONSTRUCTION_PENDING</p>
         </div>
       )}
@@ -1714,7 +1714,7 @@ export default function AgenticDashboard() {
                     <div className="flex flex-col gap-4">
                       <label className="text-[10px] font-black uppercase tracking-[0.4em] text-zinc-500">Primary Objective</label>
                       <div className="grid grid-cols-2 gap-3">
-                        {DESIRE_LIST.map((opt) => (
+                        {DESIRE_LIST.map((opt: string) => (
                           <button
                             key={opt}
                             onClick={() => setPrefDesire(opt)}
@@ -1732,14 +1732,14 @@ export default function AgenticDashboard() {
                     <div className="flex flex-col gap-4">
                       <label className="text-[10px] font-black uppercase tracking-[0.4em] text-zinc-500">Languages</label>
                       <div className="flex flex-wrap gap-3">
-                        {LANGUAGES_LIST.map((lang) => {
+                        {LANGUAGES_LIST.map((lang: string) => {
                           const isSelected = prefLanguages.includes(lang);
                           return (
                             <button
                               key={lang}
                               onClick={() => {
                                 setPrefLanguages(prev => 
-                                  prev.includes(lang) ? prev.filter(l => l !== lang) : [...prev, lang]
+                                  prev.includes(lang) ? prev.filter((l: string) => l !== lang) : [...prev, lang]
                                 );
                               }}
                               className={`px-5 py-3 text-[10px] font-black uppercase tracking-widest brutal-border transition-all ${
@@ -1757,14 +1757,14 @@ export default function AgenticDashboard() {
                     <div className="flex flex-col gap-4">
                       <label className="text-[10px] font-black uppercase tracking-[0.4em] text-zinc-500">Core Archetypes</label>
                       <div className="flex flex-wrap gap-3">
-                        {PERSONALITIES_LIST.map((arch) => {
+                        {PERSONALITIES_LIST.map((arch: string) => {
                           const isSelected = prefArchetypes.includes(arch);
                           return (
                             <button
                               key={arch}
                               onClick={() => {
                                 setPrefArchetypes(prev => 
-                                  prev.includes(arch) ? prev.filter(a => a !== arch) : [...prev, arch]
+                                  prev.includes(arch) ? prev.filter((a: string) => a !== arch) : [...prev, arch]
                                 );
                               }}
                               className={`px-5 py-3 text-[10px] font-black uppercase tracking-widest brutal-border transition-all ${
@@ -1782,7 +1782,7 @@ export default function AgenticDashboard() {
                     <div className="flex flex-col gap-4">
                       <label className="text-[10px] font-black uppercase tracking-[0.4em] text-zinc-500">Opportunity Readiness</label>
                       <div className="space-y-3">
-                        {AVAILABILITY_LABELS.map((label) => (
+                        {AVAILABILITY_LABELS.map((label: string) => (
                           <button
                             key={label}
                             onClick={() => setPrefAvailability(label)}

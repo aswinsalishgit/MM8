@@ -98,7 +98,7 @@ export default function NotificationsPage() {
           </h1>
           <div className="flex items-center gap-4 mt-6">
             <div className="flex gap-1">
-              {[...Array(5)].map((_, i) => (
+              {[...Array(5)].map((_: any, i: number) => (
                 <div key={i} className={`w-1 h-4 ${i < unreadCount ? 'bg-brand-red-neon' : 'bg-zinc-800'}`} />
               ))}
             </div>
@@ -111,7 +111,7 @@ export default function NotificationsPage() {
 
         <div className="flex items-center gap-4 mt-8 md:mt-0">
           <div className="flex items-center gap-0">
-            {(["ALL", "UNREAD"] as const).map(f => (
+            {(["ALL", "UNREAD"] as const).map((f: "ALL" | "UNREAD") => (
               <button
                 key={f}
                 onClick={() => setFilter(f)}
@@ -149,7 +149,7 @@ export default function NotificationsPage() {
               </p>
             </motion.div>
           ) : (
-            filteredNotifications.map((notif, index) => {
+            filteredNotifications.map((notif: Notification, index: number) => {
               const config = getPriorityConfig(notif.priority);
               const PriorityIcon = config.icon;
               return (
