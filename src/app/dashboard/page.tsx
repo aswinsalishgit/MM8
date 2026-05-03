@@ -719,12 +719,8 @@ export default function AgenticDashboard() {
           body: JSON.stringify({ filename: file.name, mimeType: file.type }),
         });
 
-        if (!initRes.ok) {
-            const errorData = await initRes.json();
-            throw new Error(`Failed to initialize upload: ${errorData.details || errorData.error}`);
-        }
-        
-        const { uploadUrl } = await initRes.json();
+        const initData = await initRes.json();
+        const { uploadUrl } = initData;
 
         await new Promise((resolve, reject) => {
           const xhr = new XMLHttpRequest();
