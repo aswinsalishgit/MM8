@@ -666,14 +666,14 @@ export default function AgenticDashboard() {
             </div>
             
             <div className="p-8 border-b border-zinc-900 shrink-0 flex flex-col items-center">
-              <div className="w-32 h-32 brutal-border-red bg-zinc-900 mb-6 relative overflow-hidden">
+              <div className="w-32 h-32 rounded-full brutal-border-red bg-zinc-900 mb-6 relative overflow-hidden">
                 {data.profile.avatarUrl ? (
                   <img src={data.profile.avatarUrl} alt="PFP" className="w-full h-full object-cover" />
                 ) : (
                   <User className="w-12 h-12 text-zinc-800 absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" />
                 )}
               </div>
-              <p className="font-black text-center text-sm uppercase tracking-widest text-zinc-500">BIOMETRIC_ID</p>
+              <p className="font-black text-center text-sm uppercase tracking-widest text-brand-red-neon">@{data.profile.username || 'ANONYMOUS'}</p>
             </div>
 
             <nav className="flex-1 p-4 flex flex-col gap-2">
@@ -770,9 +770,9 @@ export default function AgenticDashboard() {
                   animate={{ opacity: 1, x: 0 }}
                   className="mt-6 md:mt-0 glass-panel brutal-border-red px-6 py-3 clip-brutal-slant flex items-center gap-3"
                 >
-                  <span className="font-black uppercase tracking-[0.2em] text-[10px] text-zinc-500">MM8 ID:</span>
+                  <span className="font-black uppercase tracking-[0.2em] text-[10px] text-zinc-500">USERNAME:</span>
                   <span className="font-black uppercase tracking-widest text-xs text-brand-red-neon tabular-nums">
-                    {data.profile.mm8Id ? `#${String(data.profile.mm8Id).padStart(4, '0')}` : '—'}
+                    @{data.profile.username || 'ANONYMOUS'}
                   </span>
                   {data.profile.isVip && (
                     <span className="flex items-center gap-1 px-2 py-0.5 bg-yellow-500/20 border border-yellow-500/50 text-yellow-400 text-[8px] font-black uppercase tracking-widest">
@@ -795,7 +795,7 @@ export default function AgenticDashboard() {
             </div>
             
             <div className="flex items-center gap-8 mt-6 mb-12">
-              <div className="w-32 h-32 bg-zinc-950 brutal-border-red flex items-center justify-center grayscale hover:grayscale-0 transition-all duration-500 clip-brutal-slant overflow-hidden">
+              <div className="w-32 h-32 bg-zinc-950 brutal-border-red flex items-center justify-center grayscale hover:grayscale-0 transition-all duration-500 rounded-full overflow-hidden">
                 {data.profile.avatarUrl ? (
                   <img 
                     src={data.profile.avatarUrl} 
