@@ -2,9 +2,9 @@
 
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { 
-  PlayCircle, Star, Settings, Bell, LogOut, X, 
-  ChevronRight, Crown, Upload, Trash2, MapPin, 
+import {
+  PlayCircle, Star, Settings, Bell, LogOut, X,
+  ChevronRight, Crown, Upload, Trash2, MapPin,
   ChevronDown, Check, User, CheckCircle2, Trophy, Flame, Lock, ShieldCheck, AlertTriangle, Zap,
   Menu, Home, Compass, PlusSquare, Briefcase, Target, Rss, Users
 } from "lucide-react";
@@ -49,7 +49,7 @@ const useDashboardData = () => {
   const fetchData = useCallback(async () => {
     try {
       const { data: { session } } = await supabase.auth.getSession();
-      
+
       if (!session) {
         router.push("/auth");
         return;
@@ -66,14 +66,14 @@ const useDashboardData = () => {
         console.warn("Profile not found, initializing default...", error);
         const { data: newProfile, error: createError } = await supabase
           .from('profiles')
-          .upsert({ 
-            id: session.user.id, 
+          .upsert({
+            id: session.user.id,
             full_name: session.user.user_metadata?.full_name || "AGENT_X",
             status: "UNVERIFIED"
           })
           .select()
           .single();
-        
+
         if (!createError && newProfile) {
           profile = newProfile;
         } else {
@@ -90,7 +90,7 @@ const useDashboardData = () => {
           p_reason: 'First dashboard entry — welcome to MM8'
         });
 
-        await supabase.from('profiles').update({ 
+        await supabase.from('profiles').update({
           lumen_granted: true,
           last_active: new Date().toISOString(),
           streak_days: 1
@@ -104,13 +104,13 @@ const useDashboardData = () => {
         // --- STREAK & DAILY LOGIN ---
         const lastActive = profile.last_active ? new Date(profile.last_active) : null;
         const now = new Date();
-        const isNewDay = !lastActive || 
+        const isNewDay = !lastActive ||
           (now.toDateString() !== lastActive.toDateString());
 
         if (isNewDay) {
           let streakDays = profile.streak_days || 0;
           const hoursSinceLast = lastActive ? (now.getTime() - lastActive.getTime()) / 3600000 : 999;
-          
+
           if (hoursSinceLast <= 48) {
             streakDays += 1;
           } else {
@@ -139,9 +139,9 @@ const useDashboardData = () => {
             });
           }
 
-          await supabase.from('profiles').update({ 
-            streak_days: streakDays, 
-            last_active: now.toISOString() 
+          await supabase.from('profiles').update({
+            streak_days: streakDays,
+            last_active: now.toISOString()
           }).eq('id', session.user.id);
 
           // Refetch
@@ -153,8 +153,8 @@ const useDashboardData = () => {
 
       // --- FETCH TODAY'S MISSIONS ---
       const todayStart = new Date();
-      todayStart.setHours(0,0,0,0);
-      
+      todayStart.setHours(0, 0, 0, 0);
+
       const { data: todayLogs } = await supabase
         .from('lumen_log')
         .select('action')
@@ -162,7 +162,7 @@ const useDashboardData = () => {
         .gte('created_at', todayStart.toISOString());
 
       const missionActions = (todayLogs || []).map(l => l.action);
-      
+
       const multiplier = profile.is_vip ? 1.3 : 1.0;
 
       // --- FETCH LEADERBOARD ---
@@ -203,20 +203,20 @@ const useDashboardData = () => {
           opportunityReadiness: profile.opportunity_readiness || "",
         },
         missions: [
-          { 
-            label: 'UPLOAD AUDITION TAPE', 
-            reward: Math.floor(40 * multiplier), 
-            done: missionActions.includes('UPLOAD_TAPE') || missionActions.includes('AUDITION_UPLOAD') 
+          {
+            label: 'UPLOAD AUDITION TAPE',
+            reward: Math.floor(40 * multiplier),
+            done: missionActions.includes('UPLOAD_TAPE') || missionActions.includes('AUDITION_UPLOAD')
           },
-          { 
-            label: 'COMPLETE PROFILE FIELD', 
-            reward: Math.floor(10 * multiplier), 
-            done: missionActions.includes('PROFILE_UPDATE') || missionActions.includes('ONBOARDING_COMPLETE') 
+          {
+            label: 'COMPLETE PROFILE FIELD',
+            reward: Math.floor(10 * multiplier),
+            done: missionActions.includes('PROFILE_UPDATE') || missionActions.includes('ONBOARDING_COMPLETE')
           },
-          { 
-            label: 'DAILY LOGIN', 
-            reward: Math.floor(10 * multiplier), 
-            done: missionActions.includes('DAILY_LOGIN') 
+          {
+            label: 'DAILY LOGIN',
+            reward: Math.floor(10 * multiplier),
+            done: missionActions.includes('DAILY_LOGIN')
           },
         ],
         leaderboard: (leaderboard || []).map((u: any, i: number) => ({
@@ -247,18 +247,18 @@ const useDashboardData = () => {
     // --- REAL-TIME SUBSCRIPTION ---
     const channel = supabase
       .channel('dashboard-sync')
-      .on('postgres_changes', { 
-        event: '*', 
-        schema: 'public', 
-        table: 'profiles' 
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'profiles'
       }, () => {
         console.log("PROFILE_SYNC_TRIGGERED");
         fetchData();
       })
-      .on('postgres_changes', { 
-        event: 'INSERT', 
-        schema: 'public', 
-        table: 'lumen_log' 
+      .on('postgres_changes', {
+        event: 'INSERT',
+        schema: 'public',
+        table: 'lumen_log'
       }, () => {
         console.log("LMN_LOG_SYNC_TRIGGERED");
         fetchData();
@@ -307,7 +307,7 @@ export default function AgenticDashboard() {
   const [prefExperience, setPrefExperience] = useState("");
   const [prefAvailability, setPrefAvailability] = useState("");
   const [prefLocation, setPrefLocation] = useState("");
-  
+
   const [isUploadingPFP, setIsUploadingPFP] = useState(false);
 
   // Cropping State
@@ -365,7 +365,7 @@ export default function AgenticDashboard() {
       setUsernameStatus("invalid");
       return;
     }
-    
+
     setUsernameStatus("checking");
     try {
       const { data: exists, error } = await supabase.rpc('check_username_exists', { p_username: username });
@@ -449,7 +449,7 @@ export default function AgenticDashboard() {
 
   const handleApplyCrop = async () => {
     if (!cropImage || !croppedAreaPixels) return;
-    
+
     setIsUploadingPFP(true);
     setShowCropModal(false);
     setMessage({ text: "PROCESSING BIOMETRIC UPLOAD...", type: 'info' });
@@ -460,7 +460,7 @@ export default function AgenticDashboard() {
 
       const formData = new FormData();
       formData.append('file', croppedBlob, 'pfp.jpg');
-      
+
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Authentication failure");
 
@@ -517,17 +517,17 @@ export default function AgenticDashboard() {
         });
 
         if (!initRes.ok) {
-            const errorData = await initRes.json();
-            throw new Error(`Failed to initialize upload: ${errorData.details || errorData.error}`);
+          const errorData = await initRes.json();
+          throw new Error(`Failed to initialize upload: ${errorData.details || errorData.error}`);
         }
-        
+
         const { uploadUrl } = await initRes.json();
 
         await new Promise((resolve, reject) => {
           const xhr = new XMLHttpRequest();
           xhr.open("PUT", uploadUrl, true);
           xhr.setRequestHeader("Content-Type", file.type);
-          
+
           xhr.upload.onprogress = (e) => {
             if (e.lengthComputable) {
               const percentComplete = Math.floor((e.loaded / e.total) * 100);
@@ -558,7 +558,7 @@ export default function AgenticDashboard() {
             p_action: 'UPLOAD_TAPE',
             p_reason: 'Audition tape uploaded'
           });
-          
+
           // Force immediate re-fetch
           await fetchData();
         }
@@ -582,20 +582,19 @@ export default function AgenticDashboard() {
 
   return (
     <main className="min-h-screen bg-black text-white flex overflow-hidden selection:bg-brand-red-neon selection:text-white">
-      
+
       {/* Status Bar */}
       {message && (
-        <motion.div 
+        <motion.div
           initial={{ y: -50, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
-          className={`fixed top-0 left-0 w-full z-[2000] p-4 text-center font-black uppercase tracking-[0.4em] text-[10px] border-b ${
-            message.type === 'error' ? 'bg-red-500/10 border-brand-red-neon text-brand-red-neon' : 
-            message.type === 'success' ? 'bg-green-500/10 border-green-500 text-green-500' :
-            'bg-brand-red-neon/10 border-brand-red-neon text-white'
-          }`}
+          className={`fixed top-0 left-0 w-full z-[2000] p-4 text-center font-black uppercase tracking-[0.4em] text-[10px] border-b ${message.type === 'error' ? 'bg-red-500/10 border-brand-red-neon text-brand-red-neon' :
+              message.type === 'success' ? 'bg-green-500/10 border-green-500 text-green-500' :
+                'bg-brand-red-neon/10 border-brand-red-neon text-white'
+            }`}
         >
           {message.text}
-          <button 
+          <button
             onClick={() => setMessage(null)}
             className="ml-8 text-zinc-500 hover:text-white"
           >
@@ -621,16 +620,16 @@ export default function AgenticDashboard() {
                 <X className="w-6 h-6 text-zinc-500 hover:text-white" />
               </button>
             </div>
-            
+
             <div className="p-8 border-b border-zinc-900 shrink-0 flex flex-col items-center">
-              <div className="w-32 h-32 brutal-border-red bg-zinc-900 mb-6 relative overflow-hidden">
+              <div className="w-32 h-32 brutal-border-red bg-zinc-900 mb-6 relative overflow-hidden rounded-full">
                 {data.profile.avatarUrl ? (
                   <img src={data.profile.avatarUrl} alt="PFP" className="w-full h-full object-cover" />
                 ) : (
                   <User className="w-12 h-12 text-zinc-800 absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" />
                 )}
               </div>
-              <p className="font-black text-center text-sm uppercase tracking-widest text-zinc-500">BIOMETRIC_ID</p>
+              <p className="font-black text-center text-sm uppercase tracking-widest text-zinc-500">@{data.profile.username || 'AGENT'}</p>
             </div>
 
             <nav className="flex-1 p-4 flex flex-col gap-2">
@@ -643,11 +642,10 @@ export default function AgenticDashboard() {
                     if (item.id === 'SETTINGS') setShowSettings(true);
                     if (item.id === 'LOGOUT') handleLogout();
                   }}
-                  className={`w-full flex items-center gap-4 p-4 text-left font-black uppercase tracking-widest text-[10px] transition-all ${
-                    currentView === item.id 
-                      ? 'bg-brand-red-neon/10 border-l-4 border-brand-red-neon text-white' 
+                  className={`w-full flex items-center gap-4 p-4 text-left font-black uppercase tracking-widest text-[10px] transition-all ${currentView === item.id
+                      ? 'bg-brand-red-neon/10 border-l-4 border-brand-red-neon text-white'
                       : 'border-l-4 border-transparent text-zinc-500 hover:bg-zinc-900 hover:text-white'
-                  }`}
+                    }`}
                 >
                   <item.icon className={`w-4 h-4 ${currentView === item.id ? 'text-brand-red-neon' : ''}`} />
                   {item.label}
@@ -660,16 +658,16 @@ export default function AgenticDashboard() {
 
       {/* Main Wrapper */}
       <div className="flex-1 flex flex-col h-screen overflow-hidden relative w-full">
-        
+
         {/* Top Header */}
         <header className="h-20 border-b border-zinc-900 bg-black flex items-center justify-between px-6 shrink-0 z-[100]">
-          <button 
+          <button
             onClick={() => setIsSidebarOpen(true)}
             className="p-3 hover:bg-zinc-900 transition-colors lg:hidden"
           >
             <Menu className="w-6 h-6 text-white" />
           </button>
-          
+
           <div className="hidden lg:block" /> {/* Spacer */}
 
           <div className="flex items-center gap-6 md:gap-12 ml-auto">
@@ -690,9 +688,9 @@ export default function AgenticDashboard() {
                 <Settings className="w-5 h-5 text-zinc-500 group-hover:text-white transition-all" />
               </button>
             </div>
-            
+
             <div className="w-[1px] h-8 bg-zinc-900 hidden md:block" />
-            
+
             <div className="w-10 h-10 rounded-full bg-zinc-900 border border-zinc-800 overflow-hidden shrink-0 brutal-border-red">
               {data.profile.avatarUrl ? (
                 <img src={data.profile.avatarUrl} alt="PFP" className="w-full h-full object-cover" />
@@ -704,736 +702,544 @@ export default function AgenticDashboard() {
         </header>
 
         {/* Content Area */}
-        <div 
+        <div
           className="flex-1 overflow-y-auto custom-scrollbar p-4 md:p-12 relative z-10 w-full"
           data-lenis-prevent
         >
-          
+
           {currentView === 'OVERVIEW' ? (
-            <div className="animate-in fade-in duration-500">
-              {/* Overview Title */}
-              <div className="mb-12 border-b border-zinc-900 pb-8 flex flex-col md:flex-row justify-between items-start md:items-end">
-                <motion.div
-                  initial={{ opacity: 0, x: -30 }}
-                  animate={{ opacity: 1, x: 0 }}
-                >
-                  <h1 className="text-4xl md:text-6xl font-black uppercase tracking-tighter leading-none text-white">
-                    ACTOR DASHBOARD
-                  </h1>
-                </motion.div>
-                
-                <motion.div 
-                  initial={{ opacity: 0, x: 30 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  className="mt-6 md:mt-0 glass-panel brutal-border-red px-6 py-3 clip-brutal-slant flex items-center gap-3"
-                >
-                  <span className="font-black uppercase tracking-[0.2em] text-[10px] text-zinc-500">MM8 ID:</span>
-                  <span className="font-black uppercase tracking-widest text-xs text-brand-red-neon tabular-nums">
-                    {data.profile.mm8Id ? `#${String(data.profile.mm8Id).padStart(4, '0')}` : '—'}
-                  </span>
-                  {data.profile.isVip && (
-                    <span className="flex items-center gap-1 px-2 py-0.5 bg-yellow-500/20 border border-yellow-500/50 text-yellow-400 text-[8px] font-black uppercase tracking-widest">
-                      <Crown className="w-3 h-3" /> VIP
-                    </span>
-                  )}
-                </motion.div>
-              </div>
-
-      <div className="max-w-screen-2xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-12 relative z-10 pb-20">
-        
-        {/* LEFT COLUMN: IDENTITY & INTEL */}
-        <div className="lg:col-span-4 flex flex-col gap-12">
-          
-          {/* Identity HUD */}
-          <section className="glass-panel brutal-border-red p-10 relative overflow-hidden group clip-brutal-tl">
-            <div className="absolute top-0 right-0 bg-brand-red-neon text-white font-black px-6 py-3 flex items-center gap-2 text-[10px] tracking-widest clip-brutal-tr">
-              <CheckCircle2 className="w-4 h-4" />
-              {data.profile.status}
-            </div>
-            
-            <div className="flex items-center gap-8 mt-6 mb-12">
-              <div className="w-32 h-32 bg-zinc-950 brutal-border-red flex items-center justify-center grayscale hover:grayscale-0 transition-all duration-500 clip-brutal-slant overflow-hidden">
-                {data.profile.avatarUrl ? (
-                  <img 
-                    src={data.profile.avatarUrl} 
-                    alt="PFP" 
-                    className="w-full h-full object-cover"
-                    onError={(e: any) => {
-                      e.target.style.display = 'none';
-                      e.target.nextSibling.style.display = 'block';
-                    }}
-                  />
-                ) : null}
-                <User className={`w-16 h-16 text-brand-red-deep group-hover:text-brand-red-neon transition-colors ${data.profile.avatarUrl ? 'hidden' : ''}`} />
-              </div>
-              <div>
-                <h2 className="text-5xl font-black uppercase tracking-tighter leading-none">{data.profile.name}</h2>
-                <p className="text-brand-red-neon font-black uppercase tracking-[0.3em] text-xs mt-3 flex items-center gap-2">
-                  <span className="w-2 h-[1px] bg-brand-red-neon" />
-                  {data.profile.location}
-                </p>
-              </div>
-            </div>
-
-            <div className="border-t border-zinc-900 pt-10">
-              {/* Profile Completion progress bar */}
-              <div className="mt-8">
-                <div className="flex justify-between items-center mb-3">
-                  <h3 className="font-black text-zinc-600 uppercase tracking-[0.4em] text-[10px]">PROFILE_STRENGTH</h3>
-                  <span className="text-white font-black text-[10px] tabular-nums">{completionProgress}%</span>
+            <div className="animate-in fade-in duration-500 space-y-8">
+              {/* Top Row: Tactical Summary */}
+              <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+                {/* Identity Card */}
+                <div className="lg:col-span-4 glass-panel p-6 brutal-border-red flex items-center gap-6 clip-brutal-tl">
+                  <div className="w-20 h-20 bg-zinc-950 brutal-border-red rounded-full overflow-hidden shrink-0">
+                    {data.profile.avatarUrl ? (
+                      <img src={data.profile.avatarUrl} alt="PFP" className="w-full h-full object-cover" />
+                    ) : (
+                      <User className="w-10 h-10 text-zinc-800 m-auto mt-4" />
+                    )}
+                  </div>
+                  <div>
+                    <h2 className="text-3xl font-black uppercase tracking-tighter leading-none">{data.profile.name}</h2>
+                    <p className="text-[10px] font-black uppercase tracking-[0.3em] text-brand-red-neon mt-2">@{data.profile.username || 'AGENT'}</p>
+                    <div className="mt-4 w-32 h-1.5 bg-zinc-950 relative overflow-hidden clip-brutal-slant">
+                      <div className="absolute inset-0 bg-brand-red-neon" style={{ width: `${completionProgress}%` }} />
+                    </div>
+                  </div>
                 </div>
-                <div className="w-full h-3 bg-zinc-950 relative overflow-hidden clip-brutal-slant">
-                  <motion.div 
-                    initial={{ width: 0 }}
-                    animate={{ width: `${completionProgress}%` }}
-                    transition={{ duration: 1.5, ease: "circOut" }}
-                    className="absolute top-0 left-0 h-full bg-brand-red-neon shadow-[0_0_20px_rgba(255,49,49,0.8)]"
-                  />
+
+                {/* Status HUD */}
+                <div className="lg:col-span-4 glass-panel p-6 brutal-border flex items-center justify-between">
+                  <div>
+                    <p className="text-[8px] font-black uppercase tracking-[0.4em] text-zinc-600 mb-2">ACCOUNT_STATUS</p>
+                    <div className="flex items-end gap-2">
+                      <span className="text-4xl font-black text-white tabular-nums">{data.profile.lumenPoints.toLocaleString()}</span>
+                      <span className="text-sm font-black text-brand-red-neon mb-1">LMN</span>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <p className={`text-[9px] font-black uppercase tracking-widest ${TIER_CONFIG[data.profile.lumenTier]?.color || 'text-zinc-500'}`}>
+                      {data.profile.lumenTier}
+                    </p>
+                    <div className="flex items-center gap-2 mt-2 justify-end">
+                      <Zap className={`w-3 h-3 ${TIER_CONFIG[data.profile.lumenTier]?.glow || ''}`} />
+                      <span className="text-[10px] font-black text-zinc-500">#{String(data.profile.mm8Id).padStart(4, '0')}</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Compact Upload Action */}
+                <div className="lg:col-span-4">
+                  <button
+                    onClick={handleUploadClick}
+                    disabled={uploading}
+                    className="w-full h-full bg-brand-red-neon p-6 flex items-center justify-between group clip-brutal-tr hover:bg-white hover:text-brand-red-neon transition-all duration-300"
+                  >
+                    <div className="text-left">
+                      <h3 className="text-2xl font-black uppercase tracking-tighter leading-none">
+                        {uploading ? `${uploadProgress}%` : "UPLOAD AUDITION"}
+                      </h3>
+                      <p className="text-[8px] font-black uppercase tracking-widest opacity-80 mt-2">SECURE_TALENT_UPLINK</p>
+                    </div>
+                    <PlayCircle className="w-10 h-10 group-hover:scale-110 transition-transform" />
+                  </button>
                 </div>
               </div>
-            </div>
-          </section>
 
-          {/* Status Hub */}
-          <section className="glass-panel p-10 brutal-border border-zinc-800 relative overflow-hidden group">
-            <div className="flex items-center justify-between mb-8">
-              <div className="flex items-center gap-4">
-                <Zap className="w-5 h-5 text-brand-red-neon" />
-                <h3 className="font-black uppercase tracking-[0.4em] text-[10px]">STATUS</h3>
-              </div>
-              <div className={`flex items-center gap-2 ${TIER_CONFIG[data.profile.lumenTier]?.color || 'text-zinc-500'}`}>
-                <Zap className={`w-3 h-3 ${TIER_CONFIG[data.profile.lumenTier]?.glow || ''}`} />
-                <span className="font-black uppercase tracking-widest text-[9px]">{data.profile.lumenTier}</span>
-              </div>
-            </div>
-            
-            <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
-              <div className="text-left">
-                <span className="text-6xl font-black tracking-tighter text-white tabular-nums leading-none">
-                  {data.profile.lumenPoints.toLocaleString()}
-                </span>
-                <span className="text-xl font-black text-brand-red-neon ml-2">LMN</span>
-              </div>
-              
-              {data.profile.streakDays > 0 && (
-                <div className="flex items-center gap-3 bg-orange-500/10 border border-orange-500/20 px-4 py-2 clip-brutal-slant">
-                  <Flame className="w-4 h-4 text-orange-500" />
-                  <span className="text-[10px] font-black text-orange-500 uppercase tracking-widest tabular-nums">
-                    {data.profile.streakDays} DAY STREAK
-                  </span>
-                </div>
-              )}
-            </div>
-          </section>
-
-          {/* Streak & Daily Missions */}
-          <section className="glass-panel-red p-10 hover:bg-brand-red-neon/10 transition-all cursor-pointer group relative overflow-hidden clip-brutal-br">
-            <div className="relative z-10">
-              <div className="flex items-center gap-4 mb-8">
-                <Flame className="w-6 h-6 text-brand-red-neon" />
-                <h3 className="font-black uppercase tracking-[0.4em] text-[10px]">DAILY_MISSIONS</h3>
-              </div>
-                <div className="flex flex-col gap-4">
+              {/* Main Interaction Layer */}
+              <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+                {/* Missions Center */}
+                <div className="lg:col-span-4 space-y-4">
+                  <div className="flex items-center gap-3 mb-2 px-2">
+                    <Target className="w-4 h-4 text-brand-red-neon" />
+                    <h3 className="font-black uppercase tracking-[0.4em] text-[10px]">DAILY_MISSIONS</h3>
+                  </div>
                   {data.missions.map((mission: any) => (
-                    <div key={mission.label} className={`flex items-center justify-between p-4 brutal-border transition-all ${mission.done ? 'border-green-500 bg-green-500/10' : 'border-zinc-800 bg-zinc-950/50'}`}>
+                    <div key={mission.label} className={`p-4 brutal-border flex items-center justify-between transition-all ${mission.done ? 'border-green-500 bg-green-500/10' : 'border-zinc-900 bg-zinc-950/50'}`}>
                       <div className="flex items-center gap-3">
-                        {mission.done ? (
-                          <CheckCircle2 className="w-4 h-4 text-green-500" />
-                        ) : (
-                          <div className="w-4 h-4 border border-zinc-700 bg-zinc-900" />
-                        )}
-                        <span className={`font-black uppercase tracking-widest text-[10px] ${mission.done ? 'text-green-500' : 'text-zinc-500'}`}>{mission.label}</span>
+                        {mission.done ? <CheckCircle2 className="w-3 h-3 text-green-500" /> : <div className="w-3 h-3 border border-zinc-800" />}
+                        <span className={`text-[9px] font-black uppercase tracking-widest ${mission.done ? 'text-green-500' : 'text-zinc-500'}`}>{mission.label}</span>
                       </div>
-                      <span className={`font-black text-[10px] tracking-widest ${mission.done ? 'text-green-500' : 'text-brand-red-neon'}`}>
-                        {mission.done ? 'COMPLETED' : `+${mission.reward} LMN`}
-                      </span>
+                      {!mission.done && <span className="text-[8px] font-black text-brand-red-neon">+{mission.reward} LMN</span>}
                     </div>
                   ))}
                 </div>
-            </div>
-          </section>
 
-          {/* Ranking Subsystem — Live LUMEN Leaderboard */}
-          <section className="glass-panel p-10 brutal-border clip-brutal-bl">
-            <div className="flex items-center gap-4 mb-10 border-b border-zinc-900 pb-8">
-              <Trophy className="w-6 h-6 text-brand-red-neon" />
-              <h3 className="font-black uppercase tracking-[0.4em] text-[10px]">GLOBAL_RANKINGS</h3>
-              <span className="text-[8px] font-black text-zinc-700 uppercase tracking-widest ml-auto">LIVE // {data.leaderboard.length} NODES</span>
+                {/* Latest Updates (Signals) */}
+                <div className="lg:col-span-4 space-y-4">
+                  <div className="flex items-center gap-3 mb-2 px-2">
+                    <Bell className="w-4 h-4 text-brand-red-neon" />
+                    <h3 className="font-black uppercase tracking-[0.4em] text-[10px]">LATEST_UPDATES</h3>
+                  </div>
+                  {data.notifications.slice(0, 3).map((notif: any) => (
+                    <div key={notif.id} className="p-4 brutal-border border-zinc-900 bg-zinc-950/50 flex flex-col gap-2 hover:border-zinc-700 cursor-pointer">
+                      <div className="flex justify-between items-center">
+                        <span className="bg-brand-red-neon text-white text-[6px] px-2 py-0.5 font-black uppercase">{notif.priority}</span>
+                        <span className="text-[6px] text-zinc-700 font-black uppercase">{new Date(notif.created_at).toLocaleDateString()}</span>
+                      </div>
+                      <h4 className="text-[10px] font-black uppercase tracking-tighter line-clamp-1">{notif.title}</h4>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Rankings Preview */}
+                <div className="lg:col-span-4 space-y-4">
+                  <div className="flex items-center gap-3 mb-2 px-2">
+                    <Trophy className="w-4 h-4 text-brand-red-neon" />
+                    <h3 className="font-black uppercase tracking-[0.4em] text-[10px]">GLOBAL_RANKINGS</h3>
+                  </div>
+                  <div className="p-4 glass-panel border-zinc-900 bg-zinc-950/50 space-y-3">
+                    {data.leaderboard.slice(0, 3).map((actor: any) => (
+                      <div key={actor.id} className="flex items-center justify-between border-b border-zinc-900 pb-2 last:border-0">
+                        <div className="flex items-center gap-3">
+                          <span className="text-xs font-black text-zinc-800 w-4">{actor.rank}</span>
+                          <span className={`text-[10px] font-black uppercase ${actor.isUser ? 'text-brand-red-neon' : 'text-zinc-400'}`}>{actor.name}</span>
+                        </div>
+                        <span className="text-[10px] font-black text-white">{actor.score.toLocaleString()}</span>
+                      </div>
+                    ))}
+                    <button onClick={() => setCurrentView('LEADERBOARD')} className="w-full text-center py-2 text-[8px] font-black uppercase tracking-widest text-zinc-600 hover:text-white transition-colors mt-2">FULL_REGISTRY // 100+ NODES</button>
+                  </div>
+                </div>
+              </div>
+
+              {/* Agentic Matches (Conditional) */}
+              {data.roles.length > 0 && (
+                <div className="pt-8 border-t border-zinc-900 animate-in slide-in-from-bottom duration-700">
+                  <div className="flex items-center gap-4 mb-8">
+                    <Star className="w-6 h-6 text-brand-red-neon" />
+                    <h2 className="text-4xl font-black uppercase tracking-tighter">AGENTIC MATCHES</h2>
+                  </div>
+                  <div className="flex gap-6 overflow-x-auto pb-4 custom-scrollbar snap-x">
+                    {data.roles.map((role: any) => (
+                      <div key={role.id} className="snap-start shrink-0 w-[300px] glass-panel p-6 brutal-border-red hover:bg-brand-red-neon/5 transition-all">
+                        <div className="flex justify-between items-start mb-6">
+                          <span className="bg-brand-red-neon text-white text-[8px] px-2 py-1 font-black">{role.match}% MATCH</span>
+                          <span className="text-[8px] text-zinc-600 font-black">{role.deadline}</span>
+                        </div>
+                        <h3 className="text-xl font-black uppercase tracking-tighter leading-tight mb-4">{role.title}</h3>
+                        <p className="text-[8px] text-zinc-500 font-black uppercase tracking-widest mb-6">{role.project}</p>
+                        <button className="w-full py-3 bg-zinc-950 border border-zinc-800 text-[9px] font-black uppercase tracking-widest hover:border-brand-red-neon hover:text-brand-red-neon transition-all">ANALYZE</button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
-            {data.leaderboard.length > 0 ? (
-              <div className="flex flex-col gap-4">
+          ) : currentView === 'MISSIONS' ? (
+            <div className="animate-in fade-in duration-500 max-w-4xl mx-auto space-y-12 pb-20">
+              <div className="border-b border-zinc-900 pb-8">
+                <h2 className="text-7xl font-black uppercase tracking-tighter leading-none">DAILY MISSIONS</h2>
+                <p className="text-xs font-black uppercase tracking-[0.5em] text-brand-red-neon mt-4">HARVEST_LMN // STRENGTHEN_PROFILE</p>
+              </div>
+              <div className="grid gap-6">
+                {data.missions.map((mission: any) => (
+                  <div key={mission.label} className={`p-10 brutal-border transition-all flex items-center justify-between ${mission.done ? 'border-green-500 bg-green-500/10' : 'border-zinc-800 bg-zinc-950/50'}`}>
+                    <div className="flex items-center gap-8">
+                      {mission.done ? <CheckCircle2 className="w-8 h-8 text-green-500" /> : <div className="w-8 h-8 border-2 border-zinc-800" />}
+                      <div>
+                        <h3 className={`text-3xl font-black uppercase tracking-tighter ${mission.done ? 'text-green-500' : 'text-white'}`}>{mission.label}</h3>
+                        <p className="text-[10px] font-black uppercase tracking-widest text-zinc-600 mt-2">STATUS: {mission.done ? 'VERIFIED' : 'PENDING_ACTION'}</p>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <span className={`text-4xl font-black tabular-nums ${mission.done ? 'text-green-500' : 'text-brand-red-neon'}`}>+{mission.reward}</span>
+                      <p className="text-[10px] font-black text-zinc-600 uppercase tracking-widest">LMN_CREDIT</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ) : currentView === 'LEADERBOARD' ? (
+            <div className="animate-in fade-in duration-500 max-w-5xl mx-auto space-y-12 pb-20">
+              <div className="flex justify-between items-end border-b border-zinc-900 pb-8">
+                <div>
+                  <h2 className="text-7xl font-black uppercase tracking-tighter leading-none">RANKINGS</h2>
+                  <p className="text-xs font-black uppercase tracking-[0.5em] text-brand-red-neon mt-4">GLOBAL_NODES // TOP_TALENT</p>
+                </div>
+                <div className="text-right pb-2">
+                  <span className="text-sm font-black text-zinc-700 uppercase tracking-widest">TOTAL_NODES: {data.leaderboard.length}+</span>
+                </div>
+              </div>
+              <div className="space-y-4">
                 {data.leaderboard.map((actor: any) => (
-                  <div key={actor.id} className={`flex items-center justify-between p-5 brutal-border transition-all group ${actor.isUser ? 'border-brand-red-neon bg-brand-red-neon/10 clip-brutal-slant' : 'border-zinc-900 bg-zinc-950/50 hover:border-zinc-700'}`}>
-                    <div className="flex items-center gap-5">
-                      <span className={`font-black text-2xl tabular-nums w-8 shrink-0 ${actor.rank === 1 ? 'text-brand-red-neon' : actor.rank === 2 ? 'text-zinc-400' : actor.rank === 3 ? 'text-orange-700' : 'text-zinc-800 group-hover:text-zinc-600'}`}>
-                        {String(actor.rank).padStart(2, '0')}
+                  <div key={actor.id} className={`p-6 brutal-border transition-all flex items-center justify-between ${actor.isUser ? 'border-brand-red-neon bg-brand-red-neon/10' : 'border-zinc-900 bg-zinc-950/50'}`}>
+                    <div className="flex items-center gap-8">
+                      <span className={`text-4xl font-black tabular-nums w-12 ${actor.rank === 1 ? 'text-yellow-500' : actor.rank === 2 ? 'text-zinc-400' : actor.rank === 3 ? 'text-orange-700' : 'text-zinc-800'}`}>
+                        #{actor.rank}
                       </span>
-                      <div className="w-10 h-10 bg-zinc-900 rounded-full overflow-hidden brutal-border border-zinc-800 shrink-0 flex items-center justify-center">
-                        {actor.avatarUrl ? (
-                          <img src={actor.avatarUrl} alt="" className="w-full h-full object-cover" />
-                        ) : (
-                          <User className="w-5 h-5 text-zinc-700" />
-                        )}
+                      <div className="w-16 h-16 rounded-full bg-zinc-900 border border-zinc-800 overflow-hidden shrink-0">
+                        {actor.avatarUrl ? <img src={actor.avatarUrl} className="w-full h-full object-cover" /> : <User className="w-8 h-8 text-zinc-800 m-auto mt-4" />}
                       </div>
                       <div>
-                        <div className="flex items-center gap-2">
-                          <span className={`font-black uppercase tracking-tighter text-sm ${actor.isUser ? 'text-white' : 'text-zinc-400'}`}>
-                            {actor.isUser ? 'YOU' : actor.name}
-                          </span>
-                          {actor.isVip && <Crown className="w-3 h-3 text-yellow-400" />}
-                          {actor.streakDays >= 3 && <Flame className="w-3 h-3 text-orange-500" />}
-                        </div>
-                        {actor.username && (
-                          <span className="text-[9px] font-bold text-zinc-600 uppercase tracking-widest">@{actor.username}</span>
-                        )}
+                        <h3 className="text-2xl font-black uppercase tracking-tighter leading-none">{actor.name}</h3>
+                        <p className="text-[10px] font-black uppercase tracking-widest text-zinc-600 mt-2">@{actor.username || 'AGENT'}</p>
                       </div>
                     </div>
                     <div className="text-right">
-                      <span className="font-black tabular-nums text-brand-red-neon text-lg">{actor.score.toLocaleString()}</span>
-                      <span className="text-[8px] font-black text-zinc-600 ml-1">LMN</span>
+                      <span className="text-3xl font-black text-brand-red-neon tabular-nums">{actor.score.toLocaleString()}</span>
+                      <p className="text-[8px] font-black text-zinc-700 uppercase tracking-widest">ACCUMULATED_LMN</p>
                     </div>
                   </div>
                 ))}
               </div>
-            ) : (
-              <div className="text-center py-12">
-                <Trophy className="w-8 h-8 text-zinc-800 mx-auto mb-4" />
-                <p className="text-zinc-700 font-black uppercase tracking-widest text-[10px]">NO RANKED USERS YET</p>
-              </div>
-            )}
-          </section>
-
-          {/* Notification Preview */}
-          <section className="glass-panel brutal-border-red p-10 clip-brutal-tr relative overflow-hidden">
-            <div className="flex items-center justify-between mb-8 border-b border-zinc-900 pb-6">
-              <div className="flex items-center gap-4">
-                <Bell className="w-6 h-6 text-brand-red-neon" />
-                <h3 className="font-black uppercase tracking-[0.4em] text-[10px]">LATEST_UPDATES</h3>
-              </div>
-              <button 
-                onClick={() => router.push('/dashboard/notifications')}
-                className="text-zinc-600 hover:text-brand-red-neon font-black uppercase tracking-[0.3em] text-[10px] flex items-center gap-2 transition-colors cursor-pointer"
-              >
-                VIEW ALL <ChevronRight className="w-3 h-3" />
-              </button>
             </div>
-            
-            {data.notifications && data.notifications.length > 0 ? (
-              <div className="space-y-4">
-                {data.notifications.slice(0, 3).map((notif: any) => (
-                  <div 
-                    key={notif.id}
-                    onClick={() => router.push('/dashboard/notifications')}
-                    className={`p-5 brutal-border transition-all cursor-pointer group relative ${
-                      notif.priority === 'VERY IMPORTANT' 
-                        ? 'border-brand-red-neon bg-brand-red-neon/10 hover:bg-brand-red-neon/20' 
-                        : notif.priority === 'IMPORTANT'
-                        ? 'border-yellow-500/50 bg-yellow-500/5 hover:bg-yellow-500/10'
-                        : 'border-zinc-800 bg-zinc-950/50 hover:border-zinc-600'
-                    }`}
-                  >
-                    {!notif.read && (
-                      <div className="absolute top-0 left-0 w-1 h-full bg-brand-red-neon" />
-                    )}
-                    <div className="flex items-start gap-4">
-                      <div className={`p-2 shrink-0 ${
-                        notif.priority === 'VERY IMPORTANT' ? 'bg-brand-red-neon/20' : 'bg-zinc-900'
-                      }`}>
-                        {notif.priority === 'VERY IMPORTANT' 
-                          ? <AlertTriangle className="w-4 h-4 text-brand-red-neon" />
-                          : <Bell className="w-4 h-4 text-zinc-500" />
-                        }
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-3 mb-2">
-                          <span className={`px-2 py-0.5 text-[7px] font-black uppercase tracking-widest text-white ${
-                            notif.priority === 'VERY IMPORTANT' ? 'bg-brand-red-neon' : notif.priority === 'IMPORTANT' ? 'bg-yellow-500' : 'bg-zinc-600'
-                          }`}>
-                            {notif.priority}
-                          </span>
-                          {!notif.read && <span className="w-1.5 h-1.5 rounded-full bg-brand-red-neon animate-pulse" />}
-                        </div>
-                        <h4 className="text-sm font-black uppercase tracking-tighter group-hover:text-brand-red-neon transition-colors">{notif.title}</h4>
-                        <p className="text-[10px] text-zinc-600 font-bold mt-1 line-clamp-2">{notif.body}</p>
-                      </div>
-                    </div>
-                  </div>
-                ))}
+          ) : (
+            <div className="flex flex-col items-center justify-center h-[60vh] opacity-50 animate-in fade-in duration-500">
+              <div className="w-24 h-24 bg-zinc-950 brutal-border-red flex items-center justify-center mb-8 rotate-45">
+                <Zap className="w-12 h-12 text-brand-red-neon -rotate-45" />
               </div>
-            ) : (
-              <div className="text-center py-12">
-                <Bell className="w-8 h-8 text-zinc-800 mx-auto mb-4" />
-                <p className="text-zinc-700 font-black uppercase tracking-widest text-[10px]">NO SIGNALS YET</p>
-              </div>
-            )}
-          </section>
-
-        </div>
-
-        {/* RIGHT COLUMN: OPERATIONS */}
-        <div className="lg:col-span-8 flex flex-col gap-12">
-          
-          {/* Action Hub */}
-          <section className="w-full">
-            <button 
-              onClick={handleUploadClick}
-              disabled={uploading}
-              className={`w-full relative group p-12 md:p-24 text-left overflow-hidden flex flex-col md:flex-row items-start md:items-center justify-between gap-12 transition-all duration-700 cursor-pointer ${
-                uploading ? 'bg-zinc-950 border-2 border-brand-red-deep' : 'bg-brand-red-neon text-white clip-brutal-hero-primary shadow-[0_0_60px_rgba(255,49,49,0.3)] hover:shadow-[0_0_100px_rgba(255,49,49,0.5)]'
-              }`}
-            >
-              {uploading && (
-                <div 
-                  className="absolute top-0 left-0 h-full bg-brand-red-neon opacity-30 z-0 transition-all duration-300"
-                  style={{ width: `${uploadProgress}%` }}
-                />
-              )}
-              
-              <div className="relative z-10 max-w-2xl">
-                <div className="flex items-center gap-4 mb-6">
-                  <div className="w-12 h-[2px] bg-white opacity-60" />
-                  <p className="font-black uppercase tracking-[0.5em] text-[10px] text-white/70">
-                    {uploading ? "UPLINK_ESTABLISHED" : ""}
-                  </p>
-                </div>
-                <h2 className="text-6xl md:text-9xl font-black uppercase tracking-tighter leading-[0.8] text-white">
-                  {uploading ? `SYNCING ${uploadProgress}%` : "UPLOAD AUDITION"}
-                </h2>
-                <p className="font-black uppercase tracking-widest mt-8 text-sm text-white/80 max-w-lg">
-                  {uploading ? "Transferring raw talent packets to the MM8 decentralized storage layer." : "Submit your latest performance. Our AI agents will match you directly to the pipeline."}
-                </p>
-              </div>
-
-              {!uploading && (
-                <div className="relative z-10 w-32 h-32 bg-white flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform duration-500 clip-brutal-tr shadow-2xl">
-                  <PlayCircle className="w-16 h-16 text-brand-red-neon" />
-                </div>
-              )}
-              
-              <div className="absolute right-[-30px] bottom-[-30px] text-[20rem] font-black text-black opacity-10 pointer-events-none group-hover:opacity-20 transition-opacity uppercase leading-none">
-                RAW
-              </div>
-            </button>
-          </section>
-
-          {/* AI Matching Grid */}
-          {data.roles.length > 0 && (
-          <section className="flex-1 flex flex-col min-h-0 mt-8">
-            <div className="flex items-end justify-between mb-12 px-2">
-              <div className="flex items-center gap-6">
-                <div className="p-4 bg-brand-red-neon/10 brutal-border-red clip-brutal-slant">
-                  <Star className="w-8 h-8 text-brand-red-neon" />
-                </div>
-                <div>
-                  <h2 className="text-5xl font-black uppercase tracking-tighter leading-none">AGENTIC MATCHES</h2>
-                  <p className="text-[10px] font-black uppercase tracking-[0.4em] text-zinc-600 mt-2">REAL_TIME_PIPELINE_SYNC</p>
-                </div>
-              </div>
-              <button className="text-zinc-600 hover:text-brand-red-neon font-black uppercase tracking-[0.3em] text-[10px] flex items-center gap-3 transition-all border-b border-transparent hover:border-brand-red-neon pb-2 cursor-pointer">
-                FULL REGISTRY <ChevronRight className="w-4 h-4" />
-              </button>
+              <h2 className="text-4xl font-black uppercase tracking-widest text-center">{currentView} // MODULE</h2>
+              <p className="text-sm tracking-widest uppercase text-brand-red-neon mt-4 text-center">CONSTRUCTION_PENDING // PIPELINE_ACTIVE</p>
+              <button onClick={() => setCurrentView('OVERVIEW')} className="mt-12 px-8 py-4 bg-white text-black font-black uppercase tracking-widest text-[10px] hover:bg-brand-red-neon hover:text-white transition-all">RETURN_TO_BASE</button>
             </div>
-
-            <div className="flex-1 w-full overflow-x-auto snap-x snap-mandatory hide-scrollbar flex gap-10 pb-12">
-              {data.roles.map((role: any, index: number) => (
-                <motion.div
-                  key={role.id}
-                  initial={{ opacity: 0, x: 50 }}
-                  whileInView={{ opacity: 1, x: 0 }}
-                  transition={{ delay: index * 0.1 }}
-                  className={`snap-center shrink-0 w-[350px] md:w-[480px] glass-panel brutal-border-red p-10 flex flex-col hover:bg-brand-red-neon/5 transition-all group cursor-pointer ${
-                    index % 2 === 0 ? 'clip-brutal-tl' : 'clip-brutal-tr'
-                  }`}
-                >
-                  <div className="flex justify-between items-start mb-10">
-                    <div className="bg-brand-red-neon text-white font-black px-6 py-3 uppercase text-[10px] tracking-[0.2em] shadow-[0_0_20px_rgba(255,49,49,0.4)] clip-brutal-slant">
-                      {role.match}% MATCH
-                    </div>
-                    <div className="text-right">
-                      <p className="text-zinc-600 font-black uppercase tracking-widest text-[9px]">EXPIRES_IN</p>
-                      <span className="text-white font-black uppercase tracking-widest text-xs tabular-nums">
-                        {role.deadline}
-                      </span>
-                    </div>
-                  </div>
-                  
-                  <div className="flex-1">
-                    <div className="flex items-center gap-3 mb-3">
-                      <div className="w-2 h-2 bg-brand-red-neon rounded-full" />
-                      <p className="text-zinc-500 font-black uppercase tracking-[0.3em] text-[10px]">{role.project}</p>
-                    </div>
-                    <h3 className="text-5xl font-black uppercase tracking-tighter leading-[0.9] mb-8 group-hover:text-brand-red-neon transition-colors">
-                      {role.title}
-                    </h3>
-                    <div className="flex flex-wrap gap-3 mt-auto">
-                      {role.tags.map((tag: string) => (
-                        <span key={tag} className="border border-zinc-800 text-zinc-500 px-4 py-2 text-[9px] font-black uppercase tracking-widest group-hover:border-brand-red-neon/30 group-hover:text-brand-red-neon transition-colors">
-                          {tag}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-
-                  <div className="mt-12 border-t border-zinc-900 pt-8 flex justify-between items-center group-hover:border-brand-red-neon/30 transition-all">
-                    <span className="font-black text-[10px] uppercase tracking-[0.3em] text-zinc-600 group-hover:text-white transition-colors">ANALYZE_SPECIFICATIONS</span>
-                    <div className="w-12 h-12 bg-zinc-950 brutal-border-red flex items-center justify-center group-hover:bg-brand-red-neon transition-all">
-                      <ChevronRight className="w-6 h-6 text-brand-red-neon group-hover:text-white transition-all" />
-                    </div>
-                  </div>
-                </motion.div>
-              ))}
-            </div>
-          </section>
           )}
 
-      </div>
-      </div>
-      </div>
-      ) : currentView === 'SETTINGS' ? (
-        <div className="flex flex-col items-center justify-center h-[60vh] opacity-50 animate-in fade-in duration-500">
-           <Settings className="w-16 h-16 text-brand-red-neon mb-4" />
-           <h2 className="text-2xl font-black uppercase tracking-widest text-center">SYSTEM CONFIGURATION</h2>
-           <p className="text-xs tracking-widest uppercase text-zinc-500 mt-2 text-center">Check the overlay modal.</p>
-           <button onClick={() => setShowSettings(true)} className="mt-8 px-6 py-3 bg-zinc-900 hover:bg-brand-red-neon transition-colors font-black text-xs uppercase tracking-widest border border-zinc-800">OPEN MODAL</button>
-        </div>
-      ) : (
-        <div className="flex flex-col items-center justify-center h-[60vh] opacity-50 animate-in fade-in duration-500">
-           <h2 className="text-4xl font-black uppercase tracking-widest text-center">{currentView} // MODULE</h2>
-           <p className="text-sm tracking-widest uppercase text-brand-red-neon mt-4 text-center">CONSTRUCTION_PENDING</p>
-        </div>
-      )}
-
-      </div> {/* Close Content Area */}
+        </div> {/* Close Content Area */}
       </div> {/* Close Main Wrapper */}
 
-      {/* Settings Modal */}
       <AnimatePresence>
-        {showSettings && (
-          <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 overflow-hidden">
-            <motion.div 
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="absolute inset-0 bg-black/95 backdrop-blur-xl"
-              onClick={() => setShowSettings(false)}
-            />
-            
-            <motion.div 
-              initial={{ opacity: 0, y: 50, scale: 0.95 }}
-              animate={{ opacity: 1, y: 0, scale: 1 }}
-              exit={{ opacity: 0, y: 50, scale: 0.95 }}
-              className="w-full max-w-4xl h-[85vh] glass-panel brutal-border-red relative z-10 flex flex-col overflow-hidden"
-            >
-              {/* Modal Header */}
-              <div className="p-8 border-b border-zinc-900 flex justify-between items-center shrink-0">
-                <div>
-                  <h2 className="text-4xl md:text-5xl font-black uppercase tracking-tighter leading-none">SYSTEM CONFIG</h2>
-                  <p className="text-[10px] font-black uppercase tracking-[0.4em] text-brand-red-neon mt-2">USER_IDENTITY_AND_PROTOCOLS</p>
-                </div>
-                <button 
-                  onClick={() => setShowSettings(false)}
-                  className="p-4 bg-zinc-900 hover:bg-brand-red-neon transition-all cursor-pointer group"
-                >
-                  <X className="w-6 h-6 text-zinc-500 group-hover:text-white" />
-                </button>
-              </div>
+          {showSettings && (
+            <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 overflow-hidden">
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                className="absolute inset-0 bg-black/95 backdrop-blur-xl"
+                onClick={() => setShowSettings(false)}
+              />
 
-              {/* Modal Body - Scrollable */}
-              <div 
-                className="flex-1 overflow-y-auto p-8 md:p-12 custom-scrollbar space-y-16"
-                data-lenis-prevent
+              <motion.div
+                initial={{ opacity: 0, y: 50, scale: 0.95 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, y: 50, scale: 0.95 }}
+                className="w-full max-w-4xl h-[85vh] glass-panel brutal-border-red relative z-10 flex flex-col overflow-hidden"
               >
-                
-                {/* Section 1: Biometric Identity */}
-                <section>
-                  <div className="flex items-center gap-4 mb-8">
-                    <div className="w-1 h-8 bg-brand-red-neon" />
-                    <h3 className="text-xl font-black uppercase tracking-[0.2em]">01_BIOMETRIC_DATA</h3>
+                {/* Modal Header */}
+                <div className="p-8 border-b border-zinc-900 flex justify-between items-center shrink-0">
+                  <div>
+                    <h2 className="text-4xl md:text-5xl font-black uppercase tracking-tighter leading-none">SYSTEM CONFIG</h2>
+                    <p className="text-[10px] font-black uppercase tracking-[0.4em] text-brand-red-neon mt-2">USER_IDENTITY_AND_PROTOCOLS</p>
                   </div>
-                  
-                  <div className="flex flex-col md:flex-row gap-12 items-start">
-                    {/* PFP Change */}
-                    <div className="relative group">
-                      <div className="w-48 h-48 brutal-border-red overflow-hidden bg-zinc-900 relative">
-                        {data.profile.avatarUrl ? (
-                          <img 
-                            src={data.profile.avatarUrl} 
-                            alt="Identity" 
-                            className={`w-full h-full object-cover transition-all duration-700 ${isUploadingPFP ? 'opacity-30' : 'grayscale group-hover:grayscale-0'}`} 
-                          />
-                        ) : (
-                          <div className="w-full h-full flex items-center justify-center text-zinc-800 font-black text-4xl">NO_IMG</div>
-                        )}
-                        {isUploadingPFP && (
-                          <div className="absolute inset-0 flex items-center justify-center">
-                            <div className="w-10 h-10 border-2 border-brand-red-neon border-t-transparent rounded-full animate-spin" />
-                          </div>
-                        )}
-                      </div>
-                      
-                      <div className="mt-4 flex flex-col gap-2">
-                        <label className="flex items-center justify-center gap-2 py-3 bg-zinc-900 text-white font-black uppercase tracking-widest text-[9px] brutal-border border-zinc-800 hover:border-brand-red-neon transition-all cursor-pointer">
-                          <input type="file" className="hidden" accept="image/*" onChange={handlePFPChange} disabled={isUploadingPFP} />
-                          <Upload className="w-3 h-3" /> UPLOAD NEW
-                        </label>
-                        {data.profile.avatarUrl && (
-                          <button 
-                            onClick={handleRemovePFP}
-                            className="flex items-center justify-center gap-2 py-3 bg-transparent text-brand-red-neon font-black uppercase tracking-widest text-[9px] brutal-border border-brand-red-deep hover:bg-brand-red-neon hover:text-white transition-all cursor-pointer"
-                          >
-                            <Trash2 className="w-3 h-3" /> REMOVE
-                          </button>
-                        )}
-                      </div>
+                  <button
+                    onClick={() => setShowSettings(false)}
+                    className="p-4 bg-zinc-900 hover:bg-brand-red-neon transition-all cursor-pointer group"
+                  >
+                    <X className="w-6 h-6 text-zinc-500 group-hover:text-white" />
+                  </button>
+                </div>
+
+                {/* Modal Body - Scrollable */}
+                <div
+                  className="flex-1 overflow-y-auto p-8 md:p-12 custom-scrollbar space-y-16"
+                  data-lenis-prevent
+                >
+
+                  {/* Section 1: Biometric Identity */}
+                  <section>
+                    <div className="flex items-center gap-4 mb-8">
+                      <div className="w-1 h-8 bg-brand-red-neon" />
+                      <h3 className="text-xl font-black uppercase tracking-[0.2em]">01_BIOMETRIC_DATA</h3>
                     </div>
 
-                    <div className="flex-1 space-y-10 w-full">
-                      {/* Username Update */}
-                      <div className="flex flex-col gap-4">
-                        <label className="text-[10px] font-black uppercase tracking-[0.4em] text-zinc-500">Update Username</label>
-                        <div className="relative">
-                          <input 
-                            type="text" 
-                            className={`w-full bg-zinc-950 text-white font-black text-2xl px-8 py-5 border-2 outline-none transition-all uppercase clip-brutal-tl ${
-                              usernameStatus === "available" ? "border-green-500" : 
-                              usernameStatus === "taken" || usernameStatus === "invalid" ? "border-brand-red-neon" : "border-zinc-800"
-                            }`}
-                            placeholder={data.profile.username || "USERNAME"}
-                            value={newUsername}
-                            onChange={(e) => {
-                              const val = e.target.value.toLowerCase();
-                              setNewUsername(val);
-                              checkUsername(val);
-                            }}
-                          />
-                          {usernameStatus !== "idle" && (
-                            <div className="absolute right-4 top-1/2 -translate-y-1/2 text-[9px] font-black uppercase tracking-widest">
-                              {usernameStatus === "available" && <span className="text-green-500">AVAILABLE</span>}
-                              {usernameStatus === "taken" && <span className="text-brand-red-neon">TAKEN</span>}
+                    <div className="flex flex-col md:flex-row gap-12 items-start">
+                      {/* PFP Change */}
+                      <div className="relative group">
+                        <div className="w-48 h-48 brutal-border-red overflow-hidden bg-zinc-900 relative">
+                          {data.profile.avatarUrl ? (
+                            <img
+                              src={data.profile.avatarUrl}
+                              alt="Identity"
+                              className={`w-full h-full object-cover transition-all duration-700 ${isUploadingPFP ? 'opacity-30' : 'grayscale group-hover:grayscale-0'}`}
+                            />
+                          ) : (
+                            <div className="w-full h-full flex items-center justify-center text-zinc-800 font-black text-4xl">NO_IMG</div>
+                          )}
+                          {isUploadingPFP && (
+                            <div className="absolute inset-0 flex items-center justify-center">
+                              <div className="w-10 h-10 border-2 border-brand-red-neon border-t-transparent rounded-full animate-spin" />
                             </div>
+                          )}
+                        </div>
+
+                        <div className="mt-4 flex flex-col gap-2">
+                          <label className="flex items-center justify-center gap-2 py-3 bg-zinc-900 text-white font-black uppercase tracking-widest text-[9px] brutal-border border-zinc-800 hover:border-brand-red-neon transition-all cursor-pointer">
+                            <input type="file" className="hidden" accept="image/*" onChange={handlePFPChange} disabled={isUploadingPFP} />
+                            <Upload className="w-3 h-3" /> UPLOAD NEW
+                          </label>
+                          {data.profile.avatarUrl && (
+                            <button
+                              onClick={handleRemovePFP}
+                              className="flex items-center justify-center gap-2 py-3 bg-transparent text-brand-red-neon font-black uppercase tracking-widest text-[9px] brutal-border border-brand-red-deep hover:bg-brand-red-neon hover:text-white transition-all cursor-pointer"
+                            >
+                              <Trash2 className="w-3 h-3" /> REMOVE
+                            </button>
                           )}
                         </div>
                       </div>
 
-                      {/* Password Update */}
+                      <div className="flex-1 space-y-10 w-full">
+                        {/* Username Update */}
+                        <div className="flex flex-col gap-4">
+                          <label className="text-[10px] font-black uppercase tracking-[0.4em] text-zinc-500">Update Username</label>
+                          <div className="relative">
+                            <input
+                              type="text"
+                              className={`w-full bg-zinc-950 text-white font-black text-2xl px-8 py-5 border-2 outline-none transition-all uppercase clip-brutal-tl ${usernameStatus === "available" ? "border-green-500" :
+                                  usernameStatus === "taken" || usernameStatus === "invalid" ? "border-brand-red-neon" : "border-zinc-800"
+                                }`}
+                              placeholder={data.profile.username || "USERNAME"}
+                              value={newUsername}
+                              onChange={(e) => {
+                                const val = e.target.value.toLowerCase();
+                                setNewUsername(val);
+                                checkUsername(val);
+                              }}
+                            />
+                            {usernameStatus !== "idle" && (
+                              <div className="absolute right-4 top-1/2 -translate-y-1/2 text-[9px] font-black uppercase tracking-widest">
+                                {usernameStatus === "available" && <span className="text-green-500">AVAILABLE</span>}
+                                {usernameStatus === "taken" && <span className="text-brand-red-neon">TAKEN</span>}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Password Update */}
+                        <div className="flex flex-col gap-4">
+                          <label className="text-[10px] font-black uppercase tracking-[0.4em] text-zinc-500">Update Access Code</label>
+                          <input
+                            type="password"
+                            className={`w-full bg-zinc-950 text-white font-black text-2xl px-8 py-5 border-2 outline-none transition-all uppercase clip-brutal-br ${newPassword && !validatePassword(newPassword) ? "border-brand-red-neon" :
+                                newPassword && validatePassword(newPassword) ? "border-green-500" : "border-zinc-800"
+                              }`}
+                            placeholder="********"
+                            value={newPassword}
+                            onChange={(e) => setNewPassword(e.target.value)}
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  </section>
+
+                  {/* Section 2: Ambition & Casting */}
+                  <section>
+                    <div className="flex items-center gap-4 mb-8">
+                      <div className="w-1 h-8 bg-brand-red-neon" />
+                      <h3 className="text-xl font-black uppercase tracking-[0.2em]">02_PROFESSIONAL_PREFS</h3>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
+                      {/* Objective Selection */}
                       <div className="flex flex-col gap-4">
-                        <label className="text-[10px] font-black uppercase tracking-[0.4em] text-zinc-500">Update Access Code</label>
-                        <input 
-                          type="password" 
-                          className={`w-full bg-zinc-950 text-white font-black text-2xl px-8 py-5 border-2 outline-none transition-all uppercase clip-brutal-br ${
-                            newPassword && !validatePassword(newPassword) ? "border-brand-red-neon" : 
-                            newPassword && validatePassword(newPassword) ? "border-green-500" : "border-zinc-800"
-                          }`}
-                          placeholder="********"
-                          value={newPassword}
-                          onChange={(e) => setNewPassword(e.target.value)}
-                        />
-                      </div>
-                    </div>
-                  </div>
-                </section>
-
-                {/* Section 2: Ambition & Casting */}
-                <section>
-                  <div className="flex items-center gap-4 mb-8">
-                    <div className="w-1 h-8 bg-brand-red-neon" />
-                    <h3 className="text-xl font-black uppercase tracking-[0.2em]">02_PROFESSIONAL_PREFS</h3>
-                  </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
-                    {/* Objective Selection */}
-                    <div className="flex flex-col gap-4">
-                      <label className="text-[10px] font-black uppercase tracking-[0.4em] text-zinc-500">Primary Objective</label>
-                      <div className="grid grid-cols-2 gap-3">
-                        {DESIRE_LIST.map((opt) => (
-                          <button
-                            key={opt}
-                            onClick={() => setPrefDesire(opt)}
-                            className={`p-4 text-[10px] font-black uppercase tracking-widest brutal-border transition-all text-center ${
-                              prefDesire === opt ? 'bg-brand-red-neon text-white border-brand-red-neon' : 'bg-zinc-900 text-zinc-500 border-zinc-800 hover:border-zinc-600'
-                            }`}
-                          >
-                            {opt}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-
-                    {/* Language Selection */}
-                    <div className="flex flex-col gap-4">
-                      <label className="text-[10px] font-black uppercase tracking-[0.4em] text-zinc-500">Languages</label>
-                      <div className="flex flex-wrap gap-3">
-                        {LANGUAGES_LIST.map((lang) => {
-                          const isSelected = prefLanguages.includes(lang);
-                          return (
+                        <label className="text-[10px] font-black uppercase tracking-[0.4em] text-zinc-500">Primary Objective</label>
+                        <div className="grid grid-cols-2 gap-3">
+                          {DESIRE_LIST.map((opt) => (
                             <button
-                              key={lang}
-                              onClick={() => {
-                                setPrefLanguages(prev => 
-                                  prev.includes(lang) ? prev.filter(l => l !== lang) : [...prev, lang]
-                                );
-                              }}
-                              className={`px-5 py-3 text-[10px] font-black uppercase tracking-widest brutal-border transition-all ${
-                                isSelected ? 'bg-white text-black border-white shadow-[0_0_20px_rgba(255,255,255,0.2)]' : 'bg-zinc-900 text-zinc-600 border-zinc-800 hover:border-zinc-700'
-                              }`}
+                              key={opt}
+                              onClick={() => setPrefDesire(opt)}
+                              className={`p-4 text-[10px] font-black uppercase tracking-widest brutal-border transition-all text-center ${prefDesire === opt ? 'bg-brand-red-neon text-white border-brand-red-neon' : 'bg-zinc-900 text-zinc-500 border-zinc-800 hover:border-zinc-600'
+                                }`}
                             >
-                              {lang}
+                              {opt}
                             </button>
-                          );
-                        })}
+                          ))}
+                        </div>
                       </div>
-                    </div>
 
-                    {/* Archetype Selection */}
-                    <div className="flex flex-col gap-4">
-                      <label className="text-[10px] font-black uppercase tracking-[0.4em] text-zinc-500">Core Archetypes</label>
-                      <div className="flex flex-wrap gap-3">
-                        {PERSONALITIES_LIST.map((arch) => {
-                          const isSelected = prefArchetypes.includes(arch);
-                          return (
+                      {/* Language Selection */}
+                      <div className="flex flex-col gap-4">
+                        <label className="text-[10px] font-black uppercase tracking-[0.4em] text-zinc-500">Languages</label>
+                        <div className="flex flex-wrap gap-3">
+                          {LANGUAGES_LIST.map((lang) => {
+                            const isSelected = prefLanguages.includes(lang);
+                            return (
+                              <button
+                                key={lang}
+                                onClick={() => {
+                                  setPrefLanguages(prev =>
+                                    prev.includes(lang) ? prev.filter(l => l !== lang) : [...prev, lang]
+                                  );
+                                }}
+                                className={`px-5 py-3 text-[10px] font-black uppercase tracking-widest brutal-border transition-all ${isSelected ? 'bg-white text-black border-white shadow-[0_0_20px_rgba(255,255,255,0.2)]' : 'bg-zinc-900 text-zinc-600 border-zinc-800 hover:border-zinc-700'
+                                  }`}
+                              >
+                                {lang}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+
+                      {/* Archetype Selection */}
+                      <div className="flex flex-col gap-4">
+                        <label className="text-[10px] font-black uppercase tracking-[0.4em] text-zinc-500">Core Archetypes</label>
+                        <div className="flex flex-wrap gap-3">
+                          {PERSONALITIES_LIST.map((arch) => {
+                            const isSelected = prefArchetypes.includes(arch);
+                            return (
+                              <button
+                                key={arch}
+                                onClick={() => {
+                                  setPrefArchetypes(prev =>
+                                    prev.includes(arch) ? prev.filter(a => a !== arch) : [...prev, arch]
+                                  );
+                                }}
+                                className={`px-5 py-3 text-[10px] font-black uppercase tracking-widest brutal-border transition-all ${isSelected ? 'bg-brand-red-deep text-white border-brand-red-neon' : 'bg-zinc-900 text-zinc-600 border-zinc-800 hover:border-zinc-700'
+                                  }`}
+                              >
+                                {arch}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+
+                      {/* Availability Selection */}
+                      <div className="flex flex-col gap-4">
+                        <label className="text-[10px] font-black uppercase tracking-[0.4em] text-zinc-500">Opportunity Readiness</label>
+                        <div className="space-y-3">
+                          {AVAILABILITY_LABELS.map((label) => (
                             <button
-                              key={arch}
-                              onClick={() => {
-                                setPrefArchetypes(prev => 
-                                  prev.includes(arch) ? prev.filter(a => a !== arch) : [...prev, arch]
-                                );
-                              }}
-                              className={`px-5 py-3 text-[10px] font-black uppercase tracking-widest brutal-border transition-all ${
-                                isSelected ? 'bg-brand-red-deep text-white border-brand-red-neon' : 'bg-zinc-900 text-zinc-600 border-zinc-800 hover:border-zinc-700'
-                              }`}
+                              key={label}
+                              onClick={() => setPrefAvailability(label)}
+                              className={`w-full p-5 text-[10px] font-black uppercase tracking-widest brutal-border transition-all text-left flex items-center justify-between ${prefAvailability === label ? 'bg-white/5 border-brand-red-neon text-white' : 'bg-zinc-900 border-zinc-800 text-zinc-600 hover:border-zinc-700'
+                                }`}
                             >
-                              {arch}
+                              {label}
+                              {prefAvailability === label && <Check className="w-4 h-4 text-brand-red-neon" />}
                             </button>
-                          );
-                        })}
+                          ))}
+                        </div>
                       </div>
                     </div>
+                  </section>
 
-                    {/* Availability Selection */}
+                  {/* Section 3: Geographic Parameters */}
+                  <section>
+                    <div className="flex items-center gap-4 mb-8">
+                      <div className="w-1 h-8 bg-brand-red-neon" />
+                      <h3 className="text-xl font-black uppercase tracking-[0.2em]">03_LOC_COORDINATES</h3>
+                    </div>
+
                     <div className="flex flex-col gap-4">
-                      <label className="text-[10px] font-black uppercase tracking-[0.4em] text-zinc-500">Opportunity Readiness</label>
-                      <div className="space-y-3">
-                        {AVAILABILITY_LABELS.map((label) => (
-                          <button
-                            key={label}
-                            onClick={() => setPrefAvailability(label)}
-                            className={`w-full p-5 text-[10px] font-black uppercase tracking-widest brutal-border transition-all text-left flex items-center justify-between ${
-                              prefAvailability === label ? 'bg-white/5 border-brand-red-neon text-white' : 'bg-zinc-900 border-zinc-800 text-zinc-600 hover:border-zinc-700'
-                            }`}
-                          >
-                            {label}
-                            {prefAvailability === label && <Check className="w-4 h-4 text-brand-red-neon" />}
-                          </button>
-                        ))}
-                      </div>
+                      <label className="text-[10px] font-black uppercase tracking-[0.4em] text-zinc-500">Deployment Base (City, State, Country)</label>
+                      <input
+                        type="text"
+                        className="w-full bg-zinc-950 text-white font-black text-2xl px-8 py-5 border-2 border-zinc-800 outline-none focus:border-brand-red-neon transition-all uppercase clip-brutal-tl"
+                        value={prefLocation}
+                        onChange={(e) => setPrefLocation(e.target.value)}
+                      />
+                      <p className="text-[9px] text-zinc-600 font-black uppercase tracking-widest ml-2 italic">Format: CITY, STATE, COUNTRY (e.g., MUMBAI, MAHARASHTRA, INDIA)</p>
                     </div>
-                  </div>
-                </section>
+                  </section>
 
-                {/* Section 3: Geographic Parameters */}
-                <section>
-                  <div className="flex items-center gap-4 mb-8">
-                    <div className="w-1 h-8 bg-brand-red-neon" />
-                    <h3 className="text-xl font-black uppercase tracking-[0.2em]">03_LOC_COORDINATES</h3>
-                  </div>
-                  
-                  <div className="flex flex-col gap-4">
-                    <label className="text-[10px] font-black uppercase tracking-[0.4em] text-zinc-500">Deployment Base (City, State, Country)</label>
-                    <input 
-                      type="text" 
-                      className="w-full bg-zinc-950 text-white font-black text-2xl px-8 py-5 border-2 border-zinc-800 outline-none focus:border-brand-red-neon transition-all uppercase clip-brutal-tl"
-                      value={prefLocation}
-                      onChange={(e) => setPrefLocation(e.target.value)}
-                    />
-                    <p className="text-[9px] text-zinc-600 font-black uppercase tracking-widest ml-2 italic">Format: CITY, STATE, COUNTRY (e.g., MUMBAI, MAHARASHTRA, INDIA)</p>
-                  </div>
-                </section>
+                </div>
 
-              </div>
+                {/* Modal Footer */}
+                <div className="p-8 border-t border-zinc-900 bg-zinc-950/50 flex flex-col md:flex-row gap-6 shrink-0">
+                  <button
+                    onClick={handleUpdateSettings}
+                    disabled={settingsLoading || (newUsername.length > 0 && usernameStatus !== "available") || (newPassword.length > 0 && !validatePassword(newPassword))}
+                    className="flex-1 py-8 bg-brand-red-neon text-white font-black text-3xl uppercase tracking-tighter hover:bg-white hover:text-black transition-all brutal-shadow disabled:opacity-20 cursor-pointer"
+                  >
+                    {settingsLoading ? "PROCESSING..." : "UPDATE HUD PROTOCOLS"}
+                  </button>
+                  <button
+                    onClick={handleLogout}
+                    className="px-10 py-8 glass-panel brutal-border-red text-brand-red-neon font-black text-xs uppercase tracking-widest hover:bg-brand-red-neon hover:text-white transition-all cursor-pointer flex items-center justify-center gap-3"
+                  >
+                    <LogOut className="w-5 h-5" />
+                    TERMINATE
+                  </button>
+                </div>
 
-              {/* Modal Footer */}
-              <div className="p-8 border-t border-zinc-900 bg-zinc-950/50 flex flex-col md:flex-row gap-6 shrink-0">
-                <button 
-                  onClick={handleUpdateSettings}
-                  disabled={settingsLoading || (newUsername.length > 0 && usernameStatus !== "available") || (newPassword.length > 0 && !validatePassword(newPassword))}
-                  className="flex-1 py-8 bg-brand-red-neon text-white font-black text-3xl uppercase tracking-tighter hover:bg-white hover:text-black transition-all brutal-shadow disabled:opacity-20 cursor-pointer"
-                >
-                  {settingsLoading ? "PROCESSING..." : "UPDATE HUD PROTOCOLS"}
-                </button>
-                <button 
-                  onClick={handleLogout}
-                  className="px-10 py-8 glass-panel brutal-border-red text-brand-red-neon font-black text-xs uppercase tracking-widest hover:bg-brand-red-neon hover:text-white transition-all cursor-pointer flex items-center justify-center gap-3"
-                >
-                  <LogOut className="w-5 h-5" />
-                  TERMINATE
-                </button>
-              </div>
+              </motion.div>
+            </div>
+          )}
+        </AnimatePresence>
 
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
-
-      {/* Crop Modal */}
-      <AnimatePresence>
-        {showCropModal && cropImage && (
-          <div className="fixed inset-0 z-[200] flex items-center justify-center p-6">
-            <motion.div 
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="absolute inset-0 bg-black/95 backdrop-blur-2xl"
-            />
-            <motion.div 
-              initial={{ opacity: 0, scale: 0.9 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.9 }}
-              className="w-full max-w-2xl aspect-square glass-panel brutal-border-red relative z-10 flex flex-col"
-            >
-              <div className="flex-1 relative bg-zinc-950">
-                <Cropper
-                  image={cropImage}
-                  crop={crop}
-                  zoom={zoom}
-                  aspect={1}
-                  onCropChange={setCrop}
-                  onZoomChange={setZoom}
-                  onCropComplete={onCropComplete}
-                />
-              </div>
-              <div className="p-8 bg-zinc-950 flex flex-col gap-6">
-                <div className="flex items-center gap-6">
-                  <span className="text-[10px] font-black text-zinc-500 uppercase tracking-widest w-20">ZOOM_LVL</span>
-                  <input 
-                    type="range" 
-                    min={1} 
-                    max={3} 
-                    step={0.1} 
-                    value={zoom} 
-                    onChange={(e) => setZoom(Number(e.target.value))}
-                    className="flex-1 accent-brand-red-neon"
+        {/* Crop Modal */}
+        <AnimatePresence>
+          {showCropModal && cropImage && (
+            <div className="fixed inset-0 z-[200] flex items-center justify-center p-6">
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                className="absolute inset-0 bg-black/95 backdrop-blur-2xl"
+              />
+              <motion.div
+                initial={{ opacity: 0, scale: 0.9 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.9 }}
+                className="w-full max-w-2xl aspect-square glass-panel brutal-border-red relative z-10 flex flex-col"
+              >
+                <div className="flex-1 relative bg-zinc-950">
+                  <Cropper
+                    image={cropImage}
+                    crop={crop}
+                    zoom={zoom}
+                    aspect={1}
+                    onCropChange={setCrop}
+                    onZoomChange={setZoom}
+                    onCropComplete={onCropComplete}
                   />
                 </div>
-                <div className="flex gap-4">
-                  <button 
-                    onClick={handleApplyCrop}
-                    disabled={isUploadingPFP}
-                    className="flex-1 py-5 bg-brand-red-neon text-white font-black text-sm uppercase tracking-widest hover:bg-white hover:text-black transition-all brutal-shadow disabled:opacity-50"
-                  >
-                    {isUploadingPFP ? "PROCESSING..." : "FINALIZE BIOMETRIC CROP"}
-                  </button>
-                  <button 
-                    onClick={() => setShowCropModal(false)}
-                    className="px-8 py-5 border-2 border-zinc-800 text-zinc-500 font-black text-sm uppercase tracking-widest hover:border-brand-red-neon hover:text-white transition-all"
-                  >
-                    CANCEL
-                  </button>
+                <div className="p-8 bg-zinc-950 flex flex-col gap-6">
+                  <div className="flex items-center gap-6">
+                    <span className="text-[10px] font-black text-zinc-500 uppercase tracking-widest w-20">ZOOM_LVL</span>
+                    <input
+                      type="range"
+                      min={1}
+                      max={3}
+                      step={0.1}
+                      value={zoom}
+                      onChange={(e) => setZoom(Number(e.target.value))}
+                      className="flex-1 accent-brand-red-neon"
+                    />
+                  </div>
+                  <div className="flex gap-4">
+                    <button
+                      onClick={handleApplyCrop}
+                      disabled={isUploadingPFP}
+                      className="flex-1 py-5 bg-brand-red-neon text-white font-black text-sm uppercase tracking-widest hover:bg-white hover:text-black transition-all brutal-shadow disabled:opacity-50"
+                    >
+                      {isUploadingPFP ? "PROCESSING..." : "FINALIZE BIOMETRIC CROP"}
+                    </button>
+                    <button
+                      onClick={() => setShowCropModal(false)}
+                      className="px-8 py-5 border-2 border-zinc-800 text-zinc-500 font-black text-sm uppercase tracking-widest hover:border-brand-red-neon hover:text-white transition-all"
+                    >
+                      CANCEL
+                    </button>
+                  </div>
                 </div>
-              </div>
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
+              </motion.div>
+            </div>
+          )}
+        </AnimatePresence>
     </main>
   );
 }
