@@ -279,7 +279,7 @@ const useDashboardData = () => {
 
 export default function AgenticDashboard() {
   const router = useRouter();
-  const { data, loading } = useDashboardData();
+  const { data, loading, fetchData } = useDashboardData();
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [showSettings, setShowSettings] = useState(false);
