@@ -203,9 +203,21 @@ const useDashboardData = () => {
           opportunityReadiness: profile.opportunity_readiness || "",
         },
         missions: [
-          { label: 'UPLOAD AUDITION TAPE', reward: Math.floor(40 * multiplier), done: missionActions.includes('UPLOAD_TAPE') },
-          { label: 'COMPLETE PROFILE FIELD', reward: Math.floor(10 * multiplier), done: missionActions.includes('PROFILE_UPDATE') || missionActions.includes('ONBOARDING_COMPLETE') },
-          { label: 'DAILY LOGIN', reward: Math.floor(10 * multiplier), done: missionActions.includes('DAILY_LOGIN') },
+          { 
+            label: 'UPLOAD AUDITION TAPE', 
+            reward: Math.floor(40 * multiplier), 
+            done: missionActions.includes('UPLOAD_TAPE') || missionActions.includes('AUDITION_UPLOAD') 
+          },
+          { 
+            label: 'COMPLETE PROFILE FIELD', 
+            reward: Math.floor(10 * multiplier), 
+            done: missionActions.includes('PROFILE_UPDATE') || missionActions.includes('ONBOARDING_COMPLETE') 
+          },
+          { 
+            label: 'DAILY LOGIN', 
+            reward: Math.floor(10 * multiplier), 
+            done: missionActions.includes('DAILY_LOGIN') 
+          },
         ],
         leaderboard: (leaderboard || []).map((u: any, i: number) => ({
           rank: i + 1,
@@ -550,6 +562,9 @@ export default function AgenticDashboard() {
             p_action: 'UPLOAD_TAPE',
             p_reason: 'Audition tape uploaded'
           });
+          
+          // Force immediate re-fetch
+          await fetchData();
         }
       } catch (error: any) {
         console.error("Upload error:", error);

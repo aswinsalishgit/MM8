@@ -38,7 +38,7 @@ export async function POST(request: Request) {
     );
 
     oauth2Client.setCredentials({
-      refresh_token: process.env.GOOGLE_REFRESH_TOKEN?.replace(/"/g, ''),
+      refresh_token: process.env.GOOGLE_REFRESH_TOKEN?.replace(/['"]/g, '').trim(),
     });
 
     const { token } = await oauth2Client.getAccessToken();
@@ -78,9 +78,15 @@ export async function POST(request: Request) {
     return NextResponse.json({ uploadUrl });
   } catch (error: any) {
     console.error('MM8_DRIVE_INIT_FAILURE:', error.message || error);
+    
+    let details = error.message;
+    if (details === 'invalid_grant') {
+      details = 'Google Refresh Token expired or revoked (likely the 7-day limit for apps in Testing mode). Please regenerate GOOGLE_REFRESH_TOKEN.';
+    }
+
     return NextResponse.json({ 
       error: 'Upload Initialization Failure', 
-      details: error.message 
+      details: details 
     }, { status: 500 });
   }
 }
