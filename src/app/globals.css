@@ -179,22 +179,19 @@ body {
 }
 
 /* Brutalist specific utilities */
-/* Hide Google Translate Toolbar */
-.goog-te-banner-frame.skiptranslate,
+/* Aggressive Google Translate UI Purge */
+iframe.goog-te-banner-frame, 
 .goog-te-banner-frame,
-#goog-gt-tt,
-.goog-te-balloon-frame,
-.goog-te-menu-value {
+.goog-te-banner,
+.skiptranslate {
   display: none !important;
+  visibility: hidden !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
 }
 
 body {
-  top: 0 !important;
-}
-
-.goog-text-highlight {
-  background: none !important;
-  box-shadow: none !important;
+  top: 0px !important;
 }
 
 /* Hide Scrollbars site-wide */

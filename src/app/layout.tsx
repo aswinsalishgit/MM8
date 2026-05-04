@@ -3,6 +3,8 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import SmoothScroll from "@/components/SmoothScroll";
 import BackgroundCanvas from "@/components/BackgroundCanvas";
+import Script from "next/script";
+import TranslationBridge from "@/components/TranslationBridge";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -69,20 +71,14 @@ export default function RootLayout({
         <SmoothScroll>
           {children}
         </SmoothScroll>
-        <script dangerouslySetInnerHTML={{
-          __html: `
-            function googleTranslateElementInit() {
-              new google.translate.TranslateElement({
-                pageLanguage: 'en',
-                includedLanguages: 'en,ml,ta,hi,te,kn,es,fr,de,zh-CN,ja',
-                autoDisplay: false
-              }, 'google_translate_element');
-            }
-          `
-        }} />
-        <script src="//translate.google.com/translate_a/element.js?cb=googleTranslateElementInit" async defer />
-        <div id="google_translate_element" style={{ position: 'absolute', top: '-1000px', left: '-1000px', opacity: 0, pointerEvents: 'none', display: 'none' }} />
+        <TranslationBridge />
+        <Script 
+          src="//translate.google.com/translate_a/element.js?cb=googleTranslateElementInit" 
+          strategy="afterInteractive"
+        />
       </body>
     </html>
+  );
+}
   );
 }
