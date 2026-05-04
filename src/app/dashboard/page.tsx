@@ -1192,6 +1192,10 @@ export default function AgenticDashboard() {
                 <button
                   key={item.id}
                   onClick={() => {
+                    if (item.id === 'STANGAB') {
+                      router.push('/stangab');
+                      return;
+                    }
                     setCurrentView(item.id);
                     if (window.innerWidth <= 1024) setIsSidebarOpen(false);
                     if (item.id === 'LOGOUT') handleLogout();

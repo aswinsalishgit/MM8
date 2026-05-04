@@ -13,14 +13,46 @@ async function getDriveClient() {
   return google.drive({ version: 'v3', auth: oauth2Client });
 }
 
-export async function createUserFolder(fullName: string, email: string, userId: string) {
+export async function ensureRoleFolder(role: 'ACTOR' | 'DIRECTOR' | string) {
+  const drive = await getDriveClient();
+  const rootId = process.env.GOOGLE_DRIVE_FOLDER_ID!;
+  const folderName = role === 'DIRECTOR' ? 'DIRECTORS' : 'ACTORS';
+  
+  // Find if exists
+  const response = await drive.files.list({
+    q: `'${rootId}' in parents and name = '${folderName}' and mimeType = 'application/vnd.google-apps.folder' and trashed = false`,
+    fields: 'files(id)',
+  });
+  
+  if (response.data.files && response.data.files.length > 0) {
+    return response.data.files[0].id;
+  }
+  
+  // Create if not exists
+  const fileMetadata = {
+    name: folderName,
+    mimeType: 'application/vnd.google-apps.folder',
+    parents: [rootId]
+  };
+  
+  const file = await drive.files.create({
+    requestBody: fileMetadata,
+    fields: 'id',
+  });
+  
+  return file.data.id;
+}
+
+export async function createUserFolder(fullName: string, email: string, userId: string, role: string) {
   const drive = await getDriveClient();
   const folderName = `${fullName} (${email}, ${userId})`;
+  
+  const parentId = await ensureRoleFolder(role);
   
   const fileMetadata = {
     name: folderName,
     mimeType: 'application/vnd.google-apps.folder',
-    parents: [process.env.GOOGLE_DRIVE_FOLDER_ID!] // Use the root folder ID from env
+    parents: [parentId!]
   };
 
   try {
