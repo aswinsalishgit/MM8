@@ -69,9 +69,15 @@ const useDashboardData = () => {
         .eq('id', session.user.id)
         .single();
 
-      if (profile?.role === 'DIRECTOR') {
-        router.push("/director-dashboard");
+      // Validate role
+      if (profile && profile.role === 'ACTOR') {
+        router.push("/dashboard");
         return;
+      }
+
+      if (profile && profile.role !== 'DIRECTOR') {
+        await supabase.from('profiles').update({ role: 'DIRECTOR' }).eq('id', session.user.id);
+        profile.role = 'DIRECTOR';
       }
 
       // If profile doesn't exist, try to create one or use default
@@ -111,7 +117,7 @@ const useDashboardData = () => {
 
         // Refetch profile after grant
         const { data: refreshed } = await supabase
-          .from('profiles').select('*, settings(*)').eq('id', session.user.id).single();
+          .from('profiles').select('*').eq('id', session.user.id).single();
         if (refreshed) profile = refreshed;
       } else {
         // --- STREAK & DAILY LOGIN ---
@@ -159,7 +165,7 @@ const useDashboardData = () => {
 
           // Refetch
           const { data: refreshed } = await supabase
-            .from('profiles').select('*, settings(*)').eq('id', session.user.id).single();
+            .from('profiles').select('*').eq('id', session.user.id).single();
           if (refreshed) profile = refreshed;
         }
       }
@@ -214,6 +220,32 @@ const useDashboardData = () => {
           languages: profile.languages || [],
           archetypes: profile.archetypes || [],
           experience: profile.experience || "",
+          settings: profile.settings ? {
+            appearance: profile.settings[0]?.appearance || profile.settings?.appearance || 'system',
+            accentColor: profile.settings[0]?.accent_color || profile.settings?.accent_color || 'default',
+            contrast: profile.settings[0]?.contrast || profile.settings?.contrast || 'system',
+            notifications: {
+              push: profile.settings[0]?.push_notifications ?? profile.settings?.notifications?.push ?? true,
+              email: profile.settings[0]?.email_notifications ?? profile.settings?.notifications?.email ?? true,
+              sms: profile.settings[0]?.sms_notifications ?? profile.settings?.notifications?.sms ?? false,
+            },
+            categories: profile.settings[0]?.categories || profile.settings?.categories || {
+              casting: true, activity: true, ai: true, progress: true, communication: true, account: true, platform: true
+            },
+            privacy: {
+              visibility: profile.settings[0]?.privacy_visibility || profile.settings?.privacy?.visibility || 'public',
+              openToWork: profile.settings[0]?.open_to_work ?? profile.settings?.privacy?.openToWork ?? true,
+              show_age: profile.settings[0]?.show_age ?? profile.settings?.privacy?.showAge ?? true,
+              showLocation: profile.settings[0]?.show_location ?? profile.settings?.privacy?.showLocation ?? true,
+              showContact: profile.settings[0]?.show_contact ?? profile.settings?.privacy?.showContact ?? true,
+            },
+            permissions: {
+              message: profile.settings[0]?.message_permissions || profile.settings?.permissions?.message || 'everyone',
+              viewTapes: profile.settings[0]?.view_tapes_permissions || profile.settings?.permissions?.viewTapes || 'directors',
+              sendInvites: profile.settings[0]?.send_invites_permissions || profile.settings?.permissions?.sendInvites || 'directors',
+              appearInSearches: profile.settings[0]?.appear_in_searches ?? profile.settings?.permissions?.appearInSearches ?? true,
+            }
+          } : null,
           opportunityReadiness: profile.opportunity_readiness || "",
           alias: profile.alias || "",
           bio: profile.bio || "",
@@ -234,32 +266,6 @@ const useDashboardData = () => {
           scarsTattoos: profile.scars_tattoos || "",
           distinctFeatures: profile.distinct_features || "",
           priorArtExperience: profile.prior_art_experience || "",
-          settings: profile.settings ? {
-            appearance: profile.settings[0]?.appearance || profile.settings?.appearance || 'system',
-            accentColor: profile.settings[0]?.accent_color || profile.settings?.accent_color || 'default',
-            contrast: profile.settings[0]?.contrast || profile.settings?.contrast || 'system',
-            notifications: {
-              push: profile.settings[0]?.push_notifications ?? profile.settings?.notifications?.push ?? true,
-              email: profile.settings[0]?.email_notifications ?? profile.settings?.notifications?.email ?? true,
-              sms: profile.settings[0]?.sms_notifications ?? profile.settings?.notifications?.sms ?? false,
-            },
-            categories: profile.settings[0]?.categories || profile.settings?.categories || {
-              casting: true, activity: true, ai: true, progress: true, communication: true, account: true, platform: true
-            },
-            privacy: {
-              visibility: profile.settings[0]?.privacy_visibility || profile.settings?.privacy?.visibility || 'public',
-              openToWork: profile.settings[0]?.open_to_work ?? profile.settings?.privacy?.openToWork ?? true,
-              showAge: profile.settings[0]?.show_age ?? profile.settings?.privacy?.showAge ?? true,
-              showLocation: profile.settings[0]?.show_location ?? profile.settings?.privacy?.showLocation ?? true,
-              showContact: profile.settings[0]?.show_contact ?? profile.settings?.privacy?.showContact ?? true,
-            },
-            permissions: {
-              message: profile.settings[0]?.message_permissions || profile.settings?.permissions?.message || 'everyone',
-              viewTapes: profile.settings[0]?.view_tapes_permissions || profile.settings?.permissions?.viewTapes || 'directors',
-              sendInvites: profile.settings[0]?.send_invites_permissions || profile.settings?.permissions?.sendInvites || 'directors',
-              appearInSearches: profile.settings[0]?.appear_in_searches ?? profile.settings?.permissions?.appearInSearches ?? true,
-            }
-          } : null,
         },
         missions: [
           { 
@@ -405,10 +411,7 @@ export default function AgenticDashboard() {
     // Database settings override local storage if available
     if (data?.profile?.settings) {
       const s = data.profile.settings;
-      
-      // If we are currently showing settings, don't overwrite local state unless we just saved
-      // (This prevents race conditions or accidental resets while editing)
-      
+
       if (s) {
         if (s.appearance) {
           setAppearance(s.appearance);
@@ -425,7 +428,7 @@ export default function AgenticDashboard() {
           setContrast(s.contrast);
           document.documentElement.setAttribute('data-contrast', s.contrast);
         }
-        
+
         // Notification Delivery Sync (Using mapped structure)
         if (s.notifications) {
           setNotificationsDelivery({
@@ -910,10 +913,10 @@ export default function AgenticDashboard() {
       localStorage.setItem('mm8-notifications-protocol', JSON.stringify(notificationsDelivery));
 
       setMessage({ text: "Your settings have been saved and synchronization is complete.", type: 'success' });
-      
+
       // BACKGROUND REFRESH: Fetch data without closing the modal
       fetchData(); 
-      
+
       setTimeout(() => {
         setMessage(null);
       }, 3000);
@@ -1170,7 +1173,7 @@ export default function AgenticDashboard() {
             className="fixed lg:sticky top-0 left-0 w-72 h-screen bg-[var(--bg-secondary)] border-r border-[var(--border-main)] z-[150] flex flex-col shrink-0 overflow-hidden"
           >
             <div className="p-8 border-b border-[var(--border-main)] flex justify-between items-center shrink-0">
-              <h2 className="text-4xl font-black uppercase tracking-tighter">MM8</h2>
+              <h2 className="text-4xl font-black uppercase tracking-tighter">MM8_DIR</h2>
               <button className="lg:hidden p-2 hover:bg-[var(--bg-secondary)] transition-colors" onClick={() => setIsSidebarOpen(false)}>
                 <X className="w-6 h-6 text-zinc-500 hover:text-white" />
               </button>
@@ -1279,7 +1282,7 @@ export default function AgenticDashboard() {
                   animate={{ opacity: 1, x: 0 }}
                 >
                   <h1 className="text-4xl md:text-6xl font-black uppercase tracking-tighter leading-none text-[var(--text-primary)]">
-                    ACTOR DASHBOARD
+                    DIRECTOR DASHBOARD
                   </h1>
                 </motion.div>
                 
@@ -2357,14 +2360,14 @@ export default function AgenticDashboard() {
                 <User className="w-10 h-10 text-[var(--accent-primary)]" />
               </div>
               <div>
-                <h1 className="text-7xl font-black uppercase tracking-tighter leading-none">ACTOR PROFILE</h1>
+                <h1 className="text-7xl font-black uppercase tracking-tighter leading-none">DIRECTOR PROFILE</h1>
                 <p className="text-[10px] font-black uppercase tracking-[0.5em] text-zinc-600 mt-2">IDENTITY VAULT SECURED</p>
               </div>
             </div>
 
             <div className="w-full md:w-96 p-8 glass-panel-premium border border-[var(--accent-primary)]/30 shadow-[0_0_15px_var(--accent-glow)] rounded-3xl flex flex-col gap-4 relative overflow-hidden group">
                <div className="flex justify-between items-end relative z-10">
-                  <span className="text-[10px] font-black uppercase tracking-widest text-zinc-500">PROFILE_STRENGTH</span>
+                  <span className="text-[10px] font-black uppercase tracking-widest text-zinc-500">PROFILE STRENGTH</span>
                   <span className="text-3xl font-black text-[var(--accent-primary)] tabular-nums">{profileStrength}%</span>
                </div>
                <div className="h-2 bg-[var(--bg-secondary)] border border-white/10 rounded-3xl border-[var(--border-main)] relative z-10 overflow-hidden">

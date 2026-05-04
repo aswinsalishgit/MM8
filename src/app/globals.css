@@ -3,10 +3,10 @@
 @theme inline {
   --color-background: #000000;
   --color-foreground: #ffffff;
-  --color-brand-red: var(--accent-primary);
-  --color-brand-red-dark: var(--accent-secondary);
-  --color-brand-red-deep: var(--accent-secondary);
-  --color-brand-red-neon: var(--accent-primary);
+  --color-brand-red: #ff0000;
+  --color-brand-red-dark: #8b0000;
+  --color-brand-red-deep: #4b0000;
+  --color-brand-red-neon: #ff3131;
   
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
@@ -33,8 +33,6 @@
   --border-main: #27272a;
   --border-strong: #ffffff;
   --panel-bg: rgba(255, 255, 255, 0.01);
-  --accent-red: #ff3131;
-  --accent-red-glow: rgba(255, 49, 49, 0.5);
   
   font-size: 75%; /* Scales down all rem units to 75% (12px base) */
 
@@ -89,6 +87,48 @@
   }
 }
 
+/* AGGRESSIVE SCROLLBAR SUPPRESSION PROTOCOL */
+* {
+  -ms-overflow-style: none !important;
+  scrollbar-width: none !important;
+}
+
+*::-webkit-scrollbar {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
+  background: transparent !important;
+}
+
+/* Specific overrides for common scrollable targets */
+.custom-scrollbar, 
+.hide-scrollbar,
+.overflow-y-auto,
+.overflow-x-auto,
+textarea,
+html,
+body {
+  -ms-overflow-style: none !important;
+  scrollbar-width: none !important;
+}
+
+.custom-scrollbar::-webkit-scrollbar,
+.hide-scrollbar::-webkit-scrollbar,
+textarea::-webkit-scrollbar,
+html::-webkit-scrollbar,
+body::-webkit-scrollbar {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
+}
+
+html, body {
+  overflow: hidden !important;
+  height: 100% !important;
+  margin: 0;
+  padding: 0;
+}
+
 body {
   background: var(--bg-primary);
   color: var(--text-primary);
@@ -123,11 +163,11 @@ body {
 }
 
 .glass-panel-red {
-  background: rgba(255, 49, 49, 0.05);
+  background: var(--accent-glow);
   backdrop-filter: blur(40px) saturate(200%);
   -webkit-backdrop-filter: blur(40px) saturate(200%);
-  border: 1px solid var(--accent-red);
-  box-shadow: 0 8px 32px 0 var(--accent-red-glow);
+  border: 1px solid var(--accent-primary);
+  box-shadow: 0 8px 32px 0 var(--accent-glow);
 }
 
 /* Polygonal Clip Paths */
@@ -179,43 +219,16 @@ body {
 }
 
 /* Brutalist specific utilities */
-/* Aggressive Google Translate UI Purge */
-iframe.goog-te-banner-frame, 
-.goog-te-banner-frame,
-.goog-te-banner,
-.skiptranslate {
-  display: none !important;
-  visibility: hidden !important;
-  opacity: 0 !important;
-  pointer-events: none !important;
-}
-
-body {
-  top: 0px !important;
-}
-
-/* Hide Scrollbars site-wide */
-::-webkit-scrollbar {
-  display: none !important;
-  width: 0 !important;
-  height: 0 !important;
-}
-
-* {
-  -ms-overflow-style: none;  /* IE and Edge */
-  scrollbar-width: none;  /* Firefox */
-}
-
 .brutal-border {
   border: 2px solid var(--border-strong);
 }
 
 .brutal-border-red {
-  border: 2px solid var(--accent-red);
+  border: 2px solid var(--accent-primary);
 }
 
 .brutal-shadow {
-  box-shadow: 12px 12px 0px 0px var(--accent-red);
+  box-shadow: 12px 12px 0px 0px var(--accent-primary);
 }
 
 .brutal-shadow-white {
@@ -223,7 +236,7 @@ body {
 }
 
 .brutal-shadow-hover:hover {
-  box-shadow: 16px 16px 0px 0px var(--accent-red);
+  box-shadow: 16px 16px 0px 0px var(--accent-primary);
   transform: translate(-4px, -4px);
   transition: all 0.3s cubic-bezier(0.23, 1, 0.32, 1);
 }

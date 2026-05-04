@@ -23,15 +23,35 @@ export default function CompletionTransitionFlow() {
     completeOnboarding();
   }, []);
 
-  const enterDashboard = () => {
+  const enterDashboard = async () => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (user) {
+      const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).single();
+      if (profile?.role === 'DIRECTOR') {
+        router.push("/director-dashboard");
+        return;
+      }
+    }
     router.push("/dashboard");
   };
+
+  const handleBack = async () => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (user) {
+      const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).single();
+      if (profile?.role === 'DIRECTOR') {
+        router.push("/onboarding/director");
+        return;
+      }
+    }
+    router.push("/onboarding/actor");
+  }
 
   return (
     <main className="min-h-screen bg-[#050000] text-white flex flex-col justify-center px-6 md:px-16 overflow-hidden relative">
       
       <button 
-        onClick={() => router.push("/onboarding/actor")}
+        onClick={handleBack}
         className="absolute top-8 left-8 md:top-12 md:left-16 z-20 flex items-center gap-2 text-zinc-500 hover:text-white font-black uppercase tracking-widest text-xs transition-colors group cursor-pointer"
       >
         <ChevronLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform" />

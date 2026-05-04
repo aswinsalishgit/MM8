@@ -18,7 +18,7 @@ export default function Hero() {
         >
           <h1 className="text-5xl sm:text-6xl md:text-[7rem] lg:text-[8.5rem] font-black leading-[0.9] md:leading-[0.85] tracking-tighter text-white uppercase mb-6">
             TALENT IS<br />
-            <span className="text-brand-red-neon drop-shadow-[0_0_20px_rgba(255,49,49,0.4)]">BROKEN</span>
+            <span className="text-[var(--accent-primary)] drop-shadow-[0_0_20px_var(--accent-glow)]">BROKEN</span>
           </h1>
           <h2 className="text-lg sm:text-xl md:text-3xl font-bold uppercase tracking-[0.2em] md:tracking-widest text-zinc-500 mb-10 md:mb-16">
             GATEKEEPERS LOSE <span className="text-white">TODAY</span>
@@ -33,7 +33,7 @@ export default function Hero() {
         >
           <button 
             onClick={() => router.push("/auth")}
-            className="px-10 md:px-12 py-5 md:py-6 bg-brand-red-neon text-white font-black text-xl md:text-2xl uppercase tracking-tighter hover:bg-white hover:text-black transition-all duration-500 brutal-border-red shadow-[0_0_40px_rgba(255,49,49,0.3)] cursor-pointer"
+            className="px-10 md:px-12 py-5 md:py-6 bg-[var(--accent-primary)] text-white font-black text-xl md:text-2xl uppercase tracking-tighter hover:bg-white hover:text-black transition-all duration-500 brutal-border-red shadow-[0_0_40px_var(--accent-glow)] cursor-pointer"
             style={{ clipPath: "polygon(15% 0, 100% 0, 100% 75%, 85% 100%, 0 100%, 0 25%)" }}
           >
             Get Started
