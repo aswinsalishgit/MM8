@@ -5,20 +5,20 @@
 }
 
 .custom-scrollbar::-webkit-scrollbar-track {
-  background: rgba(0, 0, 0, 0.5);
+  background: var(--bg-secondary);
 }
 
 .custom-scrollbar::-webkit-scrollbar-thumb {
-  background: #ff3131; /* brand-red-neon */
+  background: var(--accent-red);
   border-radius: 0px;
 }
 
 .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-  background: #ff5e5e;
+  filter: brightness(1.2);
 }
 
 /* Firefox */
 .custom-scrollbar {
   scrollbar-width: thin;
-  scrollbar-color: #ff3131 rgba(0, 0, 0, 0.5);
+  scrollbar-color: var(--accent-red) var(--bg-secondary);
 }

@@ -22,23 +22,56 @@
 :root {
   --background: #000000;
   --foreground: #ffffff;
+  
+  /* Theme Variables - Default Dark */
+  --bg-primary: #000000;
+  --bg-secondary: #0a0a0a;
+  --bg-tertiary: #121212;
+  --text-primary: #ffffff;
+  --text-secondary: #a1a1aa;
+  --text-muted: #52525b;
+  --border-main: #27272a;
+  --border-strong: #ffffff;
+  --panel-bg: rgba(255, 255, 255, 0.01);
+  --accent-red: #ff3131;
+  --accent-red-glow: rgba(255, 49, 49, 0.5);
+  
   font-size: 75%; /* Scales down all rem units to 75% (12px base) */
 }
 
+[data-theme='light'] {
+  --background: #ffffff;
+  --foreground: #000000;
+  
+  /* Theme Variables - Paper Brutalism */
+  --bg-primary: #ffffff;
+  --bg-secondary: #f4f4f5;
+  --bg-tertiary: #e4e4e7;
+  --text-primary: #000000;
+  --text-secondary: #3f3f46;
+  --text-muted: #71717a;
+  --border-main: #d4d4d8;
+  --border-strong: #000000;
+  --panel-bg: rgba(0, 0, 0, 0.02);
+  --accent-red: #ff1a1a;
+  --accent-red-glow: rgba(255, 26, 26, 0.3);
+}
+
 body {
-  background: var(--background);
-  color: var(--foreground);
+  background: var(--bg-primary);
+  color: var(--text-primary);
   overflow-x: hidden;
   -webkit-font-smoothing: antialiased;
+  transition: background-color 0.3s ease, color 0.3s ease;
 }
 
 /* Extreme Glassmorphism */
 .glass-panel {
-  background: rgba(255, 255, 255, 0.01);
+  background: var(--panel-bg);
   backdrop-filter: blur(40px) saturate(180%);
   -webkit-backdrop-filter: blur(40px) saturate(180%);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.8);
+  border: 1px solid var(--border-main);
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.1);
   position: relative;
   overflow: hidden;
 }
@@ -49,10 +82,10 @@ body {
   inset: 0;
   background: linear-gradient(
     135deg,
-    rgba(255, 255, 255, 0.1),
+    rgba(255, 255, 255, 0.05),
     transparent 40%,
     transparent 60%,
-    rgba(255, 255, 255, 0.05)
+    rgba(255, 255, 255, 0.02)
   );
   pointer-events: none;
 }
@@ -61,8 +94,8 @@ body {
   background: rgba(255, 49, 49, 0.05);
   backdrop-filter: blur(40px) saturate(200%);
   -webkit-backdrop-filter: blur(40px) saturate(200%);
-  border: 1px solid rgba(255, 49, 49, 0.2);
-  box-shadow: 0 8px 32px 0 rgba(255, 49, 49, 0.2);
+  border: 1px solid var(--accent-red);
+  box-shadow: 0 8px 32px 0 var(--accent-red-glow);
 }
 
 /* Polygonal Clip Paths */
@@ -99,39 +132,39 @@ body {
 }
 
 .glass-button {
-  background: rgba(255, 255, 255, 0.03);
+  background: var(--panel-bg);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: 1px solid var(--border-main);
   transition: all 0.4s cubic-bezier(0.23, 1, 0.32, 1);
 }
 
 .glass-button:hover {
   background: rgba(255, 255, 255, 0.1);
-  border-color: rgba(255, 255, 255, 0.3);
-  box-shadow: 0 0 30px rgba(255, 255, 255, 0.1);
+  border-color: var(--text-primary);
+  box-shadow: 0 0 30px rgba(255, 255, 255, 0.05);
   transform: translateY(-2px);
 }
 
 /* Brutalist specific utilities */
 .brutal-border {
-  border: 2px solid #ffffff;
+  border: 2px solid var(--border-strong);
 }
 
 .brutal-border-red {
-  border: 2px solid #8b0000;
+  border: 2px solid var(--accent-red);
 }
 
 .brutal-shadow {
-  box-shadow: 12px 12px 0px 0px #8b0000;
+  box-shadow: 12px 12px 0px 0px var(--accent-red);
 }
 
 .brutal-shadow-white {
-  box-shadow: 12px 12px 0px 0px #ffffff;
+  box-shadow: 12px 12px 0px 0px var(--border-strong);
 }
 
 .brutal-shadow-hover:hover {
-  box-shadow: 16px 16px 0px 0px #ff0000;
+  box-shadow: 16px 16px 0px 0px var(--accent-red);
   transform: translate(-4px, -4px);
   transition: all 0.3s cubic-bezier(0.23, 1, 0.32, 1);
 }
