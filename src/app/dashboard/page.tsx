@@ -38,7 +38,7 @@ const TIER_CONFIG: Record<string, { color: string; glow: string; label: string }
   'RISING': { color: 'text-blue-400', glow: 'drop-shadow-[0_0_8px_rgba(96,165,250,0.5)]', label: 'RISING' },
   'ACTIVE': { color: 'text-green-400', glow: 'drop-shadow-[0_0_8px_rgba(74,222,128,0.5)]', label: 'ACTIVE' },
   'PRO TALENT': { color: 'text-yellow-400', glow: 'drop-shadow-[0_0_8px_rgba(250,204,21,0.5)]', label: 'PRO TALENT' },
-  'ELITE': { color: 'text-[#ff1a1a]', glow: 'drop-shadow-[0_0_15px_rgba(255,49,49,0.8)]', label: 'ELITE' },
+  'ELITE': { color: 'text-[var(--accent-primary)]', glow: 'drop-shadow-[0_0_15px_rgba(255,49,49,0.8)]', label: 'ELITE' },
 };
 
 const GENDER_OPTIONS = ["MALE", "FEMALE", "NON-BINARY", "OTHER"];
@@ -312,15 +312,132 @@ export default function AgenticDashboard() {
   const [usernameStatus, setUsernameStatus] = useState<"idle" | "checking" | "available" | "taken" | "invalid">("idle");
   const [message, setMessage] = useState<{ text: string, type: 'error' | 'success' | 'info' } | null>(null);
   const [theme, setTheme] = useState<'dark' | 'light'>('dark');
+  const [appearance, setAppearance] = useState<'system' | 'light' | 'dark'>('system');
+  const [contrast, setContrast] = useState<'system' | 'medium' | 'increased'>('system');
+  const [accentColor, setAccentColor] = useState<'default' | 'blue' | 'green' | 'yellow' | 'pink' | 'orange' | 'black' | 'glass'>('default');
+  const [notificationsDelivery, setNotificationsDelivery] = useState({
+    push: true,
+    email: true,
+    sms: false
+  });
+  const [notificationCategories, setNotificationCategories] = useState({
+    casting: true,
+    activity: true,
+    ai: true,
+    progress: true,
+    communication: true,
+    account: true,
+    platform: true
+  });
+  const [profilePrivacy, setProfilePrivacy] = useState({
+    visibility: 'public',
+    openToWork: true,
+    showAge: true,
+    showLocation: true,
+    showContact: true
+  });
+  const [permissions, setPermissions] = useState({
+    message: 'everyone',
+    viewTapes: 'directors',
+    sendInvites: 'directors',
+    appearInSearches: true
+  });
 
-  // Load theme preference
+  // Load preferences
   useEffect(() => {
     const savedTheme = localStorage.getItem('mm8-visual-protocol') as 'dark' | 'light';
+    const savedAccent = localStorage.getItem('mm8-accent-protocol');
+    const savedContrast = localStorage.getItem('mm8-contrast-protocol');
+    const savedLang = localStorage.getItem('mm8-lang-protocol');
+
     if (savedTheme) {
       setTheme(savedTheme);
       document.documentElement.setAttribute('data-theme', savedTheme);
+      setAppearance(savedTheme);
+    }
+    if (savedAccent) {
+      setAccentColor(savedAccent as any);
+      document.documentElement.setAttribute('data-accent', savedAccent);
+    }
+    if (savedContrast) {
+      setContrast(savedContrast as any);
+      document.documentElement.setAttribute('data-contrast', savedContrast);
     }
   }, []);
+
+  // Update Attributes when state changes
+  useEffect(() => {
+    document.documentElement.setAttribute('data-accent', accentColor);
+    localStorage.setItem('mm8-accent-protocol', accentColor);
+  }, [accentColor]);
+
+  useEffect(() => {
+    document.documentElement.setAttribute('data-contrast', contrast);
+    localStorage.setItem('mm8-contrast-protocol', contrast);
+  }, [contrast]);
+
+  // Language Translation Logic (Google Translate Bridge)
+  useEffect(() => {
+    const addGoogleTranslate = () => {
+      if (document.getElementById('google-translate-script')) return;
+      const script = document.createElement('script');
+      script.id = 'google-translate-script';
+      script.src = '//translate.google.com/translate_a/element.js?cb=googleTranslateElementInit';
+      document.body.appendChild(script);
+      (window as any).googleTranslateElementInit = () => {
+        new (window as any).google.translate.TranslateElement({
+          pageLanguage: 'en',
+          layout: (window as any).google.translate.TranslateElement.InlineLayout.SIMPLE
+        }, 'google_translate_element');
+      };
+    };
+    addGoogleTranslate();
+  }, []);
+
+  const handleLanguageChange = (lang: string) => {
+    const langCodeMap: {[key: string]: string} = {
+      "MALAYALAM": "ml", "TAMIL": "ta", "HINDI": "hi", "TELUGU": "te", "ENGLISH": "en", "KANNADA": "kn",
+      "SPANISH": "es", "FRENCH": "fr", "GERMAN": "de", "CHINESE": "zh-CN", "JAPANESE": "ja"
+    };
+    const code = langCodeMap[lang] || "en";
+    
+    // Set Google Translate Cookie for site-wide persistence
+    // Use both root and hostname domains to be safe
+    const domain = window.location.hostname;
+    document.cookie = `googtrans=/en/${code}; path=/`;
+    document.cookie = `googtrans=/en/${code}; path=/; domain=${domain}`;
+    if (domain.includes('.')) {
+      const baseDomain = domain.split('.').slice(-2).join('.');
+      document.cookie = `googtrans=/en/${code}; path=/; domain=.${baseDomain}`;
+    }
+    
+    setProfileForm({...profileForm, languages: [lang]});
+    localStorage.setItem('mm8-lang-protocol', lang);
+    
+    // Short delay to ensure cookie is set before reload
+    setTimeout(() => {
+      window.location.reload();
+    }, 100);
+  };
+
+  // Handle system appearance changes
+  useEffect(() => {
+    if (appearance === 'system') {
+      const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+      const handleChange = (e: MediaQueryListEvent) => {
+        const newTheme = e.matches ? 'dark' : 'light';
+        setTheme(newTheme);
+        document.documentElement.setAttribute('data-theme', newTheme);
+      };
+      
+      const initialTheme = mediaQuery.matches ? 'dark' : 'light';
+      setTheme(initialTheme);
+      document.documentElement.setAttribute('data-theme', initialTheme);
+      
+      mediaQuery.addEventListener('change', handleChange);
+      return () => mediaQuery.removeEventListener('change', handleChange);
+    }
+  }, [appearance]);
 
   const toggleTheme = () => {
     const newTheme = theme === 'dark' ? 'light' : 'dark';
@@ -339,6 +456,7 @@ export default function AgenticDashboard() {
   const [showPassChangeModal, setShowPassChangeModal] = useState(false);
   const [currentPassVerify, setCurrentPassVerify] = useState("");
   const [passVerified, setPassVerified] = useState(false);
+  const [showUsernameInput, setShowUsernameInput] = useState(false);
   const [profileForm, setProfileForm] = useState<any>({
     fullName: "",
     username: "",
@@ -390,7 +508,7 @@ export default function AgenticDashboard() {
 
   const getPriorityConfig = (priority: string) => {
     switch (priority) {
-      case "VERY IMPORTANT": return { color: "border-brand-red-neon bg-brand-red-neon/10", icon: AlertTriangle, iconColor: "text-brand-red-neon", badge: "bg-brand-red-neon" };
+      case "VERY IMPORTANT": return { color: "border-[var(--accent-primary)] bg-[var(--accent-primary)]/10", icon: AlertTriangle, iconColor: "text-[var(--accent-primary)]", badge: "bg-[var(--accent-primary)]" };
       case "IMPORTANT": return { color: "border-yellow-500/50 bg-yellow-500/5", icon: AlertTriangle, iconColor: "text-yellow-500", badge: "bg-yellow-500" };
       default: return { color: "border-[var(--border-main)] bg-[var(--bg-tertiary)]/50", icon: Info, iconColor: "text-zinc-500", badge: "bg-zinc-600" };
     }
@@ -688,12 +806,8 @@ export default function AgenticDashboard() {
       }
 
       const profileUpdate: any = {
-        objective_preference: prefDesire,
-        languages: prefLanguages,
-        archetypes: prefArchetypes,
-        experience: prefExperience,
-        opportunity_readiness: prefAvailability,
-        location: prefLocation
+        full_name: profileForm.fullName,
+        languages: profileForm.languages,
       };
 
       if (newUsername) {
@@ -707,12 +821,10 @@ export default function AgenticDashboard() {
 
       if (error) throw error;
 
-      setMessage({ text: "SYSTEM CONFIG UPDATED.", type: 'success' });
-      // Refresh local data by just closing and letting the next open re-sync, 
-      // or we could trigger a re-fetch. For now, let's just close.
+      setMessage({ text: "CONFIGURATION SECURED // DATA_STABLE", type: 'success' });
       setTimeout(() => {
         setShowSettings(false);
-        window.location.reload(); // Simple way to refresh all HUDs
+        window.location.reload(); 
       }, 1500);
     } catch (err: any) {
       setMessage({ text: `CRITICAL ERROR: ${err.message}`, type: 'error' });
@@ -874,9 +986,9 @@ export default function AgenticDashboard() {
           initial={{ y: -50, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
           className={`fixed top-0 left-0 w-full z-[2000] p-4 text-center font-black uppercase tracking-[0.4em] text-[10px] border-b ${
-            message.type === 'error' ? 'bg-red-500/10 border-[#ff1a1a] text-[#ff1a1a]' : 
+            message.type === 'error' ? 'bg-red-500/10 border-[var(--accent-primary)] text-[var(--accent-primary)]' : 
             message.type === 'success' ? 'bg-green-500/10 border-green-500 text-green-500' :
-            'bg-gradient-to-r from-[#ff1a1a] to-[#8a0303]/10 border-[#ff1a1a] text-white'
+            'bg-gradient-to-r from-[var(--accent-primary)] to-[var(--accent-secondary)]/10 border-[var(--accent-primary)] text-white'
           }`}
         >
           {message.text}
@@ -908,14 +1020,14 @@ export default function AgenticDashboard() {
             </div>
             
             <div className="p-8 border-b border-[var(--border-main)] shrink-0 flex flex-col items-center">
-              <div className="w-32 h-32 rounded-full border border-[var(--accent-red)]/30 shadow-[0_0_15px_rgba(255,26,26,0.1)] rounded-3xl bg-[var(--bg-tertiary)] mb-6 relative overflow-hidden">
+              <div className="w-32 h-32 rounded-full border border-[var(--accent-red)]/30 shadow-[0_0_15px_var(--accent-glow)] rounded-3xl bg-[var(--bg-tertiary)] mb-6 relative overflow-hidden">
                 {data.profile.avatarUrl ? (
                   <img src={data.profile.avatarUrl} alt="PFP" className="w-full h-full object-cover" />
                 ) : (
                   <User className="w-12 h-12 text-zinc-800 absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" />
                 )}
               </div>
-              <p className="font-black text-center text-sm uppercase tracking-widest text-[#ff1a1a]">@{data.profile.username || 'ANONYMOUS'}</p>
+              <p className="font-black text-center text-sm uppercase tracking-widest text-[var(--accent-primary)]">@{data.profile.username || 'ANONYMOUS'}</p>
             </div>
 
             <nav className="flex-1 p-4 flex flex-col gap-2">
@@ -930,11 +1042,11 @@ export default function AgenticDashboard() {
                   }}
                   className={`w-full flex items-center gap-4 p-4 text-left font-black uppercase tracking-widest text-[10px] transition-all ${
                     currentView === item.id 
-                      ? 'bg-gradient-to-r from-[#ff1a1a] to-[#8a0303]/10 border-l-4 border-[#ff1a1a] text-white' 
+                      ? 'bg-gradient-to-r from-[var(--accent-primary)] to-[var(--accent-secondary)]/10 border-l-4 border-[var(--accent-primary)] text-white' 
                       : 'border-l-4 border-transparent text-zinc-500 hover:bg-[var(--bg-secondary)] hover:text-white'
                   }`}
                 >
-                  <item.icon className={`w-4 h-4 ${currentView === item.id ? 'text-[#ff1a1a]' : ''}`} />
+                  <item.icon className={`w-4 h-4 ${currentView === item.id ? 'text-[var(--accent-primary)]' : ''}`} />
                   {item.label}
                 </button>
               ))}
@@ -965,10 +1077,10 @@ export default function AgenticDashboard() {
               <button className="p-2 hover:bg-[var(--bg-secondary)] rounded-full transition-colors group" title="DISCOVER">
                 <Compass className="w-5 h-5 text-zinc-500 group-hover:text-[var(--text-primary)] transition-all" />
               </button>
-              <button onClick={() => router.push('/dashboard/notifications')} className="p-2 hover:bg-[var(--bg-secondary)] rounded-full transition-colors group relative" title="NOTIFICATIONS">
+              <button onClick={() => setCurrentView('NOTIFICATIONS')} className="p-2 hover:bg-[var(--bg-secondary)] rounded-full transition-colors group relative" title="NOTIFICATIONS">
                 <Bell className="w-5 h-5 text-zinc-500 group-hover:text-[var(--text-primary)] transition-all" />
                 {data.notifications?.filter((n: any) => !n.read).length > 0 && (
-                  <span className="absolute top-1 right-1 w-2 h-2 bg-gradient-to-r from-[#ff1a1a] to-[#8a0303] rounded-full" />
+                  <span className="absolute top-1 right-1 w-2 h-2 bg-gradient-to-r from-[var(--accent-primary)] to-[var(--accent-secondary)] rounded-full" />
                 )}
               </button>
               <button onClick={() => setShowSettings(true)} className="p-2 hover:bg-[var(--bg-secondary)] rounded-full transition-colors group" title="SETTINGS">
@@ -980,7 +1092,7 @@ export default function AgenticDashboard() {
             
             <div 
               onClick={() => setCurrentView('PROFILE')}
-              className="w-10 h-10 rounded-full bg-[var(--bg-secondary)] border border-[var(--border-main)] overflow-hidden shrink-0 border border-[#ff1a1a]/30 shadow-[0_0_15px_rgba(255,26,26,0.1)] rounded-3xl cursor-pointer hover:scale-110 transition-transform"
+              className="w-10 h-10 rounded-full bg-[var(--bg-secondary)] border border-[var(--border-main)] overflow-hidden shrink-0 border border-[var(--accent-primary)]/30 shadow-[0_0_15px_var(--accent-glow)] rounded-3xl cursor-pointer hover:scale-110 transition-transform"
             >
               {data.profile.avatarUrl ? (
                 <img src={data.profile.avatarUrl} alt="PFP" className="w-full h-full object-cover" />
@@ -1013,10 +1125,10 @@ export default function AgenticDashboard() {
                 <motion.div 
                   initial={{ opacity: 0, x: 30 }}
                   animate={{ opacity: 1, x: 0 }}
-                  className="mt-6 md:mt-0 glass-panel-premium border border-[#ff1a1a]/30 shadow-[0_0_15px_rgba(255,26,26,0.1)] rounded-3xl px-6 py-3 rounded-full flex items-center gap-3"
+                  className="mt-6 md:mt-0 glass-panel-premium border border-[var(--accent-primary)]/30 shadow-[0_0_15px_var(--accent-glow)] rounded-3xl px-6 py-3 rounded-full flex items-center gap-3"
                 >
                   <span className="font-black uppercase tracking-[0.2em] text-[10px] text-zinc-500">USERNAME:</span>
-                  <span className="font-black uppercase tracking-widest text-xs text-[#ff1a1a] tabular-nums">
+                  <span className="font-black uppercase tracking-widest text-xs text-[var(--accent-primary)] tabular-nums">
                     @{data.profile.username || 'ANONYMOUS'}
                   </span>
                   {data.profile.isVip && (
@@ -1033,14 +1145,14 @@ export default function AgenticDashboard() {
         <div className="lg:col-span-4 flex flex-col gap-12">
           
           {/* Identity HUD */}
-          <section className="glass-panel-premium border border-[#ff1a1a]/30 shadow-[0_0_15px_rgba(255,26,26,0.1)] rounded-3xl p-10 relative overflow-hidden group clip-brutal-tl">
-            <div className="absolute top-0 right-0 bg-gradient-to-r from-[#ff1a1a] to-[#8a0303] text-[var(--text-primary)] font-black px-6 py-3 flex items-center gap-2 text-[10px] tracking-widest clip-brutal-tr">
+          <section className="glass-panel-premium border border-[var(--accent-primary)]/30 shadow-[0_0_15px_var(--accent-glow)] rounded-3xl p-10 relative overflow-hidden group clip-brutal-tl">
+            <div className="absolute top-0 right-0 bg-gradient-to-r from-[var(--accent-primary)] to-[var(--accent-secondary)] text-[var(--text-primary)] font-black px-6 py-3 flex items-center gap-2 text-[10px] tracking-widest clip-brutal-tr">
               <CheckCircle2 className="w-4 h-4" />
               {data.profile.status}
             </div>
             
             <div className="flex items-center gap-8 mt-6 mb-12">
-              <div className="w-32 h-32 bg-[var(--bg-tertiary)] border border-[#ff1a1a]/30 shadow-[0_0_15px_rgba(255,26,26,0.1)] rounded-3xl flex items-center justify-center grayscale hover:grayscale-0 transition-all duration-500 rounded-full overflow-hidden">
+              <div className="w-32 h-32 bg-[var(--bg-tertiary)] border border-[var(--accent-primary)]/30 shadow-[0_0_15px_var(--accent-glow)] rounded-3xl flex items-center justify-center grayscale hover:grayscale-0 transition-all duration-500 rounded-full overflow-hidden">
                 {data.profile.avatarUrl ? (
                   <img 
                     src={data.profile.avatarUrl} 
@@ -1052,12 +1164,12 @@ export default function AgenticDashboard() {
                     }}
                   />
                 ) : null}
-                <User className={`w-16 h-16 text-brand-red-deep group-hover:text-[#ff1a1a] transition-colors ${data.profile.avatarUrl ? 'hidden' : ''}`} />
+                <User className={`w-16 h-16 text-[var(--accent-secondary)] group-hover:text-[var(--accent-primary)] transition-colors ${data.profile.avatarUrl ? 'hidden' : ''}`} />
               </div>
               <div>
                 <h2 className="text-5xl font-black uppercase tracking-tighter leading-none">{data.profile.name}</h2>
-                <p className="text-[#ff1a1a] font-black uppercase tracking-[0.3em] text-xs mt-3 flex items-center gap-2">
-                  <span className="w-2 h-[1px] bg-gradient-to-r from-[#ff1a1a] to-[#8a0303]" />
+                <p className="text-[var(--accent-primary)] font-black uppercase tracking-[0.3em] text-xs mt-3 flex items-center gap-2">
+                  <span className="w-2 h-[1px] bg-gradient-to-r from-[var(--accent-primary)] to-[var(--accent-secondary)]" />
                   {data.profile.location}
                 </p>
               </div>
@@ -1075,7 +1187,7 @@ export default function AgenticDashboard() {
                     initial={{ width: 0 }}
                     animate={{ width: `${completionProgress}%` }}
                     transition={{ duration: 1.5, ease: "circOut" }}
-                    className="absolute top-0 left-0 h-full bg-gradient-to-r from-[#ff1a1a] to-[#8a0303] shadow-[0_0_20px_rgba(255,49,49,0.8)]"
+                    className="absolute top-0 left-0 h-full bg-gradient-to-r from-[var(--accent-primary)] to-[var(--accent-secondary)] shadow-[0_0_20px_rgba(255,49,49,0.8)]"
                   />
                 </div>
               </div>
@@ -1086,7 +1198,7 @@ export default function AgenticDashboard() {
           <section className="glass-panel-premium p-10 border border-white/10 rounded-3xl border-[var(--border-main)] relative overflow-hidden group">
             <div className="flex items-center justify-between mb-8">
               <div className="flex items-center gap-4">
-                <Zap className="w-5 h-5 text-[#ff1a1a]" />
+                <Zap className="w-5 h-5 text-[var(--accent-primary)]" />
                 <h3 className="font-black uppercase tracking-[0.4em] text-[10px]">STATUS</h3>
               </div>
               <div className={`flex items-center gap-2 ${TIER_CONFIG[data.profile.lumenTier]?.color || 'text-zinc-500'}`}>
@@ -1100,7 +1212,7 @@ export default function AgenticDashboard() {
                 <span className="text-6xl font-black tracking-tighter text-[var(--text-primary)] tabular-nums leading-none">
                   {data.profile.lumenPoints.toLocaleString()}
                 </span>
-                <span className="text-xl font-black text-[#ff1a1a] ml-2">LMN</span>
+                <span className="text-xl font-black text-[var(--accent-primary)] ml-2">LMN</span>
               </div>
               
               {data.profile.streakDays > 0 && (
@@ -1115,10 +1227,10 @@ export default function AgenticDashboard() {
           </section>
 
           {/* Streak & Daily Missions */}
-          <section className="glass-panel-premium-red p-10 hover:bg-gradient-to-r from-[#ff1a1a] to-[#8a0303]/10 transition-all cursor-pointer group relative overflow-hidden clip-brutal-br">
+          <section className="glass-panel-premium-red p-10 hover:bg-gradient-to-r from-[var(--accent-primary)] to-[var(--accent-secondary)]/10 transition-all cursor-pointer group relative overflow-hidden clip-brutal-br">
             <div className="relative z-10">
               <div className="flex items-center gap-4 mb-8">
-                <Flame className="w-6 h-6 text-[#ff1a1a]" />
+                <Flame className="w-6 h-6 text-[var(--accent-primary)]" />
                 <h3 className="font-black uppercase tracking-[0.4em] text-[10px]">DAILY_MISSIONS</h3>
               </div>
                 <div className="flex flex-col gap-4">
@@ -1132,7 +1244,7 @@ export default function AgenticDashboard() {
                         )}
                         <span className={`font-black uppercase tracking-widest text-[10px] ${mission.done ? 'text-green-500' : 'text-zinc-500'}`}>{mission.label}</span>
                       </div>
-                      <span className={`font-black text-[10px] tracking-widest ${mission.done ? 'text-green-500' : 'text-[#ff1a1a]'}`}>
+                      <span className={`font-black text-[10px] tracking-widest ${mission.done ? 'text-green-500' : 'text-[var(--accent-primary)]'}`}>
                         {mission.done ? 'COMPLETED' : `+${mission.reward} LMN`}
                       </span>
                     </div>
@@ -1144,16 +1256,16 @@ export default function AgenticDashboard() {
           {/* Ranking Subsystem — Live LUMEN Leaderboard */}
           <section className="glass-panel-premium p-10 border border-white/10 rounded-3xl clip-brutal-bl">
             <div className="flex items-center gap-4 mb-10 border-b border-[var(--border-main)] pb-8">
-              <Trophy className="w-6 h-6 text-[#ff1a1a]" />
+              <Trophy className="w-6 h-6 text-[var(--accent-primary)]" />
               <h3 className="font-black uppercase tracking-[0.4em] text-[10px]">GLOBAL_RANKINGS</h3>
               <span className="text-[8px] font-black text-zinc-700 uppercase tracking-widest ml-auto">LIVE // {data.leaderboard.length} NODES</span>
             </div>
             {data.leaderboard.length > 0 ? (
               <div className="flex flex-col gap-4">
                 {data.leaderboard.map((actor: any) => (
-                  <div key={actor.id} className={`flex items-center justify-between p-5 border border-white/10 rounded-3xl transition-all group ${actor.isUser ? 'border-[#ff1a1a] bg-gradient-to-r from-[#ff1a1a] to-[#8a0303]/10 rounded-full' : 'border-[var(--border-main)] bg-[var(--bg-tertiary)]/50 hover:border-zinc-700'}`}>
+                  <div key={actor.id} className={`flex items-center justify-between p-5 border border-white/10 rounded-3xl transition-all group ${actor.isUser ? 'border-[var(--accent-primary)] bg-gradient-to-r from-[var(--accent-primary)] to-[var(--accent-secondary)]/10 rounded-full' : 'border-[var(--border-main)] bg-[var(--bg-tertiary)]/50 hover:border-zinc-700'}`}>
                     <div className="flex items-center gap-5">
-                      <span className={`font-black text-2xl tabular-nums w-8 shrink-0 ${actor.rank === 1 ? 'text-[#ff1a1a]' : actor.rank === 2 ? 'text-zinc-400' : actor.rank === 3 ? 'text-orange-700' : 'text-zinc-800 group-hover:text-zinc-600'}`}>
+                      <span className={`font-black text-2xl tabular-nums w-8 shrink-0 ${actor.rank === 1 ? 'text-[var(--accent-primary)]' : actor.rank === 2 ? 'text-zinc-400' : actor.rank === 3 ? 'text-orange-700' : 'text-zinc-800 group-hover:text-zinc-600'}`}>
                         {String(actor.rank).padStart(2, '0')}
                       </span>
                       <div className="w-10 h-10 bg-[var(--bg-secondary)] rounded-full overflow-hidden border border-white/10 rounded-3xl border-[var(--border-main)] shrink-0 flex items-center justify-center">
@@ -1177,7 +1289,7 @@ export default function AgenticDashboard() {
                       </div>
                     </div>
                     <div className="text-right">
-                      <span className="font-black tabular-nums text-[#ff1a1a] text-lg">{actor.score.toLocaleString()}</span>
+                      <span className="font-black tabular-nums text-[var(--accent-primary)] text-lg">{actor.score.toLocaleString()}</span>
                       <span className="text-[8px] font-black text-zinc-600 ml-1">LMN</span>
                     </div>
                   </div>
@@ -1192,15 +1304,15 @@ export default function AgenticDashboard() {
           </section>
 
           {/* Notification Preview */}
-          <section className="glass-panel-premium border border-[#ff1a1a]/30 shadow-[0_0_15px_rgba(255,26,26,0.1)] rounded-3xl p-10 clip-brutal-tr relative overflow-hidden">
+          <section className="glass-panel-premium border border-[var(--accent-primary)]/30 shadow-[0_0_15px_var(--accent-glow)] rounded-3xl p-10 clip-brutal-tr relative overflow-hidden">
             <div className="flex items-center justify-between mb-8 border-b border-[var(--border-main)] pb-6">
               <div className="flex items-center gap-4">
-                <Bell className="w-6 h-6 text-[#ff1a1a]" />
+                <Bell className="w-6 h-6 text-[var(--accent-primary)]" />
                 <h3 className="font-black uppercase tracking-[0.4em] text-[10px]">LATEST_UPDATES</h3>
               </div>
               <button 
-                onClick={() => router.push('/dashboard/notifications')}
-                className="text-zinc-600 hover:text-[#ff1a1a] font-black uppercase tracking-[0.3em] text-[10px] flex items-center gap-2 transition-colors cursor-pointer"
+                onClick={() => setCurrentView('NOTIFICATIONS')}
+                className="text-zinc-600 hover:text-[var(--accent-primary)] font-black uppercase tracking-[0.3em] text-[10px] flex items-center gap-2 transition-colors cursor-pointer"
               >
                 VIEW ALL <ChevronRight className="w-3 h-3" />
               </button>
@@ -1211,37 +1323,37 @@ export default function AgenticDashboard() {
                 {data.notifications.slice(0, 3).map((notif: any) => (
                   <div 
                     key={notif.id}
-                    onClick={() => router.push('/dashboard/notifications')}
+                    onClick={() => setCurrentView('NOTIFICATIONS')}
                     className={`p-5 border border-white/10 rounded-3xl transition-all cursor-pointer group relative ${
                       notif.priority === 'VERY IMPORTANT' 
-                        ? 'border-[#ff1a1a] bg-gradient-to-r from-[#ff1a1a] to-[#8a0303]/10 hover:bg-gradient-to-r from-[#ff1a1a] to-[#8a0303]/20' 
+                        ? 'border-[var(--accent-primary)] bg-gradient-to-r from-[var(--accent-primary)] to-[var(--accent-secondary)]/10 hover:bg-gradient-to-r from-[var(--accent-primary)] to-[var(--accent-secondary)]/20' 
                         : notif.priority === 'IMPORTANT'
                         ? 'border-yellow-500/50 bg-yellow-500/5 hover:bg-yellow-500/10'
                         : 'border-[var(--border-main)] bg-[var(--bg-tertiary)]/50 hover:border-zinc-600'
                     }`}
                   >
                     {!notif.read && (
-                      <div className="absolute top-0 left-0 w-1 h-full bg-gradient-to-r from-[#ff1a1a] to-[#8a0303]" />
+                      <div className="absolute top-0 left-0 w-1 h-full bg-gradient-to-r from-[var(--accent-primary)] to-[var(--accent-secondary)]" />
                     )}
                     <div className="flex items-start gap-4">
                       <div className={`p-2 shrink-0 ${
-                        notif.priority === 'VERY IMPORTANT' ? 'bg-gradient-to-r from-[#ff1a1a] to-[#8a0303]/20' : 'bg-[var(--bg-secondary)]'
+                        notif.priority === 'VERY IMPORTANT' ? 'bg-gradient-to-r from-[var(--accent-primary)] to-[var(--accent-secondary)]/20' : 'bg-[var(--bg-secondary)]'
                       }`}>
                         {notif.priority === 'VERY IMPORTANT' 
-                          ? <AlertTriangle className="w-4 h-4 text-[#ff1a1a]" />
+                          ? <AlertTriangle className="w-4 h-4 text-[var(--accent-primary)]" />
                           : <Bell className="w-4 h-4 text-zinc-500" />
                         }
                       </div>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-3 mb-2">
                           <span className={`px-2 py-0.5 text-[7px] font-black uppercase tracking-widest text-white ${
-                            notif.priority === 'VERY IMPORTANT' ? 'bg-gradient-to-r from-[#ff1a1a] to-[#8a0303]' : notif.priority === 'IMPORTANT' ? 'bg-yellow-500' : 'bg-zinc-600'
+                            notif.priority === 'VERY IMPORTANT' ? 'bg-gradient-to-r from-[var(--accent-primary)] to-[var(--accent-secondary)]' : notif.priority === 'IMPORTANT' ? 'bg-yellow-500' : 'bg-zinc-600'
                           }`}>
                             {notif.priority}
                           </span>
-                          {!notif.read && <span className="w-1.5 h-1.5 rounded-full bg-gradient-to-r from-[#ff1a1a] to-[#8a0303] animate-pulse" />}
+                          {!notif.read && <span className="w-1.5 h-1.5 rounded-full bg-gradient-to-r from-[var(--accent-primary)] to-[var(--accent-secondary)] animate-pulse" />}
                         </div>
-                        <h4 className="text-sm font-black uppercase tracking-tighter group-hover:text-[#ff1a1a] transition-colors">{notif.title}</h4>
+                        <h4 className="text-sm font-black uppercase tracking-tighter group-hover:text-[var(--accent-primary)] transition-colors">{notif.title}</h4>
                         <p className="text-[10px] text-zinc-600 font-bold mt-1 line-clamp-2">{notif.body}</p>
                       </div>
                     </div>
@@ -1267,19 +1379,18 @@ export default function AgenticDashboard() {
               onClick={handleUploadClick}
               disabled={uploading}
               className={`w-full relative group p-12 md:p-24 text-left overflow-hidden flex flex-col md:flex-row items-start md:items-center justify-between gap-12 transition-all duration-700 cursor-pointer ${
-                uploading ? 'bg-[var(--bg-tertiary)] border-2 border-brand-red-deep' : 'bg-gradient-to-r from-[#ff1a1a] to-[#8a0303] text-white clip-brutal-hero-primary shadow-[0_0_60px_rgba(255,49,49,0.3)] hover:shadow-[0_0_100px_rgba(255,49,49,0.5)]'
+                uploading ? 'bg-[var(--bg-tertiary)] border-2 border-[var(--accent-secondary)]' : 'bg-gradient-to-r from-[var(--accent-primary)] to-[var(--accent-secondary)] text-white clip-brutal-hero-primary shadow-[0_0_60px_rgba(255,49,49,0.3)] hover:shadow-[0_0_100px_var(--accent-glow)]'
               }`}
             >
               {uploading && (
                 <div 
-                  className="absolute top-0 left-0 h-full bg-gradient-to-r from-[#ff1a1a] to-[#8a0303] opacity-30 z-0 transition-all duration-300"
+                  className="absolute top-0 left-0 h-full bg-gradient-to-r from-[var(--accent-primary)] to-[var(--accent-secondary)] opacity-30 z-0 transition-all duration-300"
                   style={{ width: `${uploadProgress}%` }}
                 />
               )}
               
               <div className="relative z-10 max-w-2xl">
                 <div className="flex items-center gap-4 mb-6">
-                  <div className="w-12 h-[2px] bg-white opacity-60" />
                   <p className="font-black uppercase tracking-[0.5em] text-[10px] text-white/70">
                     {uploading ? "UPLINK_ESTABLISHED" : ""}
                   </p>
@@ -1294,7 +1405,7 @@ export default function AgenticDashboard() {
 
               {!uploading && (
                 <div className="relative z-10 w-32 h-32 bg-white flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform duration-500 clip-brutal-tr shadow-2xl">
-                  <PlayCircle className="w-16 h-16 text-[#ff1a1a]" />
+                  <PlayCircle className="w-16 h-16 text-[var(--accent-primary)]" />
                 </div>
               )}
               
@@ -1309,15 +1420,15 @@ export default function AgenticDashboard() {
           <section className="flex-1 flex flex-col min-h-0 mt-8">
             <div className="flex items-end justify-between mb-12 px-2">
               <div className="flex items-center gap-6">
-                <div className="p-4 bg-gradient-to-r from-[#ff1a1a] to-[#8a0303]/10 border border-[#ff1a1a]/30 shadow-[0_0_15px_rgba(255,26,26,0.1)] rounded-3xl rounded-full">
-                  <Star className="w-8 h-8 text-[#ff1a1a]" />
+                <div className="p-4 bg-gradient-to-r from-[var(--accent-primary)] to-[var(--accent-secondary)]/10 border border-[var(--accent-primary)]/30 shadow-[0_0_15px_var(--accent-glow)] rounded-3xl rounded-full">
+                  <Star className="w-8 h-8 text-[var(--accent-primary)]" />
                 </div>
                 <div>
                   <h2 className="text-5xl font-black uppercase tracking-tighter leading-none">AGENTIC MATCHES</h2>
                   <p className="text-[10px] font-black uppercase tracking-[0.4em] text-zinc-600 mt-2">REAL_TIME_PIPELINE_SYNC</p>
                 </div>
               </div>
-              <button className="text-zinc-600 hover:text-[#ff1a1a] font-black uppercase tracking-[0.3em] text-[10px] flex items-center gap-3 transition-all border-b border-transparent hover:border-[#ff1a1a] pb-2 cursor-pointer">
+              <button className="text-zinc-600 hover:text-[var(--accent-primary)] font-black uppercase tracking-[0.3em] text-[10px] flex items-center gap-3 transition-all border-b border-transparent hover:border-[var(--accent-primary)] pb-2 cursor-pointer">
                 FULL REGISTRY <ChevronRight className="w-4 h-4" />
               </button>
             </div>
@@ -1329,12 +1440,12 @@ export default function AgenticDashboard() {
                   initial={{ opacity: 0, x: 50 }}
                   whileInView={{ opacity: 1, x: 0 }}
                   transition={{ delay: index * 0.1 }}
-                  className={`snap-center shrink-0 w-[350px] md:w-[480px] glass-panel-premium border border-[#ff1a1a]/30 shadow-[0_0_15px_rgba(255,26,26,0.1)] rounded-3xl p-10 flex flex-col hover:bg-gradient-to-r from-[#ff1a1a] to-[#8a0303]/5 transition-all group cursor-pointer ${
+                  className={`snap-center shrink-0 w-[350px] md:w-[480px] glass-panel-premium border border-[var(--accent-primary)]/30 shadow-[0_0_15px_var(--accent-glow)] rounded-3xl p-10 flex flex-col hover:bg-gradient-to-r from-[var(--accent-primary)] to-[var(--accent-secondary)]/5 transition-all group cursor-pointer ${
                     index % 2 === 0 ? 'clip-brutal-tl' : 'clip-brutal-tr'
                   }`}
                 >
                   <div className="flex justify-between items-start mb-10">
-                    <div className="bg-gradient-to-r from-[#ff1a1a] to-[#8a0303] text-white font-black px-6 py-3 uppercase text-[10px] tracking-[0.2em] shadow-[0_0_20px_rgba(255,49,49,0.4)] rounded-full">
+                    <div className="bg-gradient-to-r from-[var(--accent-primary)] to-[var(--accent-secondary)] text-white font-black px-6 py-3 uppercase text-[10px] tracking-[0.2em] shadow-[0_0_20px_var(--accent-glow)] rounded-full">
                       {role.match}% MATCH
                     </div>
                     <div className="text-right">
@@ -1347,25 +1458,25 @@ export default function AgenticDashboard() {
                   
                   <div className="flex-1">
                     <div className="flex items-center gap-3 mb-3">
-                      <div className="w-2 h-2 bg-gradient-to-r from-[#ff1a1a] to-[#8a0303] rounded-full" />
+                      <div className="w-2 h-2 bg-gradient-to-r from-[var(--accent-primary)] to-[var(--accent-secondary)] rounded-full" />
                       <p className="text-zinc-500 font-black uppercase tracking-[0.3em] text-[10px]">{role.project}</p>
                     </div>
-                    <h3 className="text-5xl font-black uppercase tracking-tighter leading-[0.9] mb-8 group-hover:text-[#ff1a1a] transition-colors">
+                    <h3 className="text-5xl font-black uppercase tracking-tighter leading-[0.9] mb-8 group-hover:text-[var(--accent-primary)] transition-colors">
                       {role.title}
                     </h3>
                     <div className="flex flex-wrap gap-3 mt-auto">
                       {role.tags.map((tag: string) => (
-                        <span key={tag} className="border border-[var(--border-main)] text-zinc-500 px-4 py-2 text-[9px] font-black uppercase tracking-widest group-hover:border-[#ff1a1a]/30 group-hover:text-[#ff1a1a] transition-colors">
+                        <span key={tag} className="border border-[var(--border-main)] text-zinc-500 px-4 py-2 text-[9px] font-black uppercase tracking-widest group-hover:border-[var(--accent-primary)]/30 group-hover:text-[var(--accent-primary)] transition-colors">
                           {tag}
                         </span>
                       ))}
                     </div>
                   </div>
 
-                  <div className="mt-12 border-t border-[var(--border-main)] pt-8 flex justify-between items-center group-hover:border-[#ff1a1a]/30 transition-all">
+                  <div className="mt-12 border-t border-[var(--border-main)] pt-8 flex justify-between items-center group-hover:border-[var(--accent-primary)]/30 transition-all">
                     <span className="font-black text-[10px] uppercase tracking-[0.3em] text-zinc-600 group-hover:text-white transition-colors">ANALYZE_SPECIFICATIONS</span>
-                    <div className="w-12 h-12 bg-[var(--bg-tertiary)] border border-[#ff1a1a]/30 shadow-[0_0_15px_rgba(255,26,26,0.1)] rounded-3xl flex items-center justify-center group-hover:bg-gradient-to-r from-[#ff1a1a] to-[#8a0303] transition-all">
-                      <ChevronRight className="w-6 h-6 text-[#ff1a1a] group-hover:text-white transition-all" />
+                    <div className="w-12 h-12 bg-[var(--bg-tertiary)] border border-[var(--accent-primary)]/30 shadow-[0_0_15px_var(--accent-glow)] rounded-3xl flex items-center justify-center group-hover:bg-gradient-to-r from-[var(--accent-primary)] to-[var(--accent-secondary)] transition-all">
+                      <ChevronRight className="w-6 h-6 text-[var(--accent-primary)] group-hover:text-white transition-all" />
                     </div>
                   </div>
                 </motion.div>
@@ -1380,8 +1491,8 @@ export default function AgenticDashboard() {
       ) : currentView === 'CREATE' ? (
         <div className="flex flex-col gap-16 py-12 animate-in slide-in-from-bottom-8 duration-700">
           <div className="flex items-center gap-6 px-4">
-            <div className="p-5 bg-gradient-to-r from-[#ff1a1a] to-[#8a0303]/10 border border-[#ff1a1a]/30 shadow-[0_0_15px_rgba(255,26,26,0.1)] rounded-3xl rounded-full">
-              <PlusSquare className="w-10 h-10 text-[#ff1a1a]" />
+            <div className="p-5 bg-gradient-to-r from-[var(--accent-primary)] to-[var(--accent-secondary)]/10 border border-[var(--accent-primary)]/30 shadow-[0_0_15px_var(--accent-glow)] rounded-3xl rounded-full">
+              <PlusSquare className="w-10 h-10 text-[var(--accent-primary)]" />
             </div>
             <div>
               <h1 className="text-7xl font-black uppercase tracking-tighter leading-none">CREATE_HUB</h1>
@@ -1395,19 +1506,18 @@ export default function AgenticDashboard() {
                 onClick={handleUploadClick}
                 disabled={uploading}
                 className={`w-full relative group p-16 md:p-24 text-left overflow-hidden flex flex-col md:flex-row items-start md:items-center justify-between gap-12 transition-all duration-700 cursor-pointer ${
-                  uploading ? 'bg-[var(--bg-tertiary)] border-2 border-brand-red-deep' : 'bg-gradient-to-r from-[#ff1a1a] to-[#8a0303] text-white clip-brutal-hero-primary shadow-[0_0_60px_rgba(255,49,49,0.3)] hover:shadow-[0_0_100px_rgba(255,49,49,0.5)]'
+                  uploading ? 'bg-[var(--bg-tertiary)] border-2 border-[var(--accent-secondary)]' : 'bg-gradient-to-r from-[var(--accent-primary)] to-[var(--accent-secondary)] text-white clip-brutal-hero-primary shadow-[0_0_60px_rgba(255,49,49,0.3)] hover:shadow-[0_0_100px_var(--accent-glow)]'
                 }`}
               >
                 {uploading && (
                   <div 
-                    className="absolute top-0 left-0 h-full bg-gradient-to-r from-[#ff1a1a] to-[#8a0303] opacity-30 z-0 transition-all duration-300"
+                    className="absolute top-0 left-0 h-full bg-gradient-to-r from-[var(--accent-primary)] to-[var(--accent-secondary)] opacity-30 z-0 transition-all duration-300"
                     style={{ width: `${uploadProgress}%` }}
                   />
                 )}
                 
                 <div className="relative z-10 max-w-2xl">
                   <div className="flex items-center gap-4 mb-6">
-                    <div className="w-12 h-[2px] bg-white opacity-60" />
                     <p className="font-black uppercase tracking-[0.5em] text-[10px] text-white/70">
                       {uploading ? "UPLINK_ESTABLISHED" : "ACTIVATE_PIPELINE"}
                     </p>
@@ -1422,36 +1532,36 @@ export default function AgenticDashboard() {
 
                 {!uploading && (
                   <div className="relative z-10 w-32 h-32 bg-white flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform duration-500 clip-brutal-tr shadow-2xl">
-                    <PlayCircle className="w-16 h-16 text-[#ff1a1a]" />
+                    <PlayCircle className="w-16 h-16 text-[var(--accent-primary)]" />
                   </div>
                 )}
               </button>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                <div className="glass-panel-premium p-10 border border-white/10 rounded-3xl border-[var(--border-main)] clip-brutal-tl hover:border-[#ff1a1a]/30 transition-colors group">
+                <div className="glass-panel-premium p-10 border border-white/10 rounded-3xl border-[var(--border-main)] clip-brutal-tl hover:border-[var(--accent-primary)]/30 transition-colors group">
                   <div className="flex items-center gap-4 mb-6">
-                    <Video className="w-5 h-5 text-[#ff1a1a]" />
+                    <Video className="w-5 h-5 text-[var(--accent-primary)]" />
                     <h3 className="font-black uppercase tracking-widest text-[10px]">VIDEO_GUIDELINES</h3>
                   </div>
                   <ul className="space-y-4">
                     {['Horizontal framing only', 'Neutral background', 'Chest-up medium shot', 'Stable lighting (No backlighting)'].map((tip: string) => (
                       <li key={tip} className="flex items-center gap-3">
-                        <div className="w-1.5 h-1.5 bg-gradient-to-r from-[#ff1a1a] to-[#8a0303]" />
+                        <div className="w-1.5 h-1.5 bg-gradient-to-r from-[var(--accent-primary)] to-[var(--accent-secondary)]" />
                         <span className="text-[11px] font-black uppercase tracking-wider text-zinc-400 group-hover:text-zinc-200 transition-colors">{tip}</span>
                       </li>
                     ))}
                   </ul>
                 </div>
 
-                <div className="glass-panel-premium p-10 border border-white/10 rounded-3xl border-[var(--border-main)] clip-brutal-tr hover:border-[#ff1a1a]/30 transition-colors group">
+                <div className="glass-panel-premium p-10 border border-white/10 rounded-3xl border-[var(--border-main)] clip-brutal-tr hover:border-[var(--accent-primary)]/30 transition-colors group">
                   <div className="flex items-center gap-4 mb-6">
-                    <Mic2 className="w-5 h-5 text-[#ff1a1a]" />
+                    <Mic2 className="w-5 h-5 text-[var(--accent-primary)]" />
                     <h3 className="font-black uppercase tracking-widest text-[10px]">AUDIO_PROTOCOLS</h3>
                   </div>
                   <ul className="space-y-4">
                     {['Minimize background noise', 'Clear voice projection', 'No music/overlay', 'Direct mic orientation'].map((tip: string) => (
                       <li key={tip} className="flex items-center gap-3">
-                        <div className="w-1.5 h-1.5 bg-gradient-to-r from-[#ff1a1a] to-[#8a0303]" />
+                        <div className="w-1.5 h-1.5 bg-gradient-to-r from-[var(--accent-primary)] to-[var(--accent-secondary)]" />
                         <span className="text-[11px] font-black uppercase tracking-wider text-zinc-400 group-hover:text-zinc-200 transition-colors">{tip}</span>
                       </li>
                     ))}
@@ -1461,14 +1571,14 @@ export default function AgenticDashboard() {
             </div>
 
             <div className="lg:col-span-4 flex flex-col gap-8">
-              <div className="glass-panel-premium-red p-10 border border-[#ff1a1a]/30 shadow-[0_0_15px_rgba(255,26,26,0.1)] rounded-3xl clip-brutal-br shadow-[0_0_40px_rgba(255,49,49,0.1)]">
+              <div className="glass-panel-premium-red p-10 border border-[var(--accent-primary)]/30 shadow-[0_0_15px_var(--accent-glow)] rounded-3xl clip-brutal-br shadow-[0_0_40px_var(--accent-glow)]">
                 <div className="flex items-center gap-4 mb-8">
-                  <Zap className="w-6 h-6 text-[#ff1a1a]" />
+                  <Zap className="w-6 h-6 text-[var(--accent-primary)]" />
                   <h3 className="font-black uppercase tracking-widest text-[10px]">LMN_REWARDS</h3>
                 </div>
                 <div className="text-left">
                   <span className="text-7xl font-black tracking-tighter text-white">+{Math.floor(40 * (data.profile.multiplier || 1))}</span>
-                  <span className="text-xl font-black text-[#ff1a1a] ml-2">LMN</span>
+                  <span className="text-xl font-black text-[var(--accent-primary)] ml-2">LMN</span>
                 </div>
                 <p className="text-[9px] font-black uppercase tracking-widest text-white/60 mt-4 leading-relaxed">
                   Every audition upload awards 40 LMN points (x1.3 for VIP members). Points contribute directly to your global ranking and pipeline priority.
@@ -1491,8 +1601,8 @@ export default function AgenticDashboard() {
         <div className="flex flex-col gap-16 py-12 animate-in slide-in-from-bottom-8 duration-700">
           <div className="flex items-center justify-between px-4">
             <div className="flex items-center gap-6">
-              <div className="p-5 bg-gradient-to-r from-[#ff1a1a] to-[#8a0303]/10 border border-[#ff1a1a]/30 shadow-[0_0_15px_rgba(255,26,26,0.1)] rounded-3xl rounded-full">
-                <Star className="w-10 h-10 text-[#ff1a1a]" />
+              <div className="p-5 bg-gradient-to-r from-[var(--accent-primary)] to-[var(--accent-secondary)]/10 border border-[var(--accent-primary)]/30 shadow-[0_0_15px_var(--accent-glow)] rounded-3xl rounded-full">
+                <Star className="w-10 h-10 text-[var(--accent-primary)]" />
               </div>
               <div>
                 <h1 className="text-7xl font-black uppercase tracking-tighter leading-none">ROLES_HUB</h1>
@@ -1505,13 +1615,13 @@ export default function AgenticDashboard() {
                   <span className="text-[9px] font-black text-zinc-600 uppercase tracking-widest">REALTIME_MATCHING</span>
                   <span className="text-sm font-black text-white uppercase tracking-tighter">NODE_SYNC_ACTIVE</span>
                </div>
-               <div className="w-2 h-2 bg-gradient-to-r from-[#ff1a1a] to-[#8a0303] rounded-full animate-pulse self-center" />
+               <div className="w-2 h-2 bg-gradient-to-r from-[var(--accent-primary)] to-[var(--accent-secondary)] rounded-full animate-pulse self-center" />
             </div>
           </div>
 
           <div className="flex flex-wrap gap-4 px-4 border-y border-[var(--border-main)] py-6">
             {['HIGH_MATCH', 'URGENT', 'NEW_PROJECTS', 'SAVED'].map((filter: string) => (
-              <button key={filter} className="px-6 py-2 border border-[var(--border-main)] text-[9px] font-black uppercase tracking-widest hover:border-[#ff1a1a] hover:text-[#ff1a1a] transition-all cursor-pointer">
+              <button key={filter} className="px-6 py-2 border border-[var(--border-main)] text-[9px] font-black uppercase tracking-widest hover:border-[var(--accent-primary)] hover:text-[var(--accent-primary)] transition-all cursor-pointer">
                 {filter}
               </button>
             ))}
@@ -1530,14 +1640,14 @@ export default function AgenticDashboard() {
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: index * 0.1 }}
-                  className="glass-panel-premium border border-white/10 rounded-3xl p-10 flex flex-col hover:border-[#ff1a1a]/50 transition-all group cursor-pointer relative overflow-hidden h-full"
+                  className="glass-panel-premium border border-white/10 rounded-3xl p-10 flex flex-col hover:border-[var(--accent-primary)]/50 transition-all group cursor-pointer relative overflow-hidden h-full"
                 >
                    <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-100 transition-opacity">
-                      <Star className="w-5 h-5 text-[#ff1a1a]" />
+                      <Star className="w-5 h-5 text-[var(--accent-primary)]" />
                    </div>
 
                   <div className="flex justify-between items-start mb-8">
-                    <div className="bg-gradient-to-r from-[#ff1a1a] to-[#8a0303] text-white font-black px-4 py-2 uppercase text-[9px] tracking-widest rounded-full shadow-[0_0_20px_rgba(255,49,49,0.2)]">
+                    <div className="bg-gradient-to-r from-[var(--accent-primary)] to-[var(--accent-secondary)] text-white font-black px-4 py-2 uppercase text-[9px] tracking-widest rounded-full shadow-[0_0_20px_rgba(255,49,49,0.2)]">
                       {role.match}% MATCH
                     </div>
                     <div className="text-right">
@@ -1548,7 +1658,7 @@ export default function AgenticDashboard() {
 
                   <div className="flex-1">
                     <p className="text-zinc-600 font-black uppercase tracking-[0.3em] text-[9px] mb-2">{role.project}</p>
-                    <h3 className="text-4xl font-black uppercase tracking-tighter leading-none mb-8 group-hover:text-[#ff1a1a] transition-colors">
+                    <h3 className="text-4xl font-black uppercase tracking-tighter leading-none mb-8 group-hover:text-[var(--accent-primary)] transition-colors">
                       {role.title}
                     </h3>
                     
@@ -1565,14 +1675,14 @@ export default function AgenticDashboard() {
 
                     <div className="flex flex-wrap gap-2">
                       {role.tags.map((tag: string) => (
-                        <span key={tag} className="bg-[var(--bg-secondary)]/30 text-zinc-500 px-3 py-1.5 text-[8px] font-black uppercase tracking-widest border border-[var(--border-main)] group-hover:border-[#ff1a1a]/20 transition-all">
+                        <span key={tag} className="bg-[var(--bg-secondary)]/30 text-zinc-500 px-3 py-1.5 text-[8px] font-black uppercase tracking-widest border border-[var(--border-main)] group-hover:border-[var(--accent-primary)]/20 transition-all">
                           {tag}
                         </span>
                       ))}
                     </div>
                   </div>
 
-                  <button className="mt-12 w-full py-4 bg-[var(--bg-tertiary)] border border-[var(--border-main)] font-black uppercase tracking-[0.3em] text-[10px] hover:bg-gradient-to-r from-[#ff1a1a] to-[#8a0303] hover:text-white transition-all group-hover:border-[#ff1a1a] cursor-pointer">
+                  <button className="mt-12 w-full py-4 bg-[var(--bg-tertiary)] border border-[var(--border-main)] font-black uppercase tracking-[0.3em] text-[10px] hover:bg-gradient-to-r from-[var(--accent-primary)] to-[var(--accent-secondary)] hover:text-white transition-all group-hover:border-[var(--accent-primary)] cursor-pointer">
                     ANALYZE_ROLE
                   </button>
                 </motion.div>
@@ -1583,8 +1693,8 @@ export default function AgenticDashboard() {
         <div className="flex flex-col gap-16 py-12 animate-in slide-in-from-bottom-8 duration-700">
           <div className="flex items-center justify-between px-4">
             <div className="flex items-center gap-6">
-              <div className="p-5 bg-gradient-to-r from-[#ff1a1a] to-[#8a0303]/10 border border-[#ff1a1a]/30 shadow-[0_0_15px_rgba(255,26,26,0.1)] rounded-3xl rounded-full">
-                <Target className="w-10 h-10 text-[#ff1a1a]" />
+              <div className="p-5 bg-gradient-to-r from-[var(--accent-primary)] to-[var(--accent-secondary)]/10 border border-[var(--accent-primary)]/30 shadow-[0_0_15px_var(--accent-glow)] rounded-3xl rounded-full">
+                <Target className="w-10 h-10 text-[var(--accent-primary)]" />
               </div>
               <div>
                 <h1 className="text-7xl font-black uppercase tracking-tighter leading-none">MISSIONS_HUB</h1>
@@ -1595,7 +1705,7 @@ export default function AgenticDashboard() {
             <div className="bg-[var(--bg-secondary)]/50 p-6 border border-white/10 rounded-3xl border-[var(--border-main)] flex flex-col gap-2">
                <span className="text-[8px] font-black text-zinc-600 uppercase tracking-widest">ACTIVE_MULTIPLIER</span>
                <div className="flex items-center gap-3">
-                  <Zap className="w-4 h-4 text-[#ff1a1a]" />
+                  <Zap className="w-4 h-4 text-[var(--accent-primary)]" />
                   <span className="text-2xl font-black text-white tabular-nums">x{data.profile.multiplier.toFixed(1)}</span>
                </div>
             </div>
@@ -1606,7 +1716,7 @@ export default function AgenticDashboard() {
              <div className="lg:col-span-8 flex flex-col gap-10">
                 <div className="glass-panel-premium p-10 border border-white/10 rounded-3xl border-[var(--border-main)]">
                    <div className="flex items-center gap-4 mb-10 border-b border-[var(--border-main)] pb-6">
-                      <Flame className="w-6 h-6 text-[#ff1a1a]" />
+                      <Flame className="w-6 h-6 text-[var(--accent-primary)]" />
                       <h3 className="text-2xl font-black uppercase tracking-tighter">DAILY_MISSIONS</h3>
                       <span className="text-[10px] font-black text-zinc-600 uppercase tracking-widest ml-auto">RESETS_IN 14H</span>
                    </div>
@@ -1632,7 +1742,7 @@ export default function AgenticDashboard() {
                                {mission.done ? (
                                  <CheckCircle2 className="w-6 h-6 text-green-500" />
                                ) : (
-                                 <div className="w-2 h-2 bg-zinc-700 rounded-full group-hover:bg-gradient-to-r from-[#ff1a1a] to-[#8a0303] transition-colors" />
+                                 <div className="w-2 h-2 bg-zinc-700 rounded-full group-hover:bg-gradient-to-r from-[var(--accent-primary)] to-[var(--accent-secondary)] transition-colors" />
                                )}
                             </div>
                             <div>
@@ -1646,7 +1756,7 @@ export default function AgenticDashboard() {
                           </div>
 
                           <div className="text-right">
-                             <span className={`text-3xl font-black tabular-nums ${mission.done ? 'text-green-500' : 'text-[#ff1a1a]'}`}>
+                             <span className={`text-3xl font-black tabular-nums ${mission.done ? 'text-green-500' : 'text-[var(--accent-primary)]'}`}>
                                 {mission.done ? 'DONE' : `+${mission.reward}`}
                              </span>
                              <span className="text-[10px] font-black text-zinc-600 ml-2">LMN</span>
@@ -1670,7 +1780,7 @@ export default function AgenticDashboard() {
 
              {/* Sidebar Info */}
              <div className="lg:col-span-4 flex flex-col gap-10">
-                <div className="glass-panel-premium-red p-10 border border-[#ff1a1a]/30 shadow-[0_0_15px_rgba(255,26,26,0.1)] rounded-3xl clip-brutal-hero-primary shadow-[0_0_40px_rgba(255,49,49,0.1)]">
+                <div className="glass-panel-premium-red p-10 border border-[var(--accent-primary)]/30 shadow-[0_0_15px_var(--accent-glow)] rounded-3xl clip-brutal-hero-primary shadow-[0_0_40px_var(--accent-glow)]">
                    <h3 className="font-black uppercase tracking-widest text-[10px] mb-6">PROGRESS_REPORT</h3>
                    <div className="flex items-end justify-between mb-4">
                       <span className="text-[9px] font-black uppercase text-[var(--text-secondary)] tracking-widest">TIER_REACH: {data.profile.lumenTier}</span>
@@ -1700,7 +1810,7 @@ export default function AgenticDashboard() {
                                <p className="text-[10px] font-black uppercase text-white">{log.action}</p>
                                <p className="text-[8px] font-black text-zinc-600">{log.date}</p>
                             </div>
-                            <span className="text-xs font-black text-[#ff1a1a]">+{log.points}</span>
+                            <span className="text-xs font-black text-[var(--accent-primary)]">+{log.points}</span>
                          </div>
                       ))}
                    </div>
@@ -1712,8 +1822,8 @@ export default function AgenticDashboard() {
         <div className="flex flex-col gap-16 py-12 animate-in slide-in-from-bottom-8 duration-700">
           <div className="flex items-center justify-between px-4">
             <div className="flex items-center gap-6">
-              <div className="p-5 bg-gradient-to-r from-[#ff1a1a] to-[#8a0303]/10 border border-[#ff1a1a]/30 shadow-[0_0_15px_rgba(255,26,26,0.1)] rounded-3xl rounded-full">
-                <Zap className="w-10 h-10 text-[#ff1a1a]" />
+              <div className="p-5 bg-gradient-to-r from-[var(--accent-primary)] to-[var(--accent-secondary)]/10 border border-[var(--accent-primary)]/30 shadow-[0_0_15px_var(--accent-glow)] rounded-3xl rounded-full">
+                <Zap className="w-10 h-10 text-[var(--accent-primary)]" />
               </div>
               <div>
                 <h1 className="text-7xl font-black uppercase tracking-tighter leading-none">LMN_REGISTER</h1>
@@ -1732,13 +1842,13 @@ export default function AgenticDashboard() {
              <div className="lg:col-span-8 flex flex-col gap-10">
                 <div className="glass-panel-premium p-10 border border-white/10 rounded-3xl border-[var(--border-main)] bg-[var(--bg-tertiary)]/50">
                    <div className="flex items-center gap-4 mb-10 border-b border-[var(--border-main)] pb-6">
-                      <BookOpen className="w-6 h-6 text-[#ff1a1a]" />
+                      <BookOpen className="w-6 h-6 text-[var(--accent-primary)]" />
                       <h3 className="text-2xl font-black uppercase tracking-tighter">ECONOMY_101 // THE_PROTOCOL</h3>
                    </div>
                    
                    <div className="space-y-12">
                       <div className="flex gap-8 group">
-                         <div className="text-5xl font-black text-zinc-800 group-hover:text-[#ff1a1a] transition-colors tabular-nums">01</div>
+                         <div className="text-5xl font-black text-zinc-800 group-hover:text-[var(--accent-primary)] transition-colors tabular-nums">01</div>
                          <div>
                             <h4 className="text-xl font-black uppercase tracking-tight mb-3">WHAT IS LUMEN?</h4>
                             <p className="text-zinc-500 text-sm leading-relaxed max-w-2xl font-medium">
@@ -1748,7 +1858,7 @@ export default function AgenticDashboard() {
                       </div>
 
                       <div className="flex gap-8 group">
-                         <div className="text-5xl font-black text-zinc-800 group-hover:text-[#ff1a1a] transition-colors tabular-nums">02</div>
+                         <div className="text-5xl font-black text-zinc-800 group-hover:text-[var(--accent-primary)] transition-colors tabular-nums">02</div>
                          <div>
                             <h4 className="text-xl font-black uppercase tracking-tight mb-3">THE_VALUE_PROP</h4>
                             <p className="text-zinc-500 text-sm leading-relaxed max-w-2xl font-medium">
@@ -1758,7 +1868,7 @@ export default function AgenticDashboard() {
                       </div>
 
                       <div className="flex gap-8 group">
-                         <div className="text-5xl font-black text-zinc-800 group-hover:text-[#ff1a1a] transition-colors tabular-nums">03</div>
+                         <div className="text-5xl font-black text-zinc-800 group-hover:text-[var(--accent-primary)] transition-colors tabular-nums">03</div>
                          <div>
                             <h4 className="text-xl font-black uppercase tracking-tight mb-3">YIELD_CALCULATION</h4>
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-6">
@@ -1772,7 +1882,7 @@ export default function AgenticDashboard() {
                                      <p className="text-[9px] font-black text-zinc-500 uppercase tracking-widest mb-1">{m.label}</p>
                                      <div className="flex items-center justify-between">
                                         <span className="text-lg font-black text-[var(--text-primary)] tabular-nums">{m.base}</span>
-                                        <span className="text-[8px] font-black text-[#ff1a1a] uppercase">{m.logic}</span>
+                                        <span className="text-[8px] font-black text-[var(--accent-primary)] uppercase">{m.logic}</span>
                                      </div>
                                   </div>
                                ))}
@@ -1785,7 +1895,7 @@ export default function AgenticDashboard() {
                 {/* Detailed Metrics */}
                 <div className="glass-panel-premium p-10 border border-white/10 rounded-3xl border-[var(--border-main)]">
                    <div className="flex items-center gap-4 mb-10 border-b border-[var(--border-main)] pb-6">
-                      <BarChart3 className="w-6 h-6 text-[#ff1a1a]" />
+                      <BarChart3 className="w-6 h-6 text-[var(--accent-primary)]" />
                       <h3 className="text-2xl font-black uppercase tracking-tighter">YIELD_METRICS</h3>
                    </div>
                    <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
@@ -1810,7 +1920,7 @@ export default function AgenticDashboard() {
 
              {/* Sidebar Info & Tips */}
              <div className="lg:col-span-4 flex flex-col gap-10">
-                <div className="glass-panel-premium-red p-10 border border-[#ff1a1a]/30 shadow-[0_0_15px_rgba(255,26,26,0.1)] rounded-3xl clip-brutal-tl shadow-[0_0_40px_rgba(255,49,49,0.1)]">
+                <div className="glass-panel-premium-red p-10 border border-[var(--accent-primary)]/30 shadow-[0_0_15px_var(--accent-glow)] rounded-3xl clip-brutal-tl shadow-[0_0_40px_var(--accent-glow)]">
                    <h3 className="font-black uppercase tracking-widest text-[10px] mb-8">MY_LMN_RECORD</h3>
                    <div className="space-y-8">
                       <div className="flex justify-between items-end border-b border-white/10 pb-4">
@@ -1823,7 +1933,7 @@ export default function AgenticDashboard() {
                       </div>
                       <div className="flex justify-between items-end border-b border-white/10 pb-4">
                          <span className="text-[10px] font-black uppercase text-white/60">ACTIVE_MULTIPLIER</span>
-                         <span className="text-2xl font-black text-[#ff1a1a] tabular-nums">x{data.profile.multiplier.toFixed(1)}</span>
+                         <span className="text-2xl font-black text-[var(--accent-primary)] tabular-nums">x{data.profile.multiplier.toFixed(1)}</span>
                       </div>
                    </div>
                 </div>
@@ -1838,8 +1948,8 @@ export default function AgenticDashboard() {
                          { title: 'AUDITION_MASTERY', desc: 'Weekly video submissions grant a massive 500 LMN consistency bonus.' },
                       ].map((tip: any, i: number) => (
                          <div key={i} className="group cursor-pointer">
-                            <h4 className="text-[10px] font-black uppercase text-white mb-2 group-hover:text-[#ff1a1a] transition-colors flex items-center gap-2">
-                               <div className="w-1.5 h-1.5 bg-gradient-to-r from-[#ff1a1a] to-[#8a0303]" />
+                            <h4 className="text-[10px] font-black uppercase text-white mb-2 group-hover:text-[var(--accent-primary)] transition-colors flex items-center gap-2">
+                               <div className="w-1.5 h-1.5 bg-gradient-to-r from-[var(--accent-primary)] to-[var(--accent-secondary)]" />
                                {tip.title}
                             </h4>
                             <p className="text-[9px] font-bold text-zinc-600 leading-relaxed uppercase">{tip.desc}</p>
@@ -1854,8 +1964,8 @@ export default function AgenticDashboard() {
         <div className="flex flex-col gap-16 py-12 animate-in slide-in-from-bottom-8 duration-700">
           <div className="flex items-center justify-between px-4">
             <div className="flex items-center gap-6">
-              <div className="p-5 bg-gradient-to-r from-[#ff1a1a] to-[#8a0303]/10 border border-[#ff1a1a]/30 shadow-[0_0_15px_rgba(255,26,26,0.1)] rounded-3xl rounded-full">
-                <Rss className="w-10 h-10 text-[#ff1a1a]" />
+              <div className="p-5 bg-gradient-to-r from-[var(--accent-primary)] to-[var(--accent-secondary)]/10 border border-[var(--accent-primary)]/30 shadow-[0_0_15px_var(--accent-glow)] rounded-3xl rounded-full">
+                <Rss className="w-10 h-10 text-[var(--accent-primary)]" />
               </div>
               <div>
                 <h1 className="text-7xl font-black uppercase tracking-tighter leading-none">INTEL_FEED</h1>
@@ -1871,7 +1981,7 @@ export default function AgenticDashboard() {
                    <div 
                       key={feed.id}
                       onClick={() => setSelectedFeed(feed)}
-                      className={`glass-panel-premium p-8 border border-white/10 rounded-3xl border-[var(--border-main)] hover:border-[#ff1a1a] transition-all cursor-pointer group flex flex-col md:flex-row gap-8 ${selectedFeed?.id === feed.id ? 'border-[#ff1a1a] bg-gradient-to-r from-[#ff1a1a] to-[#8a0303]/5' : 'bg-[var(--bg-tertiary)]/50'}`}
+                      className={`glass-panel-premium p-8 border border-white/10 rounded-3xl border-[var(--border-main)] hover:border-[var(--accent-primary)] transition-all cursor-pointer group flex flex-col md:flex-row gap-8 ${selectedFeed?.id === feed.id ? 'border-[var(--accent-primary)] bg-gradient-to-r from-[var(--accent-primary)] to-[var(--accent-secondary)]/5' : 'bg-[var(--bg-tertiary)]/50'}`}
                    >
                       <div className="w-full md:w-48 h-48 border border-white/10 rounded-3xl border-[var(--border-main)] overflow-hidden shrink-0 relative">
                          <img src={feed.image} alt="" className="w-full h-full object-cover grayscale group-hover:grayscale-0 transition-all duration-500 scale-105 group-hover:scale-100" />
@@ -1882,11 +1992,11 @@ export default function AgenticDashboard() {
                       <div className="flex-1 flex flex-col justify-between py-2">
                          <div>
                             <div className="flex items-center gap-4 mb-3">
-                               <span className="text-[9px] font-black text-[#ff1a1a] uppercase tracking-widest">{feed.author}</span>
+                               <span className="text-[9px] font-black text-[var(--accent-primary)] uppercase tracking-widest">{feed.author}</span>
                                <span className="w-1 h-1 bg-zinc-800 rounded-full" />
                                <span className="text-[9px] font-black text-zinc-600 uppercase tracking-widest tabular-nums">{feed.timestamp}</span>
                             </div>
-                            <h3 className="text-2xl font-black uppercase tracking-tighter leading-tight group-hover:text-[#ff1a1a] transition-colors mb-4">
+                            <h3 className="text-2xl font-black uppercase tracking-tighter leading-tight group-hover:text-[var(--accent-primary)] transition-colors mb-4">
                                {feed.title}
                             </h3>
                             <p className="text-zinc-500 text-[11px] font-black uppercase leading-relaxed line-clamp-2">
@@ -1916,7 +2026,7 @@ export default function AgenticDashboard() {
                             <img src={selectedFeed.image} alt="" className="w-full h-full object-cover" />
                             <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent" />
                             <div className="absolute bottom-6 left-6 right-6">
-                               <span className="px-3 py-1 bg-gradient-to-r from-[#ff1a1a] to-[#8a0303] text-white text-[10px] font-black uppercase tracking-widest">
+                               <span className="px-3 py-1 bg-gradient-to-r from-[var(--accent-primary)] to-[var(--accent-secondary)] text-white text-[10px] font-black uppercase tracking-widest">
                                   {selectedFeed.category}
                                </span>
                             </div>
@@ -1927,8 +2037,8 @@ export default function AgenticDashboard() {
                          </h2>
                          
                          <div className="flex items-center gap-4 mb-10 border-y border-[var(--border-main)] py-6">
-                            <div className="w-10 h-10 bg-gradient-to-r from-[#ff1a1a] to-[#8a0303]/10 border border-[#ff1a1a]/30 shadow-[0_0_15px_rgba(255,26,26,0.1)] rounded-3xl flex items-center justify-center">
-                               <Rss className="w-4 h-4 text-[#ff1a1a]" />
+                            <div className="w-10 h-10 bg-gradient-to-r from-[var(--accent-primary)] to-[var(--accent-secondary)]/10 border border-[var(--accent-primary)]/30 shadow-[0_0_15px_var(--accent-glow)] rounded-3xl flex items-center justify-center">
+                               <Rss className="w-4 h-4 text-[var(--accent-primary)]" />
                             </div>
                             <div>
                                <p className="text-[10px] font-black uppercase text-white tracking-widest">{selectedFeed.author}</p>
@@ -1941,7 +2051,7 @@ export default function AgenticDashboard() {
                                {selectedFeed.details}
                             </p>
                             <div className="pt-10 flex gap-4">
-                               <button className="flex-1 py-4 bg-gradient-to-r from-[#ff1a1a] to-[#8a0303] text-white font-black uppercase tracking-[0.2em] text-[10px] hover:bg-white hover:text-black transition-all cursor-pointer">
+                               <button className="flex-1 py-4 bg-gradient-to-r from-[var(--accent-primary)] to-[var(--accent-secondary)] text-white font-black uppercase tracking-[0.2em] text-[10px] hover:bg-white hover:text-black transition-all cursor-pointer">
                                   SHARE_INTEL
                                </button>
                                <button className="p-4 border border-white/10 rounded-3xl border-[var(--border-main)] text-zinc-500 hover:text-white transition-all cursor-pointer">
@@ -1966,19 +2076,19 @@ export default function AgenticDashboard() {
           <div className="flex flex-col md:flex-row justify-between items-start md:items-end border-b border-[var(--border-main)] pb-12 mb-4">
             <div>
               <h1 className="text-7xl font-black uppercase tracking-tighter leading-none">
-                NOTIF<span className="text-brand-red-neon drop-shadow-[0_0_15px_rgba(255,49,49,0.5)]">//</span>CENTER
+                NOTIF<span className="text-[var(--accent-primary)] drop-shadow-[0_0_15px_var(--accent-glow)]">//</span>CENTER
               </h1>
               <div className="flex items-center gap-4 mt-6">
                 <div className="flex gap-1">
                   {[...Array(5)].map((_: any, i: number) => {
                     const unreadCount = data.notifications.filter((n: any) => !n.read).length;
                     return (
-                      <div key={i} className={`w-1 h-4 ${i < unreadCount ? 'bg-brand-red-neon' : 'bg-zinc-800'}`} />
+                      <div key={i} className={`w-1 h-4 ${i < unreadCount ? 'bg-[var(--accent-primary)]' : 'bg-zinc-800'}`} />
                     );
                   })}
                 </div>
                 <p className="text-zinc-600 font-black tracking-[0.4em] uppercase text-[10px] flex items-center gap-2">
-                  <span className="w-2 h-2 rounded-full bg-brand-red-neon animate-pulse" />
+                  <span className="w-2 h-2 rounded-full bg-[var(--accent-primary)] animate-pulse" />
                   {data.notifications.filter((n: any) => !n.read).length} UNREAD_SIGNALS
                 </p>
               </div>
@@ -1991,7 +2101,7 @@ export default function AgenticDashboard() {
                     key={f}
                     onClick={() => setNotifFilter(f)}
                     className={`px-6 py-3 font-black uppercase tracking-widest text-[10px] transition-all cursor-pointer ${
-                      notifFilter === f ? 'bg-brand-red-neon text-white' : 'bg-[var(--bg-tertiary)] text-zinc-500 hover:text-white brutal-border border-[var(--border-main)]'
+                      notifFilter === f ? 'bg-[var(--accent-primary)] text-white' : 'bg-[var(--bg-tertiary)] text-zinc-500 hover:text-white brutal-border border-[var(--border-main)]'
                     }`}
                   >
                     {f}
@@ -2001,7 +2111,7 @@ export default function AgenticDashboard() {
               {data.notifications.filter((n: any) => !n.read).length > 0 && (
                 <button 
                   onClick={markAllRead}
-                  className="px-6 py-3 glass-panel brutal-border-red text-brand-red-neon font-black uppercase tracking-widest text-[10px] hover:bg-brand-red-neon hover:text-white transition-all cursor-pointer flex items-center gap-2"
+                  className="px-6 py-3 glass-panel brutal-border-red text-[var(--accent-primary)] font-black uppercase tracking-widest text-[10px] hover:bg-[var(--accent-primary)] hover:text-white transition-all cursor-pointer flex items-center gap-2"
                 >
                   <Check className="w-3 h-3" /> MARK ALL READ
                 </button>
@@ -2035,15 +2145,15 @@ export default function AgenticDashboard() {
                       transition={{ delay: index * 0.05 }}
                       onClick={() => !notif.read && markAsRead(notif.id)}
                       className={`p-8 md:p-10 brutal-border transition-all cursor-pointer group relative overflow-hidden ${config.color} ${
-                        !notif.read ? 'hover:border-brand-red-neon' : 'opacity-60 hover:opacity-80'
+                        !notif.read ? 'hover:border-[var(--accent-primary)]' : 'opacity-60 hover:opacity-80'
                       }`}
                     >
                       {!notif.read && (
-                        <div className="absolute top-0 left-0 w-1 h-full bg-brand-red-neon shadow-[0_0_10px_rgba(255,49,49,0.5)]" />
+                        <div className="absolute top-0 left-0 w-1 h-full bg-[var(--accent-primary)] shadow-[0_0_10px_var(--accent-glow)]" />
                       )}
 
                       <div className="flex items-start gap-6 md:gap-8">
-                        <div className={`p-3 ${notif.priority === 'VERY IMPORTANT' ? 'bg-brand-red-neon/20' : 'bg-[var(--bg-secondary)]'} shrink-0`}>
+                        <div className={`p-3 ${notif.priority === 'VERY IMPORTANT' ? 'bg-[var(--accent-primary)]/20' : 'bg-[var(--bg-secondary)]'} shrink-0`}>
                           <PriorityIcon className={`w-5 h-5 ${config.iconColor}`} />
                         </div>
                         
@@ -2056,11 +2166,11 @@ export default function AgenticDashboard() {
                               {formatTime(notif.created_at)}
                             </span>
                             {!notif.read && (
-                              <span className="w-2 h-2 rounded-full bg-brand-red-neon animate-pulse" />
+                              <span className="w-2 h-2 rounded-full bg-[var(--accent-primary)] animate-pulse" />
                             )}
                           </div>
                           
-                          <h3 className="text-2xl md:text-3xl font-black uppercase tracking-tighter mb-4 group-hover:text-brand-red-neon transition-colors leading-tight">
+                          <h3 className="text-2xl md:text-3xl font-black uppercase tracking-tighter mb-4 group-hover:text-[var(--accent-primary)] transition-colors leading-tight">
                             {notif.title}
                           </h3>
                           <p className="text-zinc-400 font-medium text-sm leading-relaxed">
@@ -2080,8 +2190,8 @@ export default function AgenticDashboard() {
           {/* Profile Header & Strength */}
           <div className="flex flex-col md:flex-row justify-between items-start md:items-center px-4 gap-8">
             <div className="flex items-center gap-6">
-              <div className="p-5 bg-gradient-to-r from-[#ff1a1a] to-[#8a0303]/10 border border-[#ff1a1a]/30 shadow-[0_0_15px_rgba(255,26,26,0.1)] rounded-3xl rounded-full">
-                <User className="w-10 h-10 text-[#ff1a1a]" />
+              <div className="p-5 bg-gradient-to-r from-[var(--accent-primary)] to-[var(--accent-secondary)]/10 border border-[var(--accent-primary)]/30 shadow-[0_0_15px_var(--accent-glow)] rounded-3xl rounded-full">
+                <User className="w-10 h-10 text-[var(--accent-primary)]" />
               </div>
               <div>
                 <h1 className="text-7xl font-black uppercase tracking-tighter leading-none">ACTOR_PROFILE</h1>
@@ -2089,20 +2199,20 @@ export default function AgenticDashboard() {
               </div>
             </div>
 
-            <div className="w-full md:w-96 p-8 glass-panel-premium border border-[#ff1a1a]/30 shadow-[0_0_15px_rgba(255,26,26,0.1)] rounded-3xl flex flex-col gap-4 relative overflow-hidden group">
+            <div className="w-full md:w-96 p-8 glass-panel-premium border border-[var(--accent-primary)]/30 shadow-[0_0_15px_var(--accent-glow)] rounded-3xl flex flex-col gap-4 relative overflow-hidden group">
                <div className="flex justify-between items-end relative z-10">
                   <span className="text-[10px] font-black uppercase tracking-widest text-zinc-500">PROFILE_STRENGTH</span>
-                  <span className="text-3xl font-black text-[#ff1a1a] tabular-nums">{profileStrength}%</span>
+                  <span className="text-3xl font-black text-[var(--accent-primary)] tabular-nums">{profileStrength}%</span>
                </div>
                <div className="h-2 bg-[var(--bg-secondary)] border border-white/10 rounded-3xl border-[var(--border-main)] relative z-10 overflow-hidden">
                   <motion.div 
                      initial={{ width: 0 }}
                      animate={{ width: `${profileStrength}%` }}
-                     className="h-full bg-gradient-to-r from-[#ff1a1a] to-[#8a0303] shadow-[0_0_20px_rgba(255,49,49,0.5)]"
+                     className="h-full bg-gradient-to-r from-[var(--accent-primary)] to-[var(--accent-secondary)] shadow-[0_0_20px_var(--accent-glow)]"
                   />
                </div>
                {profileStrength < 100 && (
-                  <p className="text-[8px] font-black text-[#ff1a1a] uppercase tracking-widest animate-pulse relative z-10">
+                  <p className="text-[8px] font-black text-[var(--accent-primary)] uppercase tracking-widest animate-pulse relative z-10">
                      COMPLETE_PROFILE FOR 7X_VISIBILITY_BOOST
                   </p>
                )}
@@ -2116,7 +2226,7 @@ export default function AgenticDashboard() {
              {/* Left Column: Visuals & Sharing */}
              <div className="lg:col-span-4 flex flex-col gap-10">
                 <div className="glass-panel-premium p-10 border border-white/10 rounded-3xl border-[var(--border-main)] flex flex-col items-center text-center">
-                   <div className="w-48 h-48 rounded-full border border-[#ff1a1a]/30 shadow-[0_0_15px_rgba(255,26,26,0.1)] rounded-3xl bg-[var(--bg-secondary)] mb-8 relative overflow-hidden group">
+                   <div className="w-48 h-48 rounded-full border border-[var(--accent-primary)]/30 shadow-[0_0_15px_var(--accent-glow)] rounded-3xl bg-[var(--bg-secondary)] mb-8 relative overflow-hidden group">
                       {data.profile.avatarUrl ? (
                          <img src={data.profile.avatarUrl} alt="PFP" className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
                       ) : (
@@ -2130,7 +2240,7 @@ export default function AgenticDashboard() {
                       </button>
                    </div>
                    <h2 className="text-3xl font-black uppercase tracking-tighter mb-2">{data.profile.name}</h2>
-                   <p className="text-[#ff1a1a] font-black text-xs tracking-widest mb-8">@{data.profile.username || 'ANONYMOUS'}</p>
+                   <p className="text-[var(--accent-primary)] font-black text-xs tracking-widest mb-8">@{data.profile.username || 'ANONYMOUS'}</p>
                    
                    <div className="w-full space-y-4">
                       <button 
@@ -2138,14 +2248,14 @@ export default function AgenticDashboard() {
                            navigator.clipboard.writeText(`${window.location.origin}/actor/${data.profile.username || data.profile.id}`);
                            setMessage({ text: "PROFILE_LINK_COPIED // SHARE_READY", type: 'info' });
                         }}
-                        className="w-full py-4 bg-[var(--bg-secondary)] hover:bg-gradient-to-r from-[#ff1a1a] to-[#8a0303] transition-all border border-white/10 rounded-3xl border-[var(--border-main)] font-black uppercase tracking-widest text-[10px] flex items-center justify-center gap-3"
+                        className="w-full py-4 bg-[var(--bg-secondary)] hover:bg-gradient-to-r from-[var(--accent-primary)] to-[var(--accent-secondary)] transition-all border border-white/10 rounded-3xl border-[var(--border-main)] font-black uppercase tracking-widest text-[10px] flex items-center justify-center gap-3"
                       >
                          <Rss className="w-4 h-4" /> SHARE_PROFILE
                       </button>
                       {!isEditingProfile && (
                          <button 
                             onClick={() => setIsEditingProfile(true)}
-                            className="w-full py-4 bg-gradient-to-r from-[#ff1a1a] to-[#8a0303] text-white font-black uppercase tracking-widest text-[10px] flex items-center justify-center gap-3 rounded-full"
+                            className="w-full py-4 bg-gradient-to-r from-[var(--accent-primary)] to-[var(--accent-secondary)] text-white font-black uppercase tracking-widest text-[10px] flex items-center justify-center gap-3 rounded-full"
                          >
                             <PlusSquare className="w-4 h-4" /> EDIT_DATA_VAULT
                          </button>
@@ -2159,7 +2269,7 @@ export default function AgenticDashboard() {
                       <div className="px-4 py-2 bg-yellow-500/10 border border-yellow-500/30 text-yellow-500 text-[8px] font-black uppercase tracking-widest flex items-center gap-2">
                          <Crown className="w-3 h-3" /> VERIFIED_TALENT
                       </div>
-                      <div className="px-4 py-2 bg-gradient-to-r from-[#ff1a1a] to-[#8a0303]/10 border border-[#ff1a1a]/30 text-[#ff1a1a] text-[8px] font-black uppercase tracking-widest flex items-center gap-2">
+                      <div className="px-4 py-2 bg-gradient-to-r from-[var(--accent-primary)] to-[var(--accent-secondary)]/10 border border-[var(--accent-primary)]/30 text-[var(--accent-primary)] text-[8px] font-black uppercase tracking-widest flex items-center gap-2">
                          <Zap className="w-3 h-3" /> HIGH_YIELD_NODE
                       </div>
                       <div className="px-4 py-2 bg-blue-500/10 border border-blue-500/30 text-blue-500 text-[8px] font-black uppercase tracking-widest flex items-center gap-2">
@@ -2176,7 +2286,7 @@ export default function AgenticDashboard() {
                       {/* Section: Core Identity */}
                       <div className="glass-panel-premium p-10 border border-white/10 rounded-3xl border-[var(--border-main)]">
                          <h3 className="text-2xl font-black uppercase tracking-tighter mb-10 border-b border-[var(--border-main)] pb-6 flex items-center gap-4">
-                            <User className="w-6 h-6 text-[#ff1a1a]" /> CORE_IDENTITY
+                            <User className="w-6 h-6 text-[var(--accent-primary)]" /> CORE_IDENTITY
                          </h3>
                          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                             <div className="flex flex-col gap-3">
@@ -2184,7 +2294,7 @@ export default function AgenticDashboard() {
                                <input 
                                   value={profileForm.fullName}
                                   onChange={e => setProfileForm({...profileForm, fullName: e.target.value})}
-                                  className="bg-[var(--bg-secondary)] border border-white/10 rounded-3xl border-[var(--border-main)] p-4 font-black uppercase text-xs tracking-widest focus:border-[#ff1a1a] outline-none"
+                                  className="bg-[var(--bg-secondary)] border border-white/10 rounded-3xl border-[var(--border-main)] p-4 font-black uppercase text-xs tracking-widest focus:border-[var(--accent-primary)] outline-none"
                                />
                             </div>
                             <div className="flex flex-col gap-3">
@@ -2192,7 +2302,7 @@ export default function AgenticDashboard() {
                                <input 
                                   value={profileForm.username}
                                   onChange={e => setProfileForm({...profileForm, username: e.target.value})}
-                                  className="bg-[var(--bg-secondary)] border border-white/10 rounded-3xl border-[var(--border-main)] p-4 font-black text-[#ff1a1a] text-xs tracking-widest focus:border-[#ff1a1a] outline-none"
+                                  className="bg-[var(--bg-secondary)] border border-white/10 rounded-3xl border-[var(--border-main)] p-4 font-black text-[var(--accent-primary)] text-xs tracking-widest focus:border-[var(--accent-primary)] outline-none"
                                />
                             </div>
                             <div className="flex flex-col gap-3">
@@ -2209,7 +2319,7 @@ export default function AgenticDashboard() {
                                   value={profileForm.alias}
                                   onChange={e => setProfileForm({...profileForm, alias: e.target.value})}
                                   placeholder="E.G. THE_MAVERICK"
-                                  className="bg-[var(--bg-secondary)] border border-white/10 rounded-3xl border-[var(--border-main)] p-4 font-black uppercase text-xs tracking-widest focus:border-[#ff1a1a] outline-none"
+                                  className="bg-[var(--bg-secondary)] border border-white/10 rounded-3xl border-[var(--border-main)] p-4 font-black uppercase text-xs tracking-widest focus:border-[var(--accent-primary)] outline-none"
                                />
                             </div>
                             <div className="md:col-span-2 flex flex-col gap-3">
@@ -2218,14 +2328,14 @@ export default function AgenticDashboard() {
                                   value={profileForm.bio}
                                   onChange={e => setProfileForm({...profileForm, bio: e.target.value})}
                                   rows={4}
-                                  className="bg-[var(--bg-secondary)] border border-white/10 rounded-3xl border-[var(--border-main)] p-4 font-black uppercase text-xs tracking-widest focus:border-[#ff1a1a] outline-none resize-none"
+                                  className="bg-[var(--bg-secondary)] border border-white/10 rounded-3xl border-[var(--border-main)] p-4 font-black uppercase text-xs tracking-widest focus:border-[var(--accent-primary)] outline-none resize-none"
                                />
                             </div>
                             <div className="md:col-span-2">
                                <button 
                                  type="button"
                                  onClick={() => setShowPassChangeModal(true)}
-                                 className="px-6 py-3 border border-[var(--border-main)] hover:border-[#ff1a1a] transition-all text-[10px] font-black uppercase tracking-widest text-zinc-600 hover:text-white flex items-center gap-3"
+                                 className="px-6 py-3 border border-[var(--border-main)] hover:border-[var(--accent-primary)] transition-all text-[10px] font-black uppercase tracking-widest text-zinc-600 hover:text-white flex items-center gap-3"
                                >
                                   <Lock className="w-4 h-4" /> RECONFIGURE_SECURITY_PROTOCOL
                                </button>
@@ -2236,7 +2346,7 @@ export default function AgenticDashboard() {
                       {/* Section: Professional Specs */}
                       <div className="glass-panel-premium p-10 border border-white/10 rounded-3xl border-[var(--border-main)]">
                          <h3 className="text-2xl font-black uppercase tracking-tighter mb-10 border-b border-[var(--border-main)] pb-6 flex items-center gap-4">
-                            <Briefcase className="w-6 h-6 text-[#ff1a1a]" /> PROFESSIONAL_SPECS
+                            <Briefcase className="w-6 h-6 text-[var(--accent-primary)]" /> PROFESSIONAL_SPECS
                          </h3>
                          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                             <div className="flex flex-col gap-3">
@@ -2244,7 +2354,7 @@ export default function AgenticDashboard() {
                                <select 
                                   value={profileForm.role}
                                   onChange={e => setProfileForm({...profileForm, role: e.target.value})}
-                                  className="bg-[var(--bg-secondary)] border border-white/10 rounded-3xl border-[var(--border-main)] p-4 font-black uppercase text-xs tracking-widest focus:border-[#ff1a1a] outline-none"
+                                  className="bg-[var(--bg-secondary)] border border-white/10 rounded-3xl border-[var(--border-main)] p-4 font-black uppercase text-xs tracking-widest focus:border-[var(--accent-primary)] outline-none"
                                >
                                   <option value="">SELECT_ROLE</option>
                                   <option value="ACTOR">ACTOR</option>
@@ -2258,7 +2368,7 @@ export default function AgenticDashboard() {
                                <select 
                                   value={profileForm.primaryObjective}
                                   onChange={e => setProfileForm({...profileForm, primaryObjective: e.target.value})}
-                                  className="bg-[var(--bg-secondary)] border border-white/10 rounded-3xl border-[var(--border-main)] p-4 font-black uppercase text-xs tracking-widest focus:border-[#ff1a1a] outline-none"
+                                  className="bg-[var(--bg-secondary)] border border-white/10 rounded-3xl border-[var(--border-main)] p-4 font-black uppercase text-xs tracking-widest focus:border-[var(--accent-primary)] outline-none"
                                >
                                   <option value="">SELECT_OBJECTIVE</option>
                                   {DESIRE_LIST.map(d => <option key={d} value={d}>{d}</option>)}
@@ -2269,7 +2379,7 @@ export default function AgenticDashboard() {
                                <input 
                                   value={profileForm.location}
                                   onChange={e => setProfileForm({...profileForm, location: e.target.value})}
-                                  className="bg-[var(--bg-secondary)] border border-white/10 rounded-3xl border-[var(--border-main)] p-4 font-black uppercase text-xs tracking-widest focus:border-[#ff1a1a] outline-none"
+                                  className="bg-[var(--bg-secondary)] border border-white/10 rounded-3xl border-[var(--border-main)] p-4 font-black uppercase text-xs tracking-widest focus:border-[var(--accent-primary)] outline-none"
                                />
                             </div>
                             <div className="flex flex-col gap-3">
@@ -2277,7 +2387,7 @@ export default function AgenticDashboard() {
                                <input 
                                   value={profileForm.motherland}
                                   onChange={e => setProfileForm({...profileForm, motherland: e.target.value})}
-                                  className="bg-[var(--bg-secondary)] border border-white/10 rounded-3xl border-[var(--border-main)] p-4 font-black uppercase text-xs tracking-widest focus:border-[#ff1a1a] outline-none"
+                                  className="bg-[var(--bg-secondary)] border border-white/10 rounded-3xl border-[var(--border-main)] p-4 font-black uppercase text-xs tracking-widest focus:border-[var(--accent-primary)] outline-none"
                                />
                             </div>
                             <div className="md:col-span-2 flex flex-col gap-3">
@@ -2287,7 +2397,7 @@ export default function AgenticDashboard() {
                                   onChange={e => setProfileForm({...profileForm, priorArtExperience: e.target.value})}
                                   placeholder="DESCRIBE_PRIOR_WORK..."
                                   rows={3}
-                                  className="bg-[var(--bg-secondary)] border border-white/10 rounded-3xl border-[var(--border-main)] p-4 font-black uppercase text-xs tracking-widest focus:border-[#ff1a1a] outline-none resize-none"
+                                  className="bg-[var(--bg-secondary)] border border-white/10 rounded-3xl border-[var(--border-main)] p-4 font-black uppercase text-xs tracking-widest focus:border-[var(--accent-primary)] outline-none resize-none"
                                />
                             </div>
                          </div>
@@ -2296,7 +2406,7 @@ export default function AgenticDashboard() {
                       {/* Section: Biometric Data */}
                       <div className="glass-panel-premium p-10 border border-white/10 rounded-3xl border-[var(--border-main)]">
                          <h3 className="text-2xl font-black uppercase tracking-tighter mb-10 border-b border-[var(--border-main)] pb-6 flex items-center gap-4">
-                            <Zap className="w-6 h-6 text-[#ff1a1a]" /> BIOMETRIC_DATA
+                            <Zap className="w-6 h-6 text-[var(--accent-primary)]" /> BIOMETRIC_DATA
                          </h3>
                          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
                             <div className="flex flex-col gap-3">
@@ -2305,7 +2415,7 @@ export default function AgenticDashboard() {
                                   type="number"
                                   value={profileForm.age || ''}
                                   onChange={e => setProfileForm({...profileForm, age: e.target.value})}
-                                  className="bg-[var(--bg-secondary)] border border-white/10 rounded-3xl border-[var(--border-main)] p-4 font-black uppercase text-xs tracking-widest focus:border-[#ff1a1a] outline-none"
+                                  className="bg-[var(--bg-secondary)] border border-white/10 rounded-3xl border-[var(--border-main)] p-4 font-black uppercase text-xs tracking-widest focus:border-[var(--accent-primary)] outline-none"
                                />
                             </div>
                             <div className="flex flex-col gap-3">
@@ -2313,7 +2423,7 @@ export default function AgenticDashboard() {
                                <select 
                                   value={profileForm.gender}
                                   onChange={e => setProfileForm({...profileForm, gender: e.target.value})}
-                                  className="bg-[var(--bg-secondary)] border border-white/10 rounded-3xl border-[var(--border-main)] p-4 font-black uppercase text-xs tracking-widest focus:border-[#ff1a1a] outline-none"
+                                  className="bg-[var(--bg-secondary)] border border-white/10 rounded-3xl border-[var(--border-main)] p-4 font-black uppercase text-xs tracking-widest focus:border-[var(--accent-primary)] outline-none"
                                >
                                   <option value="">SELECT</option>
                                   {GENDER_OPTIONS.map(o => <option key={o} value={o}>{o}</option>)}
@@ -2324,7 +2434,7 @@ export default function AgenticDashboard() {
                                <input 
                                   value={profileForm.height}
                                   onChange={e => setProfileForm({...profileForm, height: e.target.value})}
-                                  className="bg-[var(--bg-secondary)] border border-white/10 rounded-3xl border-[var(--border-main)] p-4 font-black uppercase text-xs tracking-widest focus:border-[#ff1a1a] outline-none"
+                                  className="bg-[var(--bg-secondary)] border border-white/10 rounded-3xl border-[var(--border-main)] p-4 font-black uppercase text-xs tracking-widest focus:border-[var(--accent-primary)] outline-none"
                                />
                             </div>
                             <div className="flex flex-col gap-3">
@@ -2332,7 +2442,7 @@ export default function AgenticDashboard() {
                                <select 
                                   value={profileForm.overallBuild}
                                   onChange={e => setProfileForm({...profileForm, overallBuild: e.target.value})}
-                                  className="bg-[var(--bg-secondary)] border border-white/10 rounded-3xl border-[var(--border-main)] p-4 font-black uppercase text-xs tracking-widest focus:border-[#ff1a1a] outline-none"
+                                  className="bg-[var(--bg-secondary)] border border-white/10 rounded-3xl border-[var(--border-main)] p-4 font-black uppercase text-xs tracking-widest focus:border-[var(--accent-primary)] outline-none"
                                >
                                   <option value="">SELECT</option>
                                   {BUILD_OPTIONS.map(o => <option key={o} value={o}>{o}</option>)}
@@ -2343,7 +2453,7 @@ export default function AgenticDashboard() {
                                <select 
                                   value={profileForm.faceShape}
                                   onChange={e => setProfileForm({...profileForm, faceShape: e.target.value})}
-                                  className="bg-[var(--bg-secondary)] border border-white/10 rounded-3xl border-[var(--border-main)] p-4 font-black uppercase text-xs tracking-widest focus:border-[#ff1a1a] outline-none"
+                                  className="bg-[var(--bg-secondary)] border border-white/10 rounded-3xl border-[var(--border-main)] p-4 font-black uppercase text-xs tracking-widest focus:border-[var(--accent-primary)] outline-none"
                                >
                                   <option value="">SELECT</option>
                                   {FACE_SHAPE_OPTIONS.map(o => <option key={o} value={o}>{o}</option>)}
@@ -2354,7 +2464,7 @@ export default function AgenticDashboard() {
                                <select 
                                   value={profileForm.skinTone}
                                   onChange={e => setProfileForm({...profileForm, skinTone: e.target.value})}
-                                  className="bg-[var(--bg-secondary)] border border-white/10 rounded-3xl border-[var(--border-main)] p-4 font-black uppercase text-xs tracking-widest focus:border-[#ff1a1a] outline-none"
+                                  className="bg-[var(--bg-secondary)] border border-white/10 rounded-3xl border-[var(--border-main)] p-4 font-black uppercase text-xs tracking-widest focus:border-[var(--accent-primary)] outline-none"
                                >
                                   <option value="">SELECT</option>
                                   {SKIN_TONE_OPTIONS.map(o => <option key={o} value={o}>{o}</option>)}
@@ -2365,7 +2475,7 @@ export default function AgenticDashboard() {
                                <select 
                                   value={profileForm.hairType}
                                   onChange={e => setProfileForm({...profileForm, hairType: e.target.value})}
-                                  className="bg-[var(--bg-secondary)] border border-white/10 rounded-3xl border-[var(--border-main)] p-4 font-black uppercase text-xs tracking-widest focus:border-[#ff1a1a] outline-none"
+                                  className="bg-[var(--bg-secondary)] border border-white/10 rounded-3xl border-[var(--border-main)] p-4 font-black uppercase text-xs tracking-widest focus:border-[var(--accent-primary)] outline-none"
                                >
                                   <option value="">SELECT</option>
                                   {profileForm.gender === 'MALE' ? HAIR_TYPE_MALE.map(o => <option key={o} value={o}>{o}</option>) : HAIR_TYPE_FEMALE.map(o => <option key={o} value={o}>{o}</option>)}
@@ -2376,7 +2486,7 @@ export default function AgenticDashboard() {
                                <input 
                                   value={profileForm.eyeColor}
                                   onChange={e => setProfileForm({...profileForm, eyeColor: e.target.value})}
-                                  className="bg-[var(--bg-secondary)] border border-white/10 rounded-3xl border-[var(--border-main)] p-4 font-black uppercase text-xs tracking-widest focus:border-[#ff1a1a] outline-none"
+                                  className="bg-[var(--bg-secondary)] border border-white/10 rounded-3xl border-[var(--border-main)] p-4 font-black uppercase text-xs tracking-widest focus:border-[var(--accent-primary)] outline-none"
                                />
                             </div>
                             <div className="flex flex-col gap-3">
@@ -2385,7 +2495,7 @@ export default function AgenticDashboard() {
                                   value={profileForm.scarsTattoos}
                                   onChange={e => setProfileForm({...profileForm, scarsTattoos: e.target.value})}
                                   placeholder="DESCRIBE_IF_ANY..."
-                                  className="bg-[var(--bg-secondary)] border border-white/10 rounded-3xl border-[var(--border-main)] p-4 font-black uppercase text-xs tracking-widest focus:border-[#ff1a1a] outline-none"
+                                  className="bg-[var(--bg-secondary)] border border-white/10 rounded-3xl border-[var(--border-main)] p-4 font-black uppercase text-xs tracking-widest focus:border-[var(--accent-primary)] outline-none"
                                />
                             </div>
                          </div>
@@ -2395,7 +2505,7 @@ export default function AgenticDashboard() {
                          <button 
                             type="submit"
                             disabled={profileLoading}
-                            className="flex-1 py-6 bg-gradient-to-r from-[#ff1a1a] to-[#8a0303] text-white font-black uppercase tracking-[0.5em] text-sm hover:scale-[1.02] transition-all shadow-[0_0_30px_rgba(255,26,26,0.3)] hover:shadow-[0_0_50px_rgba(255,26,26,0.5)] disabled:opacity-50"
+                            className="flex-1 py-6 bg-gradient-to-r from-[var(--accent-primary)] to-[var(--accent-secondary)] text-white font-black uppercase tracking-[0.5em] text-sm hover:scale-[1.02] transition-all shadow-[0_0_30px_var(--accent-glow)] hover:shadow-[0_0_50px_var(--accent-glow)] disabled:opacity-50"
                          >
                             {profileLoading ? "SYNCING_IDENTITY..." : "SAVE_DEEP_PROFILE"}
                          </button>
@@ -2417,12 +2527,12 @@ export default function AgenticDashboard() {
                                <h3 className="text-[10px] font-black uppercase tracking-[0.5em] text-zinc-600 mb-2">PUBLIC_LEDGER_DATA</h3>
                                <p className="text-4xl font-black uppercase tracking-tighter">DATA_SUMMARY</p>
                             </div>
-                            <ShieldCheck className="w-12 h-12 text-[#ff1a1a] opacity-20" />
+                            <ShieldCheck className="w-12 h-12 text-[var(--accent-primary)] opacity-20" />
                          </div>
                          
                          <div className="grid grid-cols-1 md:grid-cols-2 gap-y-10 gap-x-12">
                             {[
-                               { label: 'STATUS', val: data.profile.status, color: 'text-[#ff1a1a]' },
+                               { label: 'STATUS', val: data.profile.status, color: 'text-[var(--accent-primary)]' },
                                { label: 'LOCATION', val: data.profile.location },
                                { label: 'ROLE', val: data.profile.role },
                                { label: 'OBJECTIVE', val: data.profile.objectivePreference },
@@ -2446,10 +2556,10 @@ export default function AgenticDashboard() {
                          </div>
                       </div>
 
-                      <div className="glass-panel-premium-red p-10 border border-[#ff1a1a]/30 shadow-[0_0_15px_rgba(255,26,26,0.1)] rounded-3xl flex flex-col md:flex-row items-center justify-between gap-8">
+                      <div className="glass-panel-premium-red p-10 border border-[var(--accent-primary)]/30 shadow-[0_0_15px_var(--accent-glow)] rounded-3xl flex flex-col md:flex-row items-center justify-between gap-8">
                          <div className="flex items-center gap-6">
                             <div className="w-16 h-16 bg-white flex items-center justify-center rounded-full">
-                               <Zap className="w-8 h-8 text-[#ff1a1a]" />
+                               <Zap className="w-8 h-8 text-[var(--accent-primary)]" />
                             </div>
                             <div>
                                <h4 className="text-xl font-black uppercase tracking-tighter">UPGRADE_VISIBILITY</h4>
@@ -2458,7 +2568,7 @@ export default function AgenticDashboard() {
                          </div>
                          <button 
                             onClick={() => setIsEditingProfile(true)}
-                            className="px-8 py-4 bg-white text-[#ff1a1a] font-black uppercase tracking-widest text-[10px] hover:scale-105 transition-all"
+                            className="px-8 py-4 bg-white text-[var(--accent-primary)] font-black uppercase tracking-widest text-[10px] hover:scale-105 transition-all"
                          >
                             FINALIZE_VAULT
                          </button>
@@ -2483,9 +2593,9 @@ export default function AgenticDashboard() {
                       initial={{ scale: 0.9, opacity: 0 }}
                       animate={{ scale: 1, opacity: 1 }}
                       exit={{ scale: 0.9, opacity: 0 }}
-                      className="relative z-10 w-full max-w-lg glass-panel-premium border border-[#ff1a1a]/30 shadow-[0_0_15px_rgba(255,26,26,0.1)] rounded-3xl p-12 flex flex-col gap-8"
+                      className="relative z-10 w-full max-w-lg glass-panel-premium border border-[var(--accent-primary)]/30 shadow-[0_0_15px_var(--accent-glow)] rounded-3xl p-12 flex flex-col gap-8"
                    >
-                      <h3 className="text-3xl font-black uppercase tracking-tighter text-[#ff1a1a]">SECURITY_BYPASS_REQ</h3>
+                      <h3 className="text-3xl font-black uppercase tracking-tighter text-[var(--accent-primary)]">SECURITY_BYPASS_REQ</h3>
                       
                       {!passVerified ? (
                          <div className="flex flex-col gap-6">
@@ -2494,12 +2604,12 @@ export default function AgenticDashboard() {
                                type="password"
                                value={currentPassVerify}
                                onChange={e => setCurrentPassVerify(e.target.value)}
-                               className="bg-[var(--bg-secondary)] border border-white/10 rounded-3xl border-[var(--border-main)] p-4 font-black text-white text-xs tracking-widest outline-none focus:border-[#ff1a1a]"
+                               className="bg-[var(--bg-secondary)] border border-white/10 rounded-3xl border-[var(--border-main)] p-4 font-black text-white text-xs tracking-widest outline-none focus:border-[var(--accent-primary)]"
                                placeholder="CURRENT_KEY"
                             />
                             <button 
                                onClick={handleVerifyPassword}
-                               className="w-full py-4 bg-gradient-to-r from-[#ff1a1a] to-[#8a0303] text-white font-black uppercase tracking-widest text-[10px]"
+                               className="w-full py-4 bg-gradient-to-r from-[var(--accent-primary)] to-[var(--accent-secondary)] text-white font-black uppercase tracking-widest text-[10px]"
                             >
                                VERIFY_IDENTITY
                             </button>
@@ -2511,7 +2621,7 @@ export default function AgenticDashboard() {
                                type="password"
                                value={newPassword}
                                onChange={e => setNewPassword(e.target.value)}
-                               className="bg-[var(--bg-secondary)] border border-white/10 rounded-3xl border-[var(--border-main)] p-4 font-black text-white text-xs tracking-widest outline-none focus:border-[#ff1a1a]"
+                               className="bg-[var(--bg-secondary)] border border-white/10 rounded-3xl border-[var(--border-main)] p-4 font-black text-white text-xs tracking-widest outline-none focus:border-[var(--accent-primary)]"
                                placeholder="NEW_SECURE_KEY"
                             />
                             <button 
@@ -2544,8 +2654,8 @@ export default function AgenticDashboard() {
         <div className="flex flex-col gap-16 py-12 animate-in slide-in-from-bottom-8 duration-700">
           <div className="flex items-center justify-between px-4">
             <div className="flex items-center gap-6">
-              <div className="p-5 bg-gradient-to-r from-[#ff1a1a] to-[#8a0303]/10 border border-[#ff1a1a]/30 shadow-[0_0_15px_rgba(255,26,26,0.1)] rounded-3xl rounded-full">
-                <Trophy className="w-10 h-10 text-[#ff1a1a]" />
+              <div className="p-5 bg-gradient-to-r from-[var(--accent-primary)] to-[var(--accent-secondary)]/10 border border-[var(--accent-primary)]/30 shadow-[0_0_15px_var(--accent-glow)] rounded-3xl rounded-full">
+                <Trophy className="w-10 h-10 text-[var(--accent-primary)]" />
               </div>
               <div>
                 <h1 className="text-7xl font-black uppercase tracking-tighter leading-none">GLOBAL_RANKINGS</h1>
@@ -2565,7 +2675,7 @@ export default function AgenticDashboard() {
                 <div 
                    key={actor.id} 
                    className={`relative p-10 border border-white/10 rounded-3xl flex flex-col items-center text-center overflow-hidden transition-all duration-500 hover:-translate-y-2 ${
-                      i === 0 ? 'bg-gradient-to-r from-[#ff1a1a] to-[#8a0303] border-white scale-105 z-10 shadow-[0_0_50px_rgba(255,49,49,0.4)]' : 'bg-[var(--bg-secondary)]/50 border-[var(--border-main)]'
+                      i === 0 ? 'bg-gradient-to-r from-[var(--accent-primary)] to-[var(--accent-secondary)] border-white scale-105 z-10 shadow-[0_0_50px_var(--accent-glow)]' : 'bg-[var(--bg-secondary)]/50 border-[var(--border-main)]'
                    }`}
                 >
                    {i === 0 && (
@@ -2583,7 +2693,7 @@ export default function AgenticDashboard() {
                          <div className="absolute inset-0 bg-white/10 animate-pulse" />
                       )}
                    </div>
-                   <div className={`text-5xl font-black mb-2 italic ${i === 0 ? 'text-white' : 'text-[#ff1a1a]'}`}>#{i + 1}</div>
+                   <div className={`text-5xl font-black mb-2 italic ${i === 0 ? 'text-white' : 'text-[var(--accent-primary)]'}`}>#{i + 1}</div>
                    <h3 className={`text-2xl font-black uppercase tracking-tight ${i === 0 ? 'text-white' : 'text-zinc-200'}`}>{actor.name}</h3>
                    <p className={`text-[10px] font-black uppercase tracking-widest mt-2 ${i === 0 ? 'text-white/70' : 'text-zinc-600'}`}>{actor.score.toLocaleString()} LMN</p>
                 </div>
@@ -2598,7 +2708,7 @@ export default function AgenticDashboard() {
                       <h3 className="text-2xl font-black uppercase tracking-tighter">ALL_NODES</h3>
                       <div className="flex gap-6">
                          {['GLOBAL', 'REGION', 'LOCAL'].map((t: string) => (
-                            <button key={t} className="text-[9px] font-black text-zinc-600 hover:text-[#ff1a1a] uppercase tracking-widest transition-colors cursor-pointer">
+                            <button key={t} className="text-[9px] font-black text-zinc-600 hover:text-[var(--accent-primary)] uppercase tracking-widest transition-colors cursor-pointer">
                                {t}
                             </button>
                          ))}
@@ -2607,9 +2717,9 @@ export default function AgenticDashboard() {
 
                    <div className="flex flex-col gap-4">
                       {data.leaderboard.map((actor: any) => (
-                        <div key={actor.id} className={`flex items-center justify-between p-6 border border-white/10 rounded-3xl transition-all group ${actor.isUser ? 'border-[#ff1a1a] bg-gradient-to-r from-[#ff1a1a] to-[#8a0303]/10' : 'border-[var(--border-main)] bg-[var(--bg-tertiary)]/50 hover:border-[var(--border-main)]'}`}>
+                        <div key={actor.id} className={`flex items-center justify-between p-6 border border-white/10 rounded-3xl transition-all group ${actor.isUser ? 'border-[var(--accent-primary)] bg-gradient-to-r from-[var(--accent-primary)] to-[var(--accent-secondary)]/10' : 'border-[var(--border-main)] bg-[var(--bg-tertiary)]/50 hover:border-[var(--border-main)]'}`}>
                           <div className="flex items-center gap-6">
-                            <span className={`font-black text-3xl tabular-nums w-12 shrink-0 ${actor.rank <= 3 ? 'text-[#ff1a1a]' : 'text-zinc-800 group-hover:text-zinc-600'}`}>
+                            <span className={`font-black text-3xl tabular-nums w-12 shrink-0 ${actor.rank <= 3 ? 'text-[var(--accent-primary)]' : 'text-zinc-800 group-hover:text-zinc-600'}`}>
                               {String(actor.rank).padStart(2, '0')}
                             </span>
                             <div className="w-12 h-12 bg-[var(--bg-secondary)] rounded-full overflow-hidden border border-white/10 rounded-3xl border-[var(--border-main)] shrink-0">
@@ -2633,7 +2743,7 @@ export default function AgenticDashboard() {
                             </div>
                           </div>
                           <div className="text-right">
-                             <span className="font-black tabular-nums text-[#ff1a1a] text-xl">{actor.score.toLocaleString()}</span>
+                             <span className="font-black tabular-nums text-[var(--accent-primary)] text-xl">{actor.score.toLocaleString()}</span>
                              <span className="text-[10px] font-black text-zinc-600 ml-2">LMN</span>
                           </div>
                         </div>
@@ -2644,7 +2754,7 @@ export default function AgenticDashboard() {
 
              {/* Personal Stats & Analytics */}
              <div className="lg:col-span-4 flex flex-col gap-10">
-                <div className="glass-panel-premium-red p-10 border border-[#ff1a1a]/30 shadow-[0_0_15px_rgba(255,26,26,0.1)] rounded-3xl clip-brutal-tr shadow-[0_0_40px_rgba(255,49,49,0.1)]">
+                <div className="glass-panel-premium-red p-10 border border-[var(--accent-primary)]/30 shadow-[0_0_15px_var(--accent-glow)] rounded-3xl clip-brutal-tr shadow-[0_0_40px_var(--accent-glow)]">
                    <h3 className="font-black uppercase tracking-widest text-[10px] mb-8">MY_RANKING_STATUS</h3>
                    <div className="space-y-10">
                       <div>
@@ -2655,7 +2765,7 @@ export default function AgenticDashboard() {
                          <p className="text-[9px] font-black text-white/60 uppercase tracking-widest mb-2">PERCENTILE_REACH</p>
                          <p className="text-4xl font-black text-white tabular-nums">TOP 12%</p>
                       </div>
-                      <button className="w-full py-4 bg-white text-[#ff1a1a] font-black uppercase tracking-[0.3em] text-[10px] hover:bg-[var(--bg-primary)] hover:text-white transition-all cursor-pointer">
+                      <button className="w-full py-4 bg-white text-[var(--accent-primary)] font-black uppercase tracking-[0.3em] text-[10px] hover:bg-[var(--bg-primary)] hover:text-white transition-all cursor-pointer">
                          BOOST_RANKING
                       </button>
                    </div>
@@ -2682,7 +2792,7 @@ export default function AgenticDashboard() {
       ) : (
         <div className="flex flex-col items-center justify-center h-[60vh] opacity-50 animate-in fade-in duration-500">
            <h2 className="text-4xl font-black uppercase tracking-widest text-center">{currentView} {/* MODULE */}</h2>
-           <p className="text-sm tracking-widest uppercase text-[#ff1a1a] mt-4 text-center">CONSTRUCTION_PENDING</p>
+           <p className="text-sm tracking-widest uppercase text-[var(--accent-primary)] mt-4 text-center">CONSTRUCTION_PENDING</p>
         </div>
       )}
 
@@ -2705,17 +2815,17 @@ export default function AgenticDashboard() {
               initial={{ opacity: 0, y: 50, scale: 0.95 }}
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, y: 50, scale: 0.95 }}
-              className="w-full max-w-4xl h-[85vh] glass-panel-premium border border-[#ff1a1a]/30 shadow-[0_0_15px_rgba(255,26,26,0.1)] rounded-3xl relative z-10 flex flex-col overflow-hidden"
+              className="w-full max-w-4xl h-[85vh] glass-panel-premium border border-[var(--accent-primary)]/30 shadow-[0_0_15px_var(--accent-glow)] rounded-3xl relative z-10 flex flex-col overflow-hidden"
             >
               {/* Modal Header */}
               <div className="p-8 border-b border-[var(--border-main)] flex justify-between items-center shrink-0">
                 <div>
-                  <h2 className="text-4xl md:text-5xl font-black uppercase tracking-tighter leading-none">SYSTEM CONFIG</h2>
-                  <p className="text-[10px] font-black uppercase tracking-[0.4em] text-[#ff1a1a] mt-2">USER_IDENTITY_AND_PROTOCOLS</p>
+                  <h2 className="text-4xl md:text-5xl font-black uppercase tracking-tighter leading-none">SETTINGS</h2>
+                  <p className="text-[10px] font-black uppercase tracking-[0.4em] text-[var(--accent-primary)] mt-2">@{data.profile.username || "UNKNOWN"}</p>
                 </div>
                 <button 
                   onClick={() => setShowSettings(false)}
-                  className="p-4 bg-[var(--bg-secondary)] hover:bg-gradient-to-r from-[#ff1a1a] to-[#8a0303] transition-all cursor-pointer group"
+                  className="p-4 bg-[var(--bg-secondary)] hover:bg-gradient-to-r from-[var(--accent-primary)] to-[var(--accent-secondary)] transition-all cursor-pointer group"
                 >
                   <X className="w-6 h-6 text-zinc-500 group-hover:text-white" />
                 </button>
@@ -2727,250 +2837,310 @@ export default function AgenticDashboard() {
                 data-lenis-prevent
               >
                 
-                {/* Section 1: Biometric Identity */}
+                {/* GENERAL SECTION */}
                 <section>
-                  <div className="flex items-center gap-4 mb-8">
-                    <div className="w-1 h-8 bg-gradient-to-r from-[#ff1a1a] to-[#8a0303]" />
-                    <h3 className="text-xl font-black uppercase tracking-[0.2em]">01_BIOMETRIC_DATA</h3>
+                  <div className="flex items-center gap-4 mb-10 border-b border-[var(--border-main)] pb-4">
+                    <div className="w-1.5 h-6 bg-[var(--accent-primary)]" />
+                    <h3 className="text-2xl font-black uppercase tracking-[0.2em]">GENERAL</h3>
                   </div>
                   
-                  <div className="flex flex-col md:flex-row gap-12 items-start">
-                    {/* PFP Change */}
-                    <div className="relative group">
-                      <div className="w-48 h-48 border border-[#ff1a1a]/30 shadow-[0_0_15px_rgba(255,26,26,0.1)] rounded-3xl overflow-hidden bg-[var(--bg-secondary)] relative">
-                        {data.profile.avatarUrl ? (
-                          <img 
-                            src={data.profile.avatarUrl} 
-                            alt="Identity" 
-                            className={`w-full h-full object-cover transition-all duration-700 ${isUploadingPFP ? 'opacity-30' : 'grayscale group-hover:grayscale-0'}`} 
-                          />
-                        ) : (
-                          <div className="w-full h-full flex items-center justify-center text-zinc-800 font-black text-4xl">NO_IMG</div>
-                        )}
-                        {isUploadingPFP && (
-                          <div className="absolute inset-0 flex items-center justify-center">
-                            <div className="w-10 h-10 border-2 border-[#ff1a1a] border-t-transparent rounded-full animate-spin" />
-                          </div>
-                        )}
-                      </div>
-                      
-                      <div className="mt-4 flex flex-col gap-2">
-                        <label className="flex items-center justify-center gap-2 py-3 bg-[var(--bg-secondary)] text-white font-black uppercase tracking-widest text-[9px] border border-white/10 rounded-3xl border-[var(--border-main)] hover:border-[#ff1a1a] transition-all cursor-pointer">
-                          <input type="file" className="hidden" accept="image/*" onChange={handlePFPChange} disabled={isUploadingPFP} />
-                          <Upload className="w-3 h-3" /> UPLOAD NEW
-                        </label>
-                        {data.profile.avatarUrl && (
-                          <button 
-                            onClick={handleRemovePFP}
-                            className="flex items-center justify-center gap-2 py-3 bg-transparent text-[#ff1a1a] font-black uppercase tracking-widest text-[9px] border border-white/10 rounded-3xl border-brand-red-deep hover:bg-gradient-to-r from-[#ff1a1a] to-[#8a0303] hover:text-white transition-all cursor-pointer"
-                          >
-                            <Trash2 className="w-3 h-3" /> REMOVE
-                          </button>
-                        )}
-                      </div>
-                    </div>
-
-                    <div className="flex-1 space-y-10 w-full">
-                      {/* Username Update */}
-                      <div className="flex flex-col gap-4">
-                        <label className="text-[10px] font-black uppercase tracking-[0.4em] text-zinc-500">Update Username</label>
-                        <div className="relative">
-                          <input 
-                            type="text" 
-                            className={`w-full bg-[var(--bg-tertiary)] text-white font-black text-2xl px-8 py-5 border-2 outline-none transition-all uppercase clip-brutal-tl ${
-                              usernameStatus === "available" ? "border-green-500" : 
-                              usernameStatus === "taken" || usernameStatus === "invalid" ? "border-[#ff1a1a]" : "border-[var(--border-main)]"
-                            }`}
-                            placeholder={data.profile.username || "USERNAME"}
-                            value={newUsername}
-                            onChange={(e) => {
-                              const val = e.target.value.toLowerCase();
-                              setNewUsername(val);
-                              checkUsername(val);
-                            }}
-                          />
-                          {usernameStatus !== "idle" && (
-                            <div className="absolute right-4 top-1/2 -translate-y-1/2 text-[9px] font-black uppercase tracking-widest">
-                              {usernameStatus === "available" && <span className="text-green-500">AVAILABLE</span>}
-                              {usernameStatus === "taken" && <span className="text-[#ff1a1a]">TAKEN</span>}
-                            </div>
-                          )}
-                        </div>
-                      </div>
-
-                      {/* Password Update */}
-                      <div className="flex flex-col gap-4">
-                        <label className="text-[10px] font-black uppercase tracking-[0.4em] text-zinc-500">Update Access Code</label>
-                        <input 
-                          type="password" 
-                          className={`w-full bg-[var(--bg-tertiary)] text-white font-black text-2xl px-8 py-5 border-2 outline-none transition-all uppercase clip-brutal-br ${
-                            newPassword && !validatePassword(newPassword) ? "border-[#ff1a1a]" : 
-                            newPassword && validatePassword(newPassword) ? "border-green-500" : "border-[var(--border-main)]"
-                          }`}
-                          placeholder="********"
-                          value={newPassword}
-                          onChange={(e) => setNewPassword(e.target.value)}
-                        />
-                      </div>
-                    </div>
-                  </div>
-                </section>
-
-                {/* Section 2: Ambition & Casting */}
-                <section>
-                  <div className="flex items-center gap-4 mb-8">
-                    <div className="w-1 h-8 bg-gradient-to-r from-[#ff1a1a] to-[#8a0303]" />
-                    <h3 className="text-xl font-black uppercase tracking-[0.2em]">02_PROFESSIONAL_PREFS</h3>
-                  </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
-                    {/* Objective Selection */}
-                    <div className="flex flex-col gap-4">
-                      <label className="text-[10px] font-black uppercase tracking-[0.4em] text-zinc-500">Primary Objective</label>
-                      <div className="grid grid-cols-2 gap-3">
-                        {DESIRE_LIST.map((opt: string) => (
-                          <button
-                            key={opt}
-                            onClick={() => setPrefDesire(opt)}
-                            className={`p-4 text-[10px] font-black uppercase tracking-widest border border-white/10 rounded-3xl transition-all text-center ${
-                              prefDesire === opt ? 'bg-gradient-to-r from-[#ff1a1a] to-[#8a0303] text-white border-[#ff1a1a]' : 'bg-[var(--bg-secondary)] text-zinc-500 border-[var(--border-main)] hover:border-zinc-600'
-                            }`}
-                          >
-                            {opt}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-
-                    {/* Language Selection */}
-                    <div className="flex flex-col gap-4">
-                      <label className="text-[10px] font-black uppercase tracking-[0.4em] text-zinc-500">Languages</label>
-                      <div className="flex flex-wrap gap-3">
-                        {LANGUAGES_LIST.map((lang: string) => {
-                          const isSelected = prefLanguages.includes(lang);
-                          return (
-                            <button
-                              key={lang}
-                              onClick={() => {
-                                setPrefLanguages(prev => 
-                                  prev.includes(lang) ? prev.filter((l: string) => l !== lang) : [...prev, lang]
-                                );
-                              }}
-                              className={`px-5 py-3 text-[10px] font-black uppercase tracking-widest border border-white/10 rounded-3xl transition-all ${
-                                isSelected ? 'bg-white text-black border-white shadow-[0_0_20px_rgba(255,255,255,0.2)]' : 'bg-[var(--bg-secondary)] text-zinc-600 border-[var(--border-main)] hover:border-zinc-700'
-                              }`}
-                            >
-                              {lang}
-                            </button>
-                          );
-                        })}
-                      </div>
-                    </div>
-
-                    {/* Archetype Selection */}
-                    <div className="flex flex-col gap-4">
-                      <label className="text-[10px] font-black uppercase tracking-[0.4em] text-zinc-500">Core Archetypes</label>
-                      <div className="flex flex-wrap gap-3">
-                        {PERSONALITIES_LIST.map((arch: string) => {
-                          const isSelected = prefArchetypes.includes(arch);
-                          return (
-                            <button
-                              key={arch}
-                              onClick={() => {
-                                setPrefArchetypes(prev => 
-                                  prev.includes(arch) ? prev.filter((a: string) => a !== arch) : [...prev, arch]
-                                );
-                              }}
-                              className={`px-5 py-3 text-[10px] font-black uppercase tracking-widest border border-white/10 rounded-3xl transition-all ${
-                                isSelected ? 'bg-[#8a0303]/20 text-white border-[#ff1a1a]' : 'bg-[var(--bg-secondary)] text-zinc-600 border-[var(--border-main)] hover:border-zinc-700'
-                              }`}
-                            >
-                              {arch}
-                            </button>
-                          );
-                        })}
-                      </div>
-                    </div>
-
-                    {/* Availability Selection */}
-                    <div className="flex flex-col gap-4">
-                      <label className="text-[10px] font-black uppercase tracking-[0.4em] text-zinc-500">Opportunity Readiness</label>
-                      <div className="space-y-3">
-                        {AVAILABILITY_LABELS.map((label: string) => (
-                          <button
-                            key={label}
-                            onClick={() => setPrefAvailability(label)}
-                            className={`w-full p-5 text-[10px] font-black uppercase tracking-widest border border-white/10 rounded-3xl transition-all text-left flex items-center justify-between ${
-                              prefAvailability === label ? 'bg-white/5 border-[#ff1a1a] text-white' : 'bg-[var(--bg-secondary)] border-[var(--border-main)] text-zinc-600 hover:border-zinc-700'
-                            }`}
-                          >
-                            {label}
-                            {prefAvailability === label && <Check className="w-4 h-4 text-[#ff1a1a]" />}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-                </section>
-
-                {/* Section 3: Geographic Parameters */}
-                <section>
-                  <div className="flex items-center gap-4 mb-8">
-                    <div className="w-1 h-8 bg-gradient-to-r from-[#ff1a1a] to-[#8a0303]" />
-                    <h3 className="text-xl font-black uppercase tracking-[0.2em]">03_LOC_COORDINATES</h3>
-                  </div>
-                  
-                  <div className="flex flex-col gap-4">
-                    <label className="text-[10px] font-black uppercase tracking-[0.4em] text-zinc-500">Deployment Base (City, State, Country)</label>
-                    <input 
-                      type="text" 
-                      className="w-full bg-[var(--bg-tertiary)] text-[var(--text-primary)] font-black text-2xl px-8 py-5 border-2 border-[var(--border-main)] outline-none focus:border-[var(--accent-red)] transition-all uppercase clip-brutal-tl"
-                      value={prefLocation}
-                      onChange={(e) => setPrefLocation(e.target.value)}
-                    />
-                    <p className="text-[9px] text-zinc-600 font-black uppercase tracking-widest ml-2 italic">Format: CITY, STATE, COUNTRY (e.g., MUMBAI, MAHARASHTRA, INDIA)</p>
-                  </div>
-                </section>
-
-                {/* Section 4: Visual Protocol */}
-                <section>
-                  <div className="flex items-center gap-4 mb-8">
-                    <div className="w-1 h-8 bg-gradient-to-r from-[#ff1a1a] to-[#8a0303]" />
-                    <h3 className="text-xl font-black uppercase tracking-[0.2em]">04_VISUAL_PROTOCOL</h3>
-                  </div>
-                  
-                  <div className="flex flex-col md:flex-row gap-6">
-                    {(['dark', 'light'] as const).map((mode) => (
-                      <button
-                        key={mode}
-                        onClick={() => {
-                          if (theme !== mode) toggleTheme();
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
+                    <div className="flex flex-col gap-3">
+                      <label className="text-[10px] font-black uppercase tracking-[0.4em] text-zinc-500">Appearance</label>
+                      <select 
+                        value={appearance}
+                        onChange={(e: any) => {
+                          setAppearance(e.target.value);
+                          if (e.target.value !== 'system') {
+                            const themeVal = e.target.value === 'light' ? 'PAPER_BRUTALISM' : 'DARK_CMD';
+                            setTheme(e.target.value);
+                            document.documentElement.setAttribute('data-theme', themeVal);
+                            localStorage.setItem('mm8-visual-protocol', e.target.value);
+                          }
                         }}
-                        className={`flex-1 p-8 brutal-border transition-all cursor-pointer relative group overflow-hidden ${
-                          theme === mode ? 'bg-[var(--accent-red)] border-[var(--accent-red)]' : 'bg-[var(--bg-secondary)] border-[var(--border-main)] hover:border-[var(--text-primary)]'
-                        }`}
+                        className="w-full bg-[var(--bg-tertiary)] text-[var(--text-primary)] font-black text-sm px-6 py-4 border-2 border-[var(--border-main)] outline-none focus:border-[var(--accent-primary)] uppercase appearance-none cursor-pointer"
                       >
-                        <div className="relative z-10 flex flex-col items-start gap-2">
-                          <span className={`text-[10px] font-black uppercase tracking-[0.3em] ${theme === mode ? 'text-white/70' : 'text-zinc-500'}`}>PROTOCOL_TYPE</span>
-                          <span className={`text-2xl font-black uppercase tracking-tighter ${theme === mode ? 'text-white' : 'text-[var(--text-primary)]'}`}>
-                            {mode === 'dark' ? 'DARK_CMD' : 'PAPER_BRUTALISM'}
-                          </span>
-                        </div>
-                        {theme === mode && (
-                          <div className="absolute top-4 right-4">
-                            <CheckCircle2 className="w-6 h-6 text-white" />
-                          </div>
-                        )}
-                        <div className={`absolute bottom-0 right-0 w-24 h-24 translate-x-12 translate-y-12 rounded-full blur-2xl ${
-                          mode === 'dark' ? 'bg-black/40' : 'bg-white/40'
-                        }`} />
-                      </button>
-                    ))}
+                        <option value="system">System</option>
+                        <option value="light">Light Mode (Paper Brutalism)</option>
+                        <option value="dark">Dark Mode (Standard)</option>
+                      </select>
+                    </div>
+
+                    <div className="flex flex-col gap-3">
+                      <label className="text-[10px] font-black uppercase tracking-[0.4em] text-zinc-500">Contrast</label>
+                      <select 
+                        value={contrast}
+                        onChange={(e: any) => setContrast(e.target.value)}
+                        className="w-full bg-[var(--bg-tertiary)] text-[var(--text-primary)] font-black text-sm px-6 py-4 border-2 border-[var(--border-main)] outline-none focus:border-[var(--accent-primary)] uppercase appearance-none cursor-pointer"
+                      >
+                        <option value="system">System</option>
+                        <option value="medium">Medium</option>
+                        <option value="increased">Increased</option>
+                      </select>
+                    </div>
+
+                    <div className="flex flex-col gap-3">
+                      <label className="text-[10px] font-black uppercase tracking-[0.4em] text-zinc-500">Accent Color</label>
+                      <select 
+                        value={accentColor}
+                        onChange={(e: any) => setAccentColor(e.target.value)}
+                        className="w-full bg-[var(--bg-tertiary)] text-[var(--text-primary)] font-black text-sm px-6 py-4 border-2 border-[var(--border-main)] outline-none focus:border-[var(--accent-primary)] uppercase appearance-none cursor-pointer"
+                      >
+                        <option value="default">Default (Red)</option>
+                        <option value="blue">Blue</option>
+                        <option value="green">Green</option>
+                        <option value="yellow">Yellow</option>
+                        <option value="pink">Pink</option>
+                        <option value="orange">Orange</option>
+                        <option value="black">Black (Premium)</option>
+                        <option value="glass">Glass (Premium)</option>
+                      </select>
+                    </div>
+
+                    <div className="flex flex-col gap-3">
+                      <label className="text-[10px] font-black uppercase tracking-[0.4em] text-zinc-500">Language</label>
+                      <select 
+                        value={profileForm.languages[0] || "ENGLISH"}
+                        onChange={(e: any) => handleLanguageChange(e.target.value)}
+                        className="w-full bg-[var(--bg-tertiary)] text-[var(--text-primary)] font-black text-sm px-6 py-4 border-2 border-[var(--border-main)] outline-none focus:border-[var(--accent-primary)] uppercase appearance-none cursor-pointer"
+                      >
+                        {["ENGLISH", "MALAYALAM", "TAMIL", "HINDI", "TELUGU", "KANNADA", "SPANISH", "FRENCH", "GERMAN", "CHINESE", "JAPANESE"].map(lang => (
+                          <option key={lang} value={lang}>{lang}</option>
+                        ))}
+                      </select>
+                      <div id="google_translate_element" className="hidden" />
+                    </div>
                   </div>
-                  <p className="text-[9px] text-zinc-600 font-black uppercase tracking-widest mt-6 italic leading-relaxed">
-                    PAPER_BRUTALISM: Optimized for high-contrast laboratory environments. <br />
-                    DARK_CMD: Standard stealth-mode deployment.
-                  </p>
+                </section>
+
+                {/* NOTIFICATIONS SECTION */}
+                <section>
+                  <div className="flex items-center gap-4 mb-10 border-b border-[var(--border-main)] pb-4">
+                    <div className="w-1.5 h-6 bg-[var(--accent-primary)]" />
+                    <h3 className="text-2xl font-black uppercase tracking-[0.2em]">NOTIFICATIONS</h3>
+                  </div>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-16">
+                    {/* Delivery Controls */}
+                    <div className="space-y-8">
+                      <h4 className="text-[10px] font-black uppercase tracking-[0.4em] text-[var(--accent-primary)]">Delivery Controls</h4>
+                      {[
+                        { key: 'push', label: 'Push Notifications' },
+                        { key: 'email', label: 'Email Notifications' },
+                        { key: 'sms', label: 'SMS / WhatsApp Alerts' }
+                      ].map(item => (
+                        <div key={item.key} className="flex items-center justify-between">
+                          <span className="text-xs font-black uppercase tracking-widest">{item.label}</span>
+                          <button 
+                            onClick={() => setNotificationsDelivery({...notificationsDelivery, [item.key]: !((notificationsDelivery as any)[item.key])})}
+                            className={`w-12 h-6 border-2 transition-all relative ${((notificationsDelivery as any)[item.key]) ? 'border-[var(--accent-primary)] bg-[var(--accent-primary)]' : 'border-[var(--border-main)] bg-transparent'}`}
+                          >
+                            <div className={`absolute top-0.5 w-4 h-4 transition-all ${((notificationsDelivery as any)[item.key]) ? 'right-0.5 bg-white' : 'left-0.5 bg-zinc-600'}`} />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+
+                    {/* Categories */}
+                    <div className="space-y-8">
+                      <h4 className="text-[10px] font-black uppercase tracking-[0.4em] text-[var(--accent-primary)]">Categories</h4>
+                      <div className="grid grid-cols-1 gap-4">
+                        {[
+                          'Casting & Opportunities', 'Activity & Engagement', 'AI & Platform Insights', 
+                          'Progress & Rewards', 'Communication', 'Account & Security', 'Platform Updates'
+                        ].map(cat => (
+                          <div key={cat} className="flex items-center justify-between">
+                            <span className="text-[10px] font-black uppercase tracking-widest text-zinc-500">{cat}</span>
+                            <button 
+                              onClick={() => setNotificationCategories({...notificationCategories, [cat.toLowerCase().replace(/ & /g, '_').replace(/ /g, '_')]: !((notificationCategories as any)[cat.toLowerCase().replace(/ & /g, '_').replace(/ /g, '_')])})}
+                              className={`w-4 h-4 border transition-all ${((notificationCategories as any)[cat.toLowerCase().replace(/ & /g, '_').replace(/ /g, '_')]) ? 'bg-[var(--accent-primary)] border-[var(--accent-primary)]' : 'border-[var(--border-main)] bg-transparent'}`}
+                            />
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                </section>
+
+                {/* PROFILE SECTION */}
+                <section>
+                  <div className="flex items-center gap-4 mb-10 border-b border-[var(--border-main)] pb-4">
+                    <div className="w-1.5 h-6 bg-[var(--accent-primary)]" />
+                    <h3 className="text-2xl font-black uppercase tracking-[0.2em]">PROFILE</h3>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-x-16 gap-y-12">
+                    {/* Identity Group */}
+                    <div className="space-y-8">
+                       <h4 className="text-[10px] font-black uppercase tracking-[0.4em] text-[var(--accent-primary)]">Identification</h4>
+                       
+                       <div className="space-y-6">
+                         <div className="flex flex-col gap-2">
+                           <label className="text-[9px] font-black text-zinc-500 uppercase tracking-widest">Full Name</label>
+                           <input 
+                              type="text" 
+                              value={profileForm.fullName}
+                              onChange={e => setProfileForm({...profileForm, fullName: e.target.value})}
+                              className="w-full bg-[var(--bg-secondary)] border-b-2 border-[var(--border-main)] py-3 px-1 font-black text-sm uppercase outline-none focus:border-[var(--accent-primary)] transition-all"
+                           />
+                         </div>
+
+                         <div className="flex flex-col gap-2">
+                           <label className="text-[9px] font-black text-zinc-500 uppercase tracking-widest">Bio (Max 500 characters)</label>
+                           <textarea 
+                              value={profileForm.bio}
+                              onChange={e => setProfileForm({...profileForm, bio: e.target.value.slice(0, 500)})}
+                              className="w-full bg-[var(--bg-secondary)] border-2 border-[var(--border-main)] p-4 font-black text-xs uppercase outline-none focus:border-[var(--accent-primary)] transition-all h-24 custom-scrollbar"
+                              placeholder="TELL YOUR STORY..."
+                           />
+                         </div>
+
+                         <div className="flex flex-col gap-2 pt-4">
+                           <label className="text-[9px] font-black text-zinc-500 uppercase tracking-widest">Profile Picture</label>
+                           <div className="flex items-center gap-6">
+                             <div className="w-16 h-16 rounded-full bg-[var(--bg-secondary)] border-2 border-[var(--border-main)] overflow-hidden shrink-0">
+                               {data.profile.avatarUrl ? (
+                                 <img src={data.profile.avatarUrl} alt="" className="w-full h-full object-cover grayscale" />
+                               ) : (
+                                 <div className="w-full h-full flex items-center justify-center"><User className="w-6 h-6 text-zinc-700" /></div>
+                               )}
+                             </div>
+                             <label className="flex-1 py-3 border-2 border-dashed border-[var(--border-main)] flex items-center justify-center gap-2 text-[10px] font-black uppercase tracking-widest hover:border-[var(--accent-primary)] transition-all cursor-pointer">
+                               <input type="file" className="hidden" accept="image/*" onChange={handlePFPChange} />
+                               <Upload className="w-3 h-3" /> Update Image
+                             </label>
+                           </div>
+                         </div>
+
+                         <div className="flex flex-col gap-2">
+                           <label className="text-[9px] font-black text-zinc-500 uppercase tracking-widest">Email Address</label>
+                           <input 
+                              type="email" 
+                              value={profileForm.email}
+                              disabled
+                              className="w-full bg-transparent border-b border-[var(--border-main)] py-3 px-1 font-black text-sm text-zinc-600 outline-none"
+                           />
+                         </div>
+
+                         <div className="flex flex-col gap-4 pt-4">
+                           {showUsernameInput ? (
+                             <div className="space-y-4 animate-in fade-in slide-in-from-top-2 duration-300">
+                               <label className="text-[9px] font-black text-[var(--accent-primary)] uppercase tracking-widest">Select New Username</label>
+                               <div className="relative">
+                                 <input 
+                                   type="text" 
+                                   value={newUsername}
+                                   onChange={(e) => {
+                                     const val = e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, '');
+                                     setNewUsername(val);
+                                     checkUsername(val);
+                                   }}
+                                   className={`w-full bg-[var(--bg-tertiary)] border-2 p-4 font-black text-white text-xs tracking-widest outline-none transition-all ${
+                                     usernameStatus === "available" ? "border-green-500" : 
+                                     usernameStatus === "taken" || usernameStatus === "invalid" ? "border-[var(--accent-primary)]" : "border-[var(--border-main)]"
+                                   }`}
+                                   placeholder="NEW_IDENTITY_ID"
+                                 />
+                                 {usernameStatus !== "idle" && (
+                                   <div className="absolute right-4 top-1/2 -translate-y-1/2 text-[8px] font-black uppercase">
+                                     {usernameStatus === "available" && <span className="text-green-500">AVAILABLE</span>}
+                                     {usernameStatus === "taken" && <span className="text-[var(--accent-primary)]">TAKEN</span>}
+                                   </div>
+                                 )}
+                               </div>
+                               <button onClick={() => setShowUsernameInput(false)} className="text-[9px] font-black uppercase tracking-widest text-zinc-600 hover:text-white transition-colors underline">Cancel Change</button>
+                             </div>
+                           ) : (
+                             <button onClick={() => setShowUsernameInput(true)} className="w-full py-4 border-2 border-[var(--border-main)] font-black text-[10px] uppercase tracking-widest hover:border-[var(--accent-primary)] hover:text-[var(--accent-primary)] transition-all">Update Username</button>
+                           )}
+                           <button onClick={() => setShowPassChangeModal(true)} className="w-full py-4 border-2 border-[var(--border-main)] font-black text-[10px] uppercase tracking-widest hover:border-[var(--accent-primary)] hover:text-[var(--accent-primary)] transition-all">Update Password</button>
+                         </div>
+                       </div>
+                    </div>
+
+                    {/* Privacy & Visibility */}
+                    <div className="space-y-8">
+                       <h4 className="text-[10px] font-black uppercase tracking-[0.4em] text-[var(--accent-primary)]">Privacy Controls</h4>
+                       
+                       <div className="space-y-6">
+                         <div className="flex items-center justify-between">
+                            <span className="text-[10px] font-black uppercase tracking-widest text-zinc-500">Profile Visibility</span>
+                            <select 
+                              value={profilePrivacy.visibility}
+                              onChange={e => setProfilePrivacy({...profilePrivacy, visibility: e.target.value})}
+                              className="bg-[var(--bg-tertiary)] font-black text-[10px] uppercase p-2 border border-[var(--border-main)] outline-none"
+                            >
+                               <option value="public">Public</option>
+                               <option value="directors">Only Directors</option>
+                            </select>
+                         </div>
+
+                         {[
+                           { key: 'openToWork', label: 'Open To Work' },
+                           { key: 'showAge', label: 'Show Age' },
+                           { key: 'showLocation', label: 'Show Location' },
+                           { key: 'showContact', label: 'Show Contact Details' }
+                         ].map(item => (
+                           <div key={item.key} className="flex items-center justify-between">
+                             <span className="text-[10px] font-black uppercase tracking-widest text-zinc-500">{item.label}</span>
+                             <button 
+                                onClick={() => setProfilePrivacy({...profilePrivacy, [item.key]: !((profilePrivacy as any)[item.key])})}
+                                className={`w-8 h-4 border transition-all ${((profilePrivacy as any)[item.key]) ? 'bg-green-500 border-green-500' : 'bg-zinc-800 border-zinc-700'}`}
+                             />
+                           </div>
+                         ))}
+                       </div>
+                    </div>
+
+                    {/* Permissions */}
+                    <div className="space-y-8">
+                       <h4 className="text-[10px] font-black uppercase tracking-[0.4em] text-[var(--accent-primary)]">Permission Matrix</h4>
+                       
+                       <div className="space-y-4">
+                          {[
+                            { label: 'Who can message you', key: 'message', options: ['everyone', 'directors', 'none'] },
+                            { label: 'Who can view audition tapes', key: 'viewTapes', options: ['everyone', 'directors'] },
+                            { label: 'Who can send casting invites', key: 'sendInvites', options: ['everyone', 'directors'] }
+                          ].map(p => (
+                            <div key={p.key} className="flex flex-col gap-2">
+                               <label className="text-[8px] font-black text-zinc-600 uppercase tracking-widest">{p.label}</label>
+                               <div className="flex gap-2">
+                                  {p.options.map(opt => (
+                                    <button 
+                                      key={opt}
+                                      onClick={() => setPermissions({...permissions, [p.key]: opt})}
+                                      className={`flex-1 py-2 text-[8px] font-black uppercase tracking-tighter border transition-all ${((permissions as any)[p.key]) === opt ? 'bg-white text-black border-white' : 'bg-[var(--bg-secondary)] text-zinc-600 border-[var(--border-main)] hover:border-zinc-700'}`}
+                                    >
+                                      {opt}
+                                    </button>
+                                  ))}
+                               </div>
+                            </div>
+                          ))}
+                          
+                          <div className="flex items-center justify-between pt-4">
+                             <span className="text-[10px] font-black uppercase tracking-widest text-zinc-500">Appear in Casting Searches</span>
+                             <button 
+                                onClick={() => setPermissions({...permissions, appearInSearches: !permissions.appearInSearches})}
+                                className={`w-10 h-5 border transition-all ${permissions.appearInSearches ? 'bg-[var(--accent-primary)] border-[var(--accent-primary)]' : 'bg-transparent border-zinc-700'}`}
+                             />
+                          </div>
+                       </div>
+                    </div>
+
+                    {/* Account Management */}
+                    <div className="space-y-8">
+                       <h4 className="text-[10px] font-black uppercase tracking-[0.4em] text-[var(--accent-primary)]">Account Management</h4>
+                       <div className="grid grid-cols-1 gap-3">
+                          <button onClick={handleLogout} className="w-full py-4 bg-[var(--bg-secondary)] border border-[var(--border-main)] text-white font-black text-[10px] uppercase tracking-widest hover:bg-[var(--accent-primary)] hover:border-[var(--accent-primary)] transition-all">Logout</button>
+                          <button className="w-full py-4 border border-white/10 rounded-3xl border-[var(--border-main)] text-zinc-500 font-black text-[10px] uppercase tracking-widest hover:text-white hover:border-white transition-all">Logout from all Devices</button>
+                          <div className="grid grid-cols-2 gap-3 pt-4">
+                             <button className="py-4 border-2 border-zinc-900 text-zinc-800 font-black text-[9px] uppercase tracking-widest hover:border-zinc-700 hover:text-zinc-600 transition-all">Deactivate Account</button>
+                             <button className="py-4 border-2 border-[var(--accent-primary)]/20 text-[var(--accent-primary)]/50 font-black text-[9px] uppercase tracking-widest hover:border-[var(--accent-primary)] hover:text-[var(--accent-primary)] transition-all">Delete Account</button>
+                          </div>
+                       </div>
+                    </div>
+                  </div>
                 </section>
 
               </div>
@@ -2980,16 +3150,9 @@ export default function AgenticDashboard() {
                 <button 
                   onClick={handleUpdateSettings}
                   disabled={settingsLoading || (newUsername.length > 0 && usernameStatus !== "available") || (newPassword.length > 0 && !validatePassword(newPassword))}
-                  className="flex-1 py-8 bg-gradient-to-r from-[#ff1a1a] to-[#8a0303] text-white font-black text-3xl uppercase tracking-tighter hover:bg-white hover:text-black transition-all shadow-[0_0_30px_rgba(255,26,26,0.3)] hover:shadow-[0_0_50px_rgba(255,26,26,0.5)] disabled:opacity-20 cursor-pointer"
+                  className="flex-1 py-8 bg-gradient-to-r from-[var(--accent-primary)] to-[var(--accent-secondary)] text-white font-black text-3xl uppercase tracking-tighter hover:bg-white hover:text-black transition-all shadow-[0_0_30px_var(--accent-glow)] hover:shadow-[0_0_50px_var(--accent-glow)] disabled:opacity-20 cursor-pointer"
                 >
-                  {settingsLoading ? "PROCESSING..." : "UPDATE HUD PROTOCOLS"}
-                </button>
-                <button 
-                  onClick={handleLogout}
-                  className="px-10 py-8 glass-panel-premium border border-[#ff1a1a]/30 shadow-[0_0_15px_rgba(255,26,26,0.1)] rounded-3xl text-[#ff1a1a] font-black text-xs uppercase tracking-widest hover:bg-gradient-to-r from-[#ff1a1a] to-[#8a0303] hover:text-white transition-all cursor-pointer flex items-center justify-center gap-3"
-                >
-                  <LogOut className="w-5 h-5" />
-                  TERMINATE
+                  {settingsLoading ? "PROCESSING..." : "SAVE CONFIGURATION"}
                 </button>
               </div>
 
@@ -3012,7 +3175,7 @@ export default function AgenticDashboard() {
               initial={{ opacity: 0, scale: 0.9 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.9 }}
-              className="w-full max-w-2xl aspect-square glass-panel-premium border border-[#ff1a1a]/30 shadow-[0_0_15px_rgba(255,26,26,0.1)] rounded-3xl relative z-10 flex flex-col"
+              className="w-full max-w-2xl aspect-square glass-panel-premium border border-[var(--accent-primary)]/30 shadow-[0_0_15px_var(--accent-glow)] rounded-3xl relative z-10 flex flex-col"
             >
               <div className="flex-1 relative bg-[var(--bg-tertiary)]">
                 <Cropper
@@ -3035,20 +3198,20 @@ export default function AgenticDashboard() {
                     step={0.1} 
                     value={zoom} 
                     onChange={(e) => setZoom(Number(e.target.value))}
-                    className="flex-1 accent-brand-red-neon"
+                    className="flex-1 accent-[var(--accent-primary)]"
                   />
                 </div>
                 <div className="flex gap-4">
                   <button 
                     onClick={handleApplyCrop}
                     disabled={isUploadingPFP}
-                    className="flex-1 py-5 bg-gradient-to-r from-[#ff1a1a] to-[#8a0303] text-white font-black text-sm uppercase tracking-widest hover:bg-white hover:text-black transition-all shadow-[0_0_30px_rgba(255,26,26,0.3)] hover:shadow-[0_0_50px_rgba(255,26,26,0.5)] disabled:opacity-50"
+                    className="flex-1 py-5 bg-gradient-to-r from-[var(--accent-primary)] to-[var(--accent-secondary)] text-white font-black text-sm uppercase tracking-widest hover:bg-white hover:text-black transition-all shadow-[0_0_30px_var(--accent-glow)] hover:shadow-[0_0_50px_var(--accent-glow)] disabled:opacity-50"
                   >
                     {isUploadingPFP ? "PROCESSING..." : "FINALIZE BIOMETRIC CROP"}
                   </button>
                   <button 
                     onClick={() => setShowCropModal(false)}
-                    className="px-8 py-5 border-2 border-[var(--border-main)] text-zinc-500 font-black text-sm uppercase tracking-widest hover:border-[#ff1a1a] hover:text-white transition-all"
+                    className="px-8 py-5 border-2 border-[var(--border-main)] text-zinc-500 font-black text-sm uppercase tracking-widest hover:border-[var(--accent-primary)] hover:text-white transition-all"
                   >
                     CANCEL
                   </button>

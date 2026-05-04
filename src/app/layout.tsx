@@ -69,6 +69,19 @@ export default function RootLayout({
         <SmoothScroll>
           {children}
         </SmoothScroll>
+        <script dangerouslySetInnerHTML={{
+          __html: `
+            function googleTranslateElementInit() {
+              new google.translate.TranslateElement({
+                pageLanguage: 'en',
+                includedLanguages: 'en,ml,ta,hi,te,kn,es,fr,de,zh-CN,ja',
+                autoDisplay: false
+              }, 'google_translate_element');
+            }
+          `
+        }} />
+        <script src="//translate.google.com/translate_a/element.js?cb=googleTranslateElementInit" async defer />
+        <div id="google_translate_element" style={{ position: 'absolute', top: '-1000px', left: '-1000px', opacity: 0, pointerEvents: 'none', display: 'none' }} />
       </body>
     </html>
   );
