@@ -191,7 +191,7 @@ export default function StangabHub() {
                  <div className="flex-1 flex flex-col">
                     <div className="flex-1 overflow-y-auto flex flex-col gap-4 p-4">
                        {messages.filter(m => (m.sender_id === user.id && m.recipient_id === selectedChat.id) || (m.sender_id === selectedChat.id && m.recipient_id === user.id)).map((msg, i) => (
-                         <div key={i} className={`flex ${msg.sender_id === user.id ? 'justify-end' : 'justify-start'}`}>
+                         <div key={i} className={`flex chat-bubble ${msg.sender_id === user.id ? 'justify-end' : 'justify-start'}`}>
                             <div className={`max-w-[70%] p-4 rounded-2xl font-medium text-sm ${msg.sender_id === user.id ? 'bg-[var(--accent-primary)] text-white' : 'bg-zinc-900 text-zinc-300'}`}>
                                {msg.content}
                             </div>
