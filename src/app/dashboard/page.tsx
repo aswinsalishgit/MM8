@@ -654,6 +654,8 @@ export default function AgenticDashboard() {
       setShowProfileModal(true);
     } catch (err: any) {
       console.error('Error fetching profile raw:', err);
+      console.error('Error fetching profile string:', JSON.stringify(err));
+      console.error('Error fetching profile msg:', err.message);
       setMessage({ text: "Failed to load profile. Connection lost.", type: 'error' });
     }
   };
