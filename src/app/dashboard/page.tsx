@@ -652,8 +652,8 @@ export default function AgenticDashboard() {
       if (error) throw error;
       setSelectedUserProfile(data);
       setShowProfileModal(true);
-    } catch (err) {
-      console.error('Error fetching profile:', err);
+    } catch (err: any) {
+      console.error('Error fetching profile raw:', err);
       setMessage({ text: "Failed to load profile. Connection lost.", type: 'error' });
     }
   };
