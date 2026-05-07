@@ -760,8 +760,9 @@ export default function AgenticDashboard() {
       setActiveChat(chatData);
       fetchMessages(chatId);
       setCurrentView('STANGAB');
-    } catch (err) {
-      console.error('Start chat error:', err);
+    } catch (err: any) {
+      console.error('Start chat error raw:', err);
+      console.error('Start chat error msg:', err.message);
       setMessage({ text: "Failed to initialize communication link.", type: 'error' });
     }
   };
