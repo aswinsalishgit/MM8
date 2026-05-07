@@ -642,10 +642,7 @@ export default function AgenticDashboard() {
     try {
       const { data, error } = await supabase
         .from('profiles')
-        .select(`
-          *,
-          settings (*)
-        `)
+        .select('*, settings(*)')
         .eq('id', userId)
         .single();
 
@@ -653,9 +650,7 @@ export default function AgenticDashboard() {
       setSelectedUserProfile(data);
       setShowProfileModal(true);
     } catch (err: any) {
-      console.error('Error fetching profile raw:', err);
-      console.error('Error fetching profile string:', JSON.stringify(err));
-      console.error('Error fetching profile msg:', err.message);
+      console.error('Error fetching profile:', err);
       setMessage({ text: "Failed to load profile. Connection lost.", type: 'error' });
     }
   };
