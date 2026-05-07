@@ -170,22 +170,6 @@ body {
   box-shadow: 0 8px 32px 0 var(--accent-glow);
 }
 
-.glass-panel-premium {
-  background: rgba(255, 255, 255, 0.03);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.8);
-}
-
-.glass-panel-premium-red {
-  background: rgba(255, 49, 49, 0.03);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  border: 1px solid rgba(255, 49, 49, 0.1);
-  box-shadow: 0 8px 32px 0 rgba(255, 49, 49, 0.05);
-}
-
 /* Polygonal Clip Paths */
 .clip-brutal-tl {
   clip-path: polygon(15% 0, 100% 0, 100% 100%, 0 100%, 0 25%);

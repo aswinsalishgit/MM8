@@ -1,4 +1,4 @@
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
+// @ts-nocheck — This is a Deno Edge Function, not a Node.js module.
 import { create, getNumericDate } from "https://deno.land/x/djwt@v2.8/mod.ts"
 import { decode } from "https://deno.land/std@0.168.0/encoding/base64.ts"
 
@@ -6,12 +6,13 @@ const GOOGLE_CLIENT_EMAIL = Deno.env.get('GOOGLE_CLIENT_EMAIL')
 const GOOGLE_PRIVATE_KEY = Deno.env.get('GOOGLE_PRIVATE_KEY')
 const ROOT_FOLDER_ID = Deno.env.get('GOOGLE_DRIVE_FOLDER_ID')
 
-serve(async (req) => {
+Deno.serve(async (req) => {
   console.log("MM8_SYSTEM: Archive trigger received")
   
   try {
     const payload = await req.json()
-    const driveFolderId = payload.old_record?.drive_folder_id
+    const oldRecord = payload.record || payload.old_record;
+    const driveFolderId = oldRecord?.drive_folder_id
 
     if (!driveFolderId || driveFolderId === 'NONE') {
       return new Response(JSON.stringify({ message: 'Skipped: No Folder ID' }), { status: 200 })
@@ -53,9 +54,12 @@ serve(async (req) => {
     console.log(`MM8_SYSTEM: Successfully archived folder ${driveFolderId}`)
     return new Response(JSON.stringify({ success: true }), { status: 200 })
 
-  } catch (error) {
+  } catch (error: any) {
     console.error('MM8_SYSTEM_ERROR:', error.message)
-    return new Response(JSON.stringify({ error: error.message }), { status: 500 })
+    return new Response(JSON.stringify({ error: error.message }), { 
+      status: 500,
+      headers: { "Content-Type": "application/json" }
+    })
   }
 })
 

@@ -1,3 +1,4 @@
+// @ts-nocheck — This is a Deno Edge Function, not a Node.js module.
 // Follow this setup guide to integrate the Deno language server with your editor:
 // https://deno.land/manual/getting_started/setup_your_environment
 // This enables autocomplete, go to definition, etc.

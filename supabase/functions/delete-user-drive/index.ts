@@ -1,32 +1,98 @@
-// Follow this setup guide to integrate the Deno language server with your editor:
-// https://deno.land/manual/getting_started/setup_your_environment
-// This enables autocomplete, go to definition, etc.
+// @ts-nocheck — This is a Deno Edge Function, not a Node.js module.
+import { create, getNumericDate } from "https://deno.land/x/djwt@v2.8/mod.ts"
+import { decode } from "https://deno.land/std@0.168.0/encoding/base64.ts"
 
-// Setup type definitions for built-in Supabase Runtime APIs
-import "@supabase/functions-js/edge-runtime.d.ts"
-
-console.log("Hello from Functions!")
+const GOOGLE_CLIENT_EMAIL = Deno.env.get('GOOGLE_CLIENT_EMAIL')
+const GOOGLE_PRIVATE_KEY = Deno.env.get('GOOGLE_PRIVATE_KEY')
 
 Deno.serve(async (req) => {
-  const { name } = await req.json()
-  const data = {
-    message: `Hello ${name}!`,
-  }
+  console.log("MM8_SYSTEM: Hard delete trigger received")
+  
+  try {
+    const payload = await req.json()
+    const oldRecord = payload.record || payload.old_record;
+    const driveFolderId = oldRecord?.drive_folder_id
 
-  return new Response(
-    JSON.stringify(data),
-    { headers: { "Content-Type": "application/json" } },
-  )
+    if (!driveFolderId || driveFolderId === 'NONE') {
+      return new Response(JSON.stringify({ message: 'Skipped: No Folder ID' }), { 
+        status: 200,
+        headers: { "Content-Type": "application/json" }
+      })
+    }
+
+    const token = await getGoogleAccessToken()
+
+    // Permanently delete the folder and its contents
+    console.log(`MM8_SYSTEM: Permanently deleting ${driveFolderId}`)
+    const deleteRes = await fetch(`https://www.googleapis.com/drive/v3/files/${driveFolderId}?supportsAllDrives=true`, {
+      method: 'DELETE',
+      headers: { Authorization: `Bearer ${token}` }
+    })
+
+    if (!deleteRes.ok && deleteRes.status !== 404) {
+      const error = await deleteRes.text()
+      throw new Error(`Delete Failed (${deleteRes.status}): ${error}`)
+    }
+
+    console.log(`MM8_SYSTEM: Successfully hard-deleted folder ${driveFolderId}`)
+    return new Response(JSON.stringify({ success: true }), { 
+      status: 200,
+      headers: { "Content-Type": "application/json" }
+    })
+
+  } catch (error: any) {
+    console.error('MM8_SYSTEM_ERROR:', error.message)
+    return new Response(JSON.stringify({ error: error.message }), { 
+      status: 500,
+      headers: { "Content-Type": "application/json" }
+    })
+  }
 })
 
-/* To invoke locally:
+async function getGoogleAccessToken() {
+  if (!GOOGLE_CLIENT_EMAIL || !GOOGLE_PRIVATE_KEY) {
+    throw new Error('Google Credentials missing from environment')
+  }
 
-  1. Run `supabase start` (see: https://supabase.com/docs/reference/cli/supabase-start)
-  2. Make an HTTP request:
+  const cleanKey = GOOGLE_PRIVATE_KEY
+    .replace(/\\n/g, '\n')
+    .split('\n')
+    .map(line => line.trim())
+    .filter(line => line && !line.startsWith('---'))
+    .join('')
+    .replace(/\s/g, '')
 
-  curl -i --location --request POST 'http://127.0.0.1:54321/functions/v1/delete-user-drive' \
-    --header 'Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0' \
-    --header 'Content-Type: application/json' \
-    --data '{"name":"Functions"}'
+  const binaryDer = decode(cleanKey)
+  const cryptoKey = await crypto.subtle.importKey(
+    "pkcs8",
+    binaryDer,
+    { name: "RSASSA-PKCS1-v1_5", hash: "SHA-256" },
+    true,
+    ["sign"]
+  )
 
-*/
+  const jwt = await create(
+    { alg: "RS256", typ: "JWT" },
+    {
+      iss: GOOGLE_CLIENT_EMAIL,
+      scope: "https://www.googleapis.com/auth/drive",
+      aud: "https://oauth2.googleapis.com/token",
+      exp: getNumericDate(3600),
+      iat: getNumericDate(0),
+    },
+    cryptoKey
+  )
+
+  const response = await fetch("https://oauth2.googleapis.com/token", {
+    method: "POST",
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body: new URLSearchParams({
+      grant_type: "urn:ietf:params:oauth:grant-type:jwt-bearer",
+      assertion: jwt,
+    }),
+  })
+
+  const data = await response.json()
+  if (!data.access_token) throw new Error('Google Token exchange failed')
+  return data.access_token
+}

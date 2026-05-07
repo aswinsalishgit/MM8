@@ -11,7 +11,7 @@ export async function ensureUserFolder() {
   // Check if folder already exists
   const { data: profile } = await supabase
     .from('profiles')
-    .select('user_drive, drive_folder_id, full_name, email, role')
+    .select('user_drive, drive_folder_id, full_name, email')
     .eq('id', user.id)
     .single();
 
@@ -22,7 +22,7 @@ export async function ensureUserFolder() {
   const fullName = profile?.full_name || user.user_metadata.full_name || user.email?.split('@')[0] || "User";
   const email = user.email || "no-email";
   
-  const driveInfo = await createUserFolder(fullName, email, user.id, profile?.role || 'ACTOR');
+  const driveInfo = await createUserFolder(fullName, email, user.id);
   
   await supabase
     .from('profiles')

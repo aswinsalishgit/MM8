@@ -90,7 +90,7 @@ const useDashboardData = () => {
         if (!createError && newProfile) {
           profile = newProfile;
         } else {
-          profile = { full_name: "INITIALIZING_IDENTITY", status: "PENDING_VERIFICATION", lumen_points: 0, location: "ESTABLISHING_LOCATION" };
+          profile = { full_name: "AGENT_X", status: "UNVERIFIED", lumen_points: 0, location: "UNKNOWN" };
         }
       }
 
@@ -197,7 +197,7 @@ const useDashboardData = () => {
       setData({
         profile: {
           id: profile.id,
-          name: profile.full_name || "INITIALIZING_IDENTITY",
+          name: profile.full_name || "AGENT_X",
           username: profile.username || null,
           email: profile.email || "",
           status: profile.status || "UNVERIFIED",
@@ -235,29 +235,29 @@ const useDashboardData = () => {
           distinctFeatures: profile.distinct_features || "",
           priorArtExperience: profile.prior_art_experience || "",
           settings: profile.settings ? {
-            appearance: profile.settings[0]?.appearance || profile.settings?.appearance || 'system',
-            accentColor: profile.settings[0]?.accent_color || profile.settings?.accent_color || 'default',
-            contrast: profile.settings[0]?.contrast || profile.settings?.contrast || 'system',
+            appearance: profile.settings[0]?.appearance || 'system',
+            accentColor: profile.settings[0]?.accent_color || 'default',
+            contrast: profile.settings[0]?.contrast || 'system',
             notifications: {
-              push: profile.settings[0]?.push_notifications ?? profile.settings?.notifications?.push ?? true,
-              email: profile.settings[0]?.email_notifications ?? profile.settings?.notifications?.email ?? true,
-              sms: profile.settings[0]?.sms_notifications ?? profile.settings?.notifications?.sms ?? false,
+              push: profile.settings[0]?.push_notifications ?? true,
+              email: profile.settings[0]?.email_notifications ?? true,
+              sms: profile.settings[0]?.sms_notifications ?? false,
             },
-            categories: profile.settings[0]?.categories || profile.settings?.categories || {
+            categories: profile.settings[0]?.categories || {
               casting: true, activity: true, ai: true, progress: true, communication: true, account: true, platform: true
             },
             privacy: {
-              visibility: profile.settings[0]?.privacy_visibility || profile.settings?.privacy?.visibility || 'public',
-              openToWork: profile.settings[0]?.open_to_work ?? profile.settings?.privacy?.openToWork ?? true,
-              showAge: profile.settings[0]?.show_age ?? profile.settings?.privacy?.showAge ?? true,
-              showLocation: profile.settings[0]?.show_location ?? profile.settings?.privacy?.showLocation ?? true,
-              showContact: profile.settings[0]?.show_contact ?? profile.settings?.privacy?.showContact ?? true,
+              visibility: profile.settings[0]?.privacy_visibility || 'public',
+              openToWork: profile.settings[0]?.open_to_work ?? true,
+              showAge: profile.settings[0]?.show_age ?? true,
+              showLocation: profile.settings[0]?.show_location ?? true,
+              showContact: profile.settings[0]?.show_contact ?? true,
             },
             permissions: {
-              message: profile.settings[0]?.message_permissions || profile.settings?.permissions?.message || 'everyone',
-              viewTapes: profile.settings[0]?.view_tapes_permissions || profile.settings?.permissions?.viewTapes || 'directors',
-              sendInvites: profile.settings[0]?.send_invites_permissions || profile.settings?.permissions?.sendInvites || 'directors',
-              appearInSearches: profile.settings[0]?.appear_in_searches ?? profile.settings?.permissions?.appearInSearches ?? true,
+              message: profile.settings[0]?.message_permissions || 'everyone',
+              viewTapes: profile.settings[0]?.view_tapes_permissions || 'directors',
+              sendInvites: profile.settings[0]?.send_invites_permissions || 'directors',
+              appearInSearches: profile.settings[0]?.appear_in_searches ?? true,
             }
           } : null,
         },
@@ -374,6 +374,18 @@ export default function AgenticDashboard() {
     sendInvites: 'directors',
     appearInSearches: true
   });
+
+  // Debounced username check
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (newUsername) {
+        checkUsername(newUsername);
+      } else {
+        setUsernameStatus("idle");
+      }
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [newUsername]);
 
   // Load preferences
   useEffect(() => {
@@ -514,10 +526,11 @@ export default function AgenticDashboard() {
   const [notifFilter, setNotifFilter] = useState<"ALL" | "UNREAD">("ALL");
   const [isEditingProfile, setIsEditingProfile] = useState(false);
   const [profileLoading, setProfileLoading] = useState(false);
-  const [showPassChangeModal, setShowPassChangeModal] = useState(false);
+  const [showUsernameInput, setShowUsernameInput] = useState(false);
+  const [showPassUpdateInput, setShowPassUpdateInput] = useState(false);
+  const [passUpdateLoading, setPassUpdateLoading] = useState(false);
   const [currentPassVerify, setCurrentPassVerify] = useState("");
   const [passVerified, setPassVerified] = useState(false);
-  const [showUsernameInput, setShowUsernameInput] = useState(false);
   const [profileForm, setProfileForm] = useState<any>({
     fullName: "",
     username: "",
@@ -702,14 +715,21 @@ export default function AgenticDashboard() {
   };
 
   const handleVerifyPassword = async () => {
-     // In a real app, you would call a server action to verify the current password.
-     // For this MVP, we will simulate verification.
-     if (currentPassVerify === "mm8-demo-pass" || currentPassVerify.length >= 6) {
-        setPassVerified(true);
-        setMessage({ text: "Your identity has been verified. Access granted.", type: 'success' });
-     } else {
-        setMessage({ text: "Verification failed due to invalid credentials.", type: 'error' });
-     }
+    if (!currentPassVerify) return;
+    setPassUpdateLoading(true);
+    try {
+      const { error } = await supabase.auth.signInWithPassword({
+        email: data.profile.email,
+        password: currentPassVerify,
+      });
+      if (error) throw new Error("Verification failed: Incorrect current password.");
+      setPassVerified(true);
+      setMessage({ text: "Identity verified. You may now initialize a new security key.", type: 'success' });
+    } catch (err: any) {
+      setMessage({ text: err.message, type: 'error' });
+    } finally {
+      setPassUpdateLoading(false);
+    }
   };
 
   const MOCK_FEEDS = [
@@ -796,6 +816,14 @@ export default function AgenticDashboard() {
       setPrefExperience(data.profile.experience || "");
       setPrefAvailability(data.profile.opportunityReadiness || "");
       setPrefLocation(data.profile.location || "");
+      
+      // Reset password update states on settings open
+      if (showSettings) {
+        setPassVerified(false);
+        setCurrentPassVerify("");
+        setNewPassword("");
+        setShowPassUpdateInput(false);
+      }
     }
   }, [data, showSettings]);
 
@@ -857,6 +885,10 @@ export default function AgenticDashboard() {
       setMessage({ text: "The provided password does not meet the required security standards.", type: 'error' });
       return;
     }
+    if (newPassword && !passVerified) {
+      setMessage({ text: "Please verify your current identity protocol before updating the security key.", type: 'error' });
+      return;
+    }
 
     setSettingsLoading(true);
     try {
@@ -910,6 +942,12 @@ export default function AgenticDashboard() {
       localStorage.setItem('mm8-notifications-protocol', JSON.stringify(notificationsDelivery));
 
       setMessage({ text: "Your settings have been saved and synchronization is complete.", type: 'success' });
+      
+      // Clear password states after successful update
+      setPassVerified(false);
+      setCurrentPassVerify("");
+      setNewPassword("");
+      setShowPassUpdateInput(false);
       
       // BACKGROUND REFRESH: Fetch data without closing the modal
       fetchData(); 
@@ -1066,36 +1104,13 @@ export default function AgenticDashboard() {
 
   if (loading || !data) {
     return (
-      <main className="h-screen bg-black text-white flex flex-col justify-center items-center p-12 overflow-hidden">
-        <div className="w-full max-w-2xl relative">
-          <div className="mb-12 border-b border-zinc-900 pb-8">
-            <h1 className="text-6xl md:text-8xl font-black uppercase tracking-tighter leading-none animate-pulse">
-              BOOTING<br/><span className="text-[var(--accent-primary)]">PROTOCOL</span>
-            </h1>
-          </div>
-          <div className="flex flex-col gap-6">
-            <div className="flex justify-between items-center text-[10px] font-black uppercase tracking-[0.5em] text-zinc-600">
-              <span>Initializing_LMN_Core</span>
-              <span className="animate-bounce">...</span>
-            </div>
-            <div className="w-full h-1 bg-zinc-900 overflow-hidden">
-              <motion.div 
-                initial={{ x: "-100%" }}
-                animate={{ x: "100%" }}
-                transition={{ repeat: Infinity, duration: 1.5, ease: "linear" }}
-                className="w-1/2 h-full bg-[var(--accent-primary)] shadow-[0_0_15px_var(--accent-glow)]"
-              />
-            </div>
-          </div>
-        </div>
-        {/* Background Noise Simulation */}
-        <div className="fixed inset-0 bg-white/5 opacity-[0.03] pointer-events-none z-50 mix-blend-overlay" />
+      <main className="min-h-screen bg-[var(--bg-primary)]">
       </main>
     );
   }
 
   return (
-    <main className="min-h-screen bg-[var(--bg-primary)] text-[var(--text-primary)] flex overflow-hidden font-sans selection:bg-[var(--accent-primary)] selection:text-white">
+    <main className="min-h-screen bg-[var(--bg-primary)] text-[var(--text-primary)] flex overflow-hidden selection:bg-[var(--accent-red)] selection:text-white transition-colors duration-500">
       
       {/* Command Toast System (Premium Glassmorphic) */}
       <AnimatePresence mode="wait">
@@ -1192,10 +1207,6 @@ export default function AgenticDashboard() {
                 <button
                   key={item.id}
                   onClick={() => {
-                    if (item.id === 'STANGAB') {
-                      router.push('/stangab');
-                      return;
-                    }
                     setCurrentView(item.id);
                     if (window.innerWidth <= 1024) setIsSidebarOpen(false);
                     if (item.id === 'LOGOUT') handleLogout();
@@ -1227,12 +1238,6 @@ export default function AgenticDashboard() {
             <Menu className="w-6 h-6 text-[var(--text-primary)]" />
           </button>
           
-          <div className="hidden lg:flex items-center gap-4">
-            <div className="flex items-center gap-2 px-4 py-2 glass-panel-premium border border-white/10 rounded-3xl border-[var(--border-main)] rounded-full">
-              <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse shadow-[0_0_10px_rgba(34,197,94,0.5)]" />
-              <span className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-500">SYSTEM_STATUS: <span className="text-white">LIVE</span></span>
-            </div>
-          </div>
 
           <div className="flex items-center gap-6 md:gap-12 ml-auto">
             <div className="flex items-center gap-4 md:gap-8">
@@ -1335,9 +1340,18 @@ export default function AgenticDashboard() {
                 <h2 className="text-4xl md:text-5xl font-black uppercase tracking-tighter leading-none break-words">{data.profile.name}</h2>
                 <div className="mt-4 flex items-start gap-3">
                   <span className="w-2 h-0.5 bg-gradient-to-r from-[var(--accent-primary)] to-[var(--accent-secondary)] mt-1.5 shrink-0" />
-                  <p className="text-[var(--accent-primary)] font-black uppercase tracking-[0.2em] text-[10px] leading-relaxed break-words">
-                    {data.profile.bio || 'SIGNAL_NOT_INITIALIZED'}
-                  </p>
+                  {data.profile.bio ? (
+                    <p className="text-[var(--accent-primary)] font-black uppercase tracking-[0.2em] text-[10px] leading-relaxed break-words">
+                      {data.profile.bio}
+                    </p>
+                  ) : (
+                    <button 
+                      onClick={() => setShowSettings(true)}
+                      className="text-[var(--accent-primary)] font-black uppercase tracking-[0.2em] text-[10px] leading-relaxed hover:underline cursor-pointer text-left"
+                    >
+                      UPDATE BIO
+                    </button>
+                  )}
                 </div>
               </div>
             </div>
@@ -1346,7 +1360,7 @@ export default function AgenticDashboard() {
               {/* Profile Completion progress bar */}
               <div className="mt-8">
                 <div className="flex justify-between items-center mb-3">
-                  <h3 className="font-black text-zinc-600 uppercase tracking-[0.4em] text-[10px]">PROFILE STRENGTH</h3>
+                  <h3 className="font-black text-zinc-600 uppercase tracking-[0.4em] text-[10px]">PROFILE_STRENGTH</h3>
                   <span className="text-[var(--text-primary)] font-black text-[10px] tabular-nums">{completionProgress}%</span>
                 </div>
                 <div className="w-full h-3 bg-[var(--bg-tertiary)] relative overflow-hidden rounded-full">
@@ -1366,7 +1380,7 @@ export default function AgenticDashboard() {
             <div className="flex items-center justify-between mb-8">
               <div className="flex items-center gap-4">
                 <Zap className="w-5 h-5 text-[var(--accent-primary)]" />
-                <h3 className="font-black uppercase tracking-[0.4em] text-[10px]">IDENTITY STATUS</h3>
+                <h3 className="font-black uppercase tracking-[0.4em] text-[10px]">STATUS</h3>
               </div>
               <div className={`flex items-center gap-2 ${TIER_CONFIG[data.profile.lumenTier]?.color || 'text-zinc-500'}`}>
                 <Zap className={`w-3 h-3 ${TIER_CONFIG[data.profile.lumenTier]?.glow || ''}`} />
@@ -1398,7 +1412,7 @@ export default function AgenticDashboard() {
             <div className="relative z-10">
               <div className="flex items-center gap-4 mb-8">
                 <Flame className="w-6 h-6 text-[var(--accent-primary)]" />
-                <h3 className="font-black uppercase tracking-[0.4em] text-[10px]">DAILY MISSIONS</h3>
+                <h3 className="font-black uppercase tracking-[0.4em] text-[10px]">DAILY_MISSIONS</h3>
               </div>
                 <div className="flex flex-col gap-4">
                   {data.missions.map((mission: any) => (
@@ -1424,7 +1438,7 @@ export default function AgenticDashboard() {
           <section className="glass-panel-premium p-10 border border-white/10 rounded-3xl clip-brutal-bl">
             <div className="flex items-center gap-4 mb-10 border-b border-[var(--border-main)] pb-8">
               <Trophy className="w-6 h-6 text-[var(--accent-primary)]" />
-              <h3 className="font-black uppercase tracking-[0.4em] text-[10px]">GLOBAL RANKINGS</h3>
+              <h3 className="font-black uppercase tracking-[0.4em] text-[10px]">GLOBAL_RANKINGS</h3>
               <span className="text-[8px] font-black text-zinc-700 uppercase tracking-widest ml-auto">LIVE // {data.leaderboard.length} NODES</span>
             </div>
             {data.leaderboard.length > 0 ? (
@@ -2361,8 +2375,8 @@ export default function AgenticDashboard() {
                 <User className="w-10 h-10 text-[var(--accent-primary)]" />
               </div>
               <div>
-                <h1 className="text-7xl font-black uppercase tracking-tighter leading-none">ACTOR PROFILE</h1>
-                <p className="text-[10px] font-black uppercase tracking-[0.5em] text-zinc-600 mt-2">IDENTITY VAULT SECURED</p>
+                <h1 className="text-7xl font-black uppercase tracking-tighter leading-none">ACTOR_PROFILE</h1>
+                <p className="text-[10px] font-black uppercase tracking-[0.5em] text-zinc-600 mt-2">DECENTRALIZED_IDENTITY_VAULT</p>
               </div>
             </div>
 
@@ -2502,7 +2516,7 @@ export default function AgenticDashboard() {
                             <div className="md:col-span-2">
                                <button 
                                  type="button"
-                                 onClick={() => setShowPassChangeModal(true)}
+                                 onClick={() => { setShowSettings(true); setShowPassUpdateInput(true); }}
                                  className="px-6 py-3 border border-[var(--border-main)] hover:border-[var(--accent-primary)] transition-all text-[10px] font-black uppercase tracking-widest text-zinc-600 hover:text-white flex items-center gap-3"
                                >
                                   <Lock className="w-4 h-4" /> RECONFIGURE_SECURITY_PROTOCOL
@@ -2745,78 +2759,6 @@ export default function AgenticDashboard() {
                 )}
              </div>
           </div>
-
-          {/* PassChange Modal */}
-          <AnimatePresence>
-             {showPassChangeModal && (
-                <div className="fixed inset-0 z-[1000] flex items-center justify-center p-4">
-                   <motion.div 
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: 1 }}
-                      exit={{ opacity: 0 }}
-                      onClick={() => setShowPassChangeModal(false)}
-                      className="absolute inset-0 bg-[var(--bg-primary)]/95 backdrop-blur-xl"
-                   />
-                   <motion.div 
-                      initial={{ scale: 0.9, opacity: 0 }}
-                      animate={{ scale: 1, opacity: 1 }}
-                      exit={{ scale: 0.9, opacity: 0 }}
-                      className="relative z-10 w-full max-w-lg glass-panel-premium border border-[var(--accent-primary)]/30 shadow-[0_0_15px_var(--accent-glow)] rounded-3xl p-12 flex flex-col gap-8"
-                   >
-                      <h3 className="text-3xl font-black uppercase tracking-tighter text-[var(--accent-primary)]">SECURITY_BYPASS_REQ</h3>
-                      
-                      {!passVerified ? (
-                         <div className="flex flex-col gap-6">
-                            <p className="text-xs font-black uppercase text-zinc-500 tracking-widest">ENTER_CURRENT_PROTOCOL_KEY_FOR_IDENTITY_PROOF:</p>
-                            <input 
-                               type="password"
-                               value={currentPassVerify}
-                               onChange={e => setCurrentPassVerify(e.target.value)}
-                               className="bg-[var(--bg-secondary)] border border-white/10 rounded-3xl border-[var(--border-main)] p-4 font-black text-white text-xs tracking-widest outline-none focus:border-[var(--accent-primary)]"
-                               placeholder="CURRENT_KEY"
-                            />
-                            <button 
-                               onClick={handleVerifyPassword}
-                               className="w-full py-4 bg-gradient-to-r from-[var(--accent-primary)] to-[var(--accent-secondary)] text-white font-black uppercase tracking-widest text-[10px]"
-                            >
-                               VERIFY_IDENTITY
-                            </button>
-                         </div>
-                      ) : (
-                         <div className="flex flex-col gap-6">
-                            <p className="text-xs font-black uppercase text-zinc-500 tracking-widest">INITIALIZE_NEW_SECURITY_KEY:</p>
-                            <input 
-                               type="password"
-                               value={newPassword}
-                               onChange={e => setNewPassword(e.target.value)}
-                               className="bg-[var(--bg-secondary)] border border-white/10 rounded-3xl border-[var(--border-main)] p-4 font-black text-white text-xs tracking-widest outline-none focus:border-[var(--accent-primary)]"
-                               placeholder="NEW_SECURE_KEY"
-                            />
-                            <button 
-                               onClick={() => {
-                                  // This would call the update password action
-                                  setMessage({ text: "Your security protocol key has been successfully updated.", type: 'success' });
-                                  setShowPassChangeModal(false);
-                                  setPassVerified(false);
-                                  setCurrentPassVerify("");
-                               }}
-                               className="w-full py-4 bg-green-500 text-black font-black uppercase tracking-widest text-[10px]"
-                            >
-                               COMMIT_CHANGES
-                            </button>
-                         </div>
-                      )}
-
-                      <button 
-                         onClick={() => setShowPassChangeModal(false)}
-                         className="text-[9px] font-black uppercase tracking-[0.4em] text-zinc-700 hover:text-white transition-colors"
-                      >
-                         ABORT_PROCEDURE
-                      </button>
-                   </motion.div>
-                </div>
-             )}
-          </AnimatePresence>
         </div>
       ) : currentView === 'LEADERBOARD' ? (
         <div className="flex flex-col gap-16 py-12 animate-in slide-in-from-bottom-8 duration-700">
@@ -3109,7 +3051,7 @@ export default function AgenticDashboard() {
                 <Settings className="w-10 h-10 text-[var(--accent-primary)]" />
               </div>
               <div>
-                <h1 className="text-7xl font-black uppercase tracking-tighter leading-none">SYSTEM SETTINGS</h1>
+                <h1 className="text-7xl font-black uppercase tracking-tighter leading-none">SYSTEM_SETTINGS</h1>
                 <p className="text-[10px] font-black uppercase tracking-[0.5em] text-[var(--accent-primary)] mt-2">@{data.profile.username || "UNKNOWN"}</p>
               </div>
             </div>
@@ -3277,8 +3219,82 @@ export default function AgenticDashboard() {
                     </div>
                   </div>
                   <div className="flex flex-col gap-4">
-                     <button onClick={() => setShowUsernameInput(true)} className="w-full py-5 border-2 border-[var(--border-main)] font-black text-[10px] uppercase tracking-widest hover:border-[var(--accent-primary)] hover:text-[var(--accent-primary)] transition-all">Update Username</button>
-                     <button onClick={() => setShowPassChangeModal(true)} className="w-full py-5 border-2 border-[var(--border-main)] font-black text-[10px] uppercase tracking-widest hover:border-[var(--accent-primary)] hover:text-[var(--accent-primary)] transition-all">Update Password</button>
+                            {showUsernameInput ? (
+                              <div className="space-y-4 animate-in fade-in slide-in-from-top-2 duration-300 border-t border-[var(--border-main)] pt-6 mt-2">
+                                <label className="text-[9px] font-black text-zinc-500 uppercase tracking-widest">Identify New Protocol Name</label>
+                                <div className="space-y-2">
+                                  <div className="relative">
+                                    <input 
+                                      value={newUsername}
+                                      onChange={e => setNewUsername(e.target.value.toLowerCase())}
+                                      className={`w-full bg-[var(--bg-tertiary)] border-2 p-4 font-black text-white text-xs tracking-widest outline-none transition-all ${
+                                        newUsername ? (usernameStatus === 'available' ? 'border-green-500' : 'border-[var(--accent-primary)]') : 'border-[var(--border-main)]'
+                                      }`}
+                                      placeholder="NEW_USERNAME"
+                                    />
+                                    {usernameStatus !== 'idle' && (
+                                      <div className="absolute right-4 top-1/2 -translate-y-1/2 text-[8px] font-black uppercase tracking-widest">
+                                        {usernameStatus === 'checking' ? 'CHECKING...' : usernameStatus === 'available' ? 'AVAILABLE' : 'TAKEN'}
+                                      </div>
+                                    )}
+                                  </div>
+                                  <p className="text-[8px] font-black text-zinc-600 uppercase">Lowercase letters only. Must be unique.</p>
+                                </div>
+                                <button onClick={() => setShowUsernameInput(false)} className="text-[9px] font-black uppercase tracking-widest text-zinc-600 hover:text-white transition-colors underline">Cancel Change</button>
+                              </div>
+                            ) : (
+                              <button onClick={() => setShowUsernameInput(true)} className="w-full py-5 border-2 border-[var(--border-main)] font-black text-[10px] uppercase tracking-widest hover:border-[var(--accent-primary)] hover:text-[var(--accent-primary)] transition-all">Update Username</button>
+                            )}
+                            {showPassUpdateInput ? (
+                              <div className="space-y-4 animate-in fade-in slide-in-from-top-2 duration-300 border-t border-[var(--border-main)] pt-6 mt-2">
+                                {!passVerified ? (
+                                  <div className="space-y-4">
+                                    <label className="text-[9px] font-black text-zinc-500 uppercase tracking-widest">Verify Current Password</label>
+                                    <input 
+                                      type="password"
+                                      value={currentPassVerify}
+                                      onChange={e => setCurrentPassVerify(e.target.value)}
+                                      className="w-full bg-[var(--bg-tertiary)] border-2 border-[var(--border-main)] p-4 font-black text-white text-xs tracking-widest outline-none focus:border-[var(--accent-primary)]"
+                                      placeholder="CURRENT_KEY"
+                                    />
+                                    <button 
+                                      onClick={handleVerifyPassword}
+                                      disabled={passUpdateLoading}
+                                      className="w-full py-4 bg-white text-black font-black uppercase tracking-widest text-[10px] hover:bg-[var(--accent-primary)] hover:text-white transition-all"
+                                    >
+                                      {passUpdateLoading ? "VERIFYING..." : "VERIFY_IDENTITY"}
+                                    </button>
+                                  </div>
+                                ) : (
+                                  <div className="space-y-4">
+                                    <label className="text-[9px] font-black text-[var(--accent-primary)] uppercase tracking-widest">Initialize New Password</label>
+                                    <input 
+                                      type="password"
+                                      value={newPassword}
+                                      onChange={e => setNewPassword(e.target.value)}
+                                      className={`w-full bg-[var(--bg-tertiary)] border-2 p-4 font-black text-white text-xs tracking-widest outline-none transition-all ${
+                                        newPassword ? (validatePassword(newPassword) ? 'border-green-500' : 'border-[var(--accent-primary)]') : 'border-[var(--border-main)]'
+                                      }`}
+                                      placeholder="NEW_SECURE_KEY"
+                                    />
+                                    <p className="text-[8px] font-black text-zinc-600 uppercase">Min 8 chars, 1 uppercase, 1 number, 1 special char</p>
+                                  </div>
+                                )}
+                                <button 
+                                  onClick={() => {
+                                    setShowPassUpdateInput(false);
+                                    setPassVerified(false);
+                                    setCurrentPassVerify("");
+                                    setNewPassword("");
+                                  }} 
+                                  className="text-[9px] font-black uppercase tracking-widest text-zinc-600 hover:text-white transition-colors underline"
+                                >
+                                  Cancel Change
+                                </button>
+                              </div>
+                            ) : (
+                              <button onClick={() => setShowPassUpdateInput(true)} className="w-full py-5 border-2 border-[var(--border-main)] font-black text-[10px] uppercase tracking-widest hover:border-[var(--accent-primary)] hover:text-[var(--accent-primary)] transition-all">Update Password</button>
+                            )}
                   </div>
                 </div>
               </div>
@@ -3551,7 +3567,56 @@ export default function AgenticDashboard() {
                            ) : (
                              <button onClick={() => setShowUsernameInput(true)} className="w-full py-4 border-2 border-[var(--border-main)] font-black text-[10px] uppercase tracking-widest hover:border-[var(--accent-primary)] hover:text-[var(--accent-primary)] transition-all">Update Username</button>
                            )}
-                           <button onClick={() => setShowPassChangeModal(true)} className="w-full py-4 border-2 border-[var(--border-main)] font-black text-[10px] uppercase tracking-widest hover:border-[var(--accent-primary)] hover:text-[var(--accent-primary)] transition-all">Update Password</button>
+                            {showPassUpdateInput ? (
+                              <div className="space-y-4 animate-in fade-in slide-in-from-top-2 duration-300 border-t border-[var(--border-main)] pt-6 mt-2">
+                                {!passVerified ? (
+                                  <div className="space-y-4">
+                                    <label className="text-[9px] font-black text-zinc-500 uppercase tracking-widest">Verify Current Password</label>
+                                    <input 
+                                      type="password"
+                                      value={currentPassVerify}
+                                      onChange={e => setCurrentPassVerify(e.target.value)}
+                                      className="w-full bg-[var(--bg-tertiary)] border-2 border-[var(--border-main)] p-4 font-black text-white text-xs tracking-widest outline-none focus:border-[var(--accent-primary)]"
+                                      placeholder="CURRENT_KEY"
+                                    />
+                                    <button 
+                                      onClick={handleVerifyPassword}
+                                      disabled={passUpdateLoading}
+                                      className="w-full py-4 bg-white text-black font-black uppercase tracking-widest text-[10px] hover:bg-[var(--accent-primary)] hover:text-white transition-all"
+                                    >
+                                      {passUpdateLoading ? "VERIFYING..." : "VERIFY_IDENTITY"}
+                                    </button>
+                                  </div>
+                                ) : (
+                                  <div className="space-y-4">
+                                    <label className="text-[9px] font-black text-[var(--accent-primary)] uppercase tracking-widest">Initialize New Password</label>
+                                    <input 
+                                      type="password"
+                                      value={newPassword}
+                                      onChange={e => setNewPassword(e.target.value)}
+                                      className={`w-full bg-[var(--bg-tertiary)] border-2 p-4 font-black text-white text-xs tracking-widest outline-none transition-all ${
+                                        newPassword ? (validatePassword(newPassword) ? 'border-green-500' : 'border-[var(--accent-primary)]') : 'border-[var(--border-main)]'
+                                      }`}
+                                      placeholder="NEW_SECURE_KEY"
+                                    />
+                                    <p className="text-[8px] font-black text-zinc-600 uppercase">Min 8 chars, 1 uppercase, 1 number, 1 special char</p>
+                                  </div>
+                                )}
+                                <button 
+                                  onClick={() => {
+                                    setShowPassUpdateInput(false);
+                                    setPassVerified(false);
+                                    setCurrentPassVerify("");
+                                    setNewPassword("");
+                                  }} 
+                                  className="text-[9px] font-black uppercase tracking-widest text-zinc-600 hover:text-white transition-colors underline"
+                                >
+                                  Cancel Change
+                                </button>
+                              </div>
+                            ) : (
+                              <button onClick={() => setShowPassUpdateInput(true)} className="w-full py-4 border-2 border-[var(--border-main)] font-black text-[10px] uppercase tracking-widest hover:border-[var(--accent-primary)] hover:text-[var(--accent-primary)] transition-all">Update Password</button>
+                            )}
                          </div>
                        </div>
                     </div>
