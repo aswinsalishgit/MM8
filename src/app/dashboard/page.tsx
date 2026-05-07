@@ -619,15 +619,18 @@ export default function AgenticDashboard() {
     try {
       const { data, error } = await supabase
         .from('profiles')
-        .select('id, full_name, username, avatar_url:avatar_url_proxy, role')
+        .select('id, full_name, username, avatar_url:avatar_url_proxy, role, settings(appear_in_searches)')
         .or(`full_name.ilike.%${query}%,username.ilike.%${query}%`)
         .limit(10);
 
       if (error) throw error;
       
-      // For each user, we should ideally check their settings, but to fix the error 
-      // we'll first see if the basic search works.
-      setSearchResults(data || []);
+      const filtered = (data || []).filter((p: any) => {
+        const s = p.settings?.[0];
+        return s?.appear_in_searches !== false;
+      });
+      
+      setSearchResults(filtered);
     } catch (err: any) {
       console.error('Search error raw:', err);
       if (err.message) {
