@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback, useMemo } from "react";
 import { motion, AnimatePresence, useScroll, useSpring, useTransform, useVelocity } from "framer-motion";
 import { useRef } from "react";
 import { 
-  PlayCircle, Star, Settings, Bell, LogOut, X, 
+  PlayCircle, Star, Settings, Bell, LogOut, X, Search, MessageSquare,
   ChevronRight, ChevronLeft, Crown, Upload, Trash2, MapPin, 
   ChevronDown, Check, User, CheckCircle2, Trophy, Flame, Lock, ShieldCheck, AlertTriangle, Zap, Info,
   Menu, Home, Compass, PlusSquare, Briefcase, Target, Rss, Users, Video, Mic2, Database, BookOpen, BarChart3
@@ -524,6 +524,15 @@ export default function AgenticDashboard() {
   const [currentView, setCurrentView] = useState("OVERVIEW");
   const [selectedFeed, setSelectedFeed] = useState<any>(null);
   const [notifFilter, setNotifFilter] = useState<"ALL" | "UNREAD">("ALL");
+  const [userSearchQuery, setUserSearchQuery] = useState("");
+  const [searchResults, setSearchResults] = useState<any[]>([]);
+  const [isSearching, setIsSearching] = useState(false);
+  const [selectedUserProfile, setSelectedUserProfile] = useState<any>(null);
+  const [showProfileModal, setShowProfileModal] = useState(false);
+  const [friendships, setFriendships] = useState<any[]>([]);
+  const [activeChat, setActiveChat] = useState<any>(null);
+  const [chatMessages, setChatMessages] = useState<any[]>([]);
+  const [newMessage, setNewMessage] = useState("");
   const [isEditingProfile, setIsEditingProfile] = useState(false);
   const [profileLoading, setProfileLoading] = useState(false);
   const [showUsernameInput, setShowUsernameInput] = useState(false);
@@ -599,6 +608,217 @@ export default function AgenticDashboard() {
     const diffDays = Math.floor(diffHours / 24);
     return `${diffDays}D AGO`;
   };
+
+  const handleUserSearch = async (query: string) => {
+    setUserSearchQuery(query);
+    if (query.trim().length < 2) {
+      setSearchResults([]);
+      return;
+    }
+    setIsSearching(true);
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('id, full_name, username, avatar_url:avatar_url_proxy, role')
+        .or(`full_name.ilike.%${query}%,username.ilike.%${query}%`)
+        .limit(10);
+
+      if (error) throw error;
+      
+      // For each user, we should ideally check their settings, but to fix the error 
+      // we'll first see if the basic search works.
+      setSearchResults(data || []);
+    } catch (err: any) {
+      console.error('Search error raw:', err);
+      if (err.message) {
+        console.error('Search error message:', err.message);
+      }
+    } finally {
+      setIsSearching(false);
+    }
+  };
+
+  const fetchUserProfile = async (userId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select(`
+          *,
+          settings (*)
+        `)
+        .eq('id', userId)
+        .single();
+
+      if (error) throw error;
+      setSelectedUserProfile(data);
+      setShowProfileModal(true);
+    } catch (err) {
+      console.error('Error fetching profile:', err);
+      setMessage({ text: "Failed to load profile. Connection lost.", type: 'error' });
+    }
+  };
+
+  const sendFriendRequest = async (friendId: string) => {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) return;
+
+    try {
+      const { error } = await supabase
+        .from('friendships')
+        .insert({
+          user_id: session.user.id,
+          friend_id: friendId,
+          status: 'pending'
+        });
+
+      if (error) throw error;
+      setMessage({ text: "Friend request transmitted.", type: 'success' });
+      // Update local friendships state
+      fetchFriendships();
+    } catch (err: any) {
+      console.error('Friend request error:', err);
+      setMessage({ text: err.message || "Failed to send request.", type: 'error' });
+    }
+  };
+
+  const fetchFriendships = async () => {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) return;
+
+    try {
+      const { data, error } = await supabase
+        .from('friendships')
+        .select(`
+          *,
+          friend:profiles!friend_id(id, full_name, username, avatar_url:avatar_url_proxy),
+          user:profiles!user_id(id, full_name, username, avatar_url:avatar_url_proxy)
+        `)
+        .or(`user_id.eq.${session.user.id},friend_id.eq.${session.user.id}`);
+
+      if (error) throw error;
+      setFriendships(data || []);
+    } catch (err: any) {
+      console.error('Fetch friendships error raw:', err);
+    }
+  };
+
+  const startChat = async (friendId: string) => {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) return;
+
+    try {
+      // Check if chat already exists
+      const { data: existingChats, error: chatErr } = await supabase
+        .from('chat_participants')
+        .select('chat_id')
+        .eq('user_id', session.user.id);
+
+      if (chatErr) throw chatErr;
+
+      let chatId = null;
+      if (existingChats && existingChats.length > 0) {
+        const chatIds = existingChats.map(c => c.chat_id);
+        const { data: commonChats, error: commonErr } = await supabase
+          .from('chat_participants')
+          .select('chat_id')
+          .in('chat_id', chatIds)
+          .eq('user_id', friendId);
+
+        if (commonErr) throw commonErr;
+        if (commonChats && commonChats.length > 0) {
+          chatId = commonChats[0].chat_id;
+        }
+      }
+
+      if (!chatId) {
+        // Create new chat
+        const { data: newChat, error: createErr } = await supabase
+          .from('chats')
+          .insert({})
+          .select()
+          .single();
+
+        if (createErr) throw createErr;
+        chatId = newChat.id;
+
+        // Add participants
+        await supabase.from('chat_participants').insert([
+          { chat_id: chatId, user_id: session.user.id },
+          { chat_id: chatId, user_id: friendId }
+        ]);
+      }
+
+      const { data: chatData } = await supabase.from('chats').select('*').eq('id', chatId).single();
+      setActiveChat(chatData);
+      fetchMessages(chatId);
+      setCurrentView('STANGAB');
+    } catch (err) {
+      console.error('Start chat error:', err);
+      setMessage({ text: "Failed to initialize communication link.", type: 'error' });
+    }
+  };
+
+  const fetchMessages = async (chatId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('messages')
+        .select('*, sender:profiles(id, full_name, username, avatar_url:avatar_url_proxy)')
+        .eq('chat_id', chatId)
+        .order('created_at', { ascending: true });
+
+      if (error) throw error;
+      setChatMessages(data || []);
+    } catch (err: any) {
+      console.error('Fetch messages error raw:', err);
+    }
+  };
+
+  const sendMessage = async () => {
+    if (!activeChat || !newMessage.trim()) return;
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) return;
+
+    try {
+      const { error } = await supabase
+        .from('messages')
+        .insert({
+          chat_id: activeChat.id,
+          sender_id: session.user.id,
+          content: newMessage.trim()
+        });
+
+      if (error) throw error;
+      setNewMessage("");
+    } catch (err) {
+      console.error('Send message error:', err);
+    }
+  };
+
+  // Real-time Messages Subscription
+  useEffect(() => {
+    if (!activeChat) return;
+
+    const channel = supabase
+      .channel(`chat:${activeChat.id}`)
+      .on('postgres_changes', {
+        event: 'INSERT',
+        schema: 'public',
+        table: 'messages',
+        filter: `chat_id=eq.${activeChat.id}`
+      }, (payload) => {
+        setChatMessages(prev => [...prev, payload.new]);
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [activeChat]);
+
+  // Initial Data Fetch
+  useEffect(() => {
+    fetchFriendships();
+  }, []);
 
   // Sync profile form when data changes
   useEffect(() => {
@@ -1244,7 +1464,11 @@ export default function AgenticDashboard() {
               <button onClick={() => setCurrentView('OVERVIEW')} className="p-2 hover:bg-[var(--bg-secondary)] rounded-full transition-colors group" title="HOME">
                 <Home className="w-5 h-5 text-zinc-500 group-hover:text-[var(--text-primary)] transition-all" />
               </button>
-              <button className="p-2 hover:bg-[var(--bg-secondary)] rounded-full transition-colors group" title="DISCOVER">
+              <button 
+                onClick={() => setCurrentView('STANGAB')}
+                className="p-2 hover:bg-[var(--bg-secondary)] rounded-full transition-colors group" 
+                title="DISCOVER"
+              >
                 <Compass className="w-5 h-5 text-zinc-500 group-hover:text-[var(--text-primary)] transition-all" />
               </button>
               <button onClick={() => setCurrentView('NOTIFICATIONS')} className="p-2 hover:bg-[var(--bg-secondary)] rounded-full transition-colors group relative" title="NOTIFICATIONS">
@@ -2922,11 +3146,66 @@ export default function AgenticDashboard() {
 
           {/* Main Interface Grid */}
           <div className="flex-1 flex gap-8 px-4 overflow-hidden">
-            {/* Sidebar: Hubs/Channels */}
+            {/* Sidebar: Hubs/Channels & User Search */}
             <div className="w-80 flex flex-col gap-6 shrink-0 h-full">
                <div className="glass-panel-premium p-6 border border-[var(--border-main)] rounded-3xl flex-1 flex flex-col overflow-hidden">
-                  <h4 className="text-[10px] font-black uppercase tracking-[0.3em] text-zinc-600 mb-6 px-2">STAN_HUBS</h4>
-                  <div className="flex-1 overflow-y-auto hide-scrollbar space-y-2">
+                  {/* User Search Bar */}
+                  <div className="relative mb-8">
+                     <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500" />
+                     <input 
+                        type="text"
+                        value={userSearchQuery}
+                        onChange={(e) => handleUserSearch(e.target.value)}
+                        placeholder="SEARCH_USERS..."
+                        className="w-full bg-[var(--bg-secondary)] border border-[var(--border-main)] pl-12 pr-4 py-4 rounded-2xl text-[10px] font-black uppercase tracking-widest outline-none focus:border-[var(--accent-primary)] transition-all"
+                     />
+                     {isSearching && (
+                        <div className="absolute right-4 top-1/2 -translate-y-1/2">
+                           <div className="w-3 h-3 border-2 border-[var(--accent-primary)] border-t-transparent rounded-full animate-spin" />
+                        </div>
+                     )}
+                  </div>
+
+                  {userSearchQuery ? (
+                     <div className="flex-1 flex flex-col overflow-hidden">
+                        <div className="flex items-center justify-between mb-4 px-2">
+                           <h4 className="text-[9px] font-black uppercase tracking-[0.3em] text-zinc-600">SEARCH_RESULTS</h4>
+                           <button onClick={() => setUserSearchQuery("")} className="text-[8px] font-black text-[var(--accent-primary)] uppercase">CLEAR</button>
+                        </div>
+                        <div className="flex-1 overflow-y-auto hide-scrollbar space-y-3">
+                           {searchResults.length > 0 ? (
+                              searchResults.map(user => (
+                                 <div 
+                                    key={user.id}
+                                    onClick={() => fetchUserProfile(user.id)}
+                                    className="p-4 bg-[var(--bg-secondary)] border border-[var(--border-main)] rounded-2xl hover:border-[var(--accent-primary)]/50 transition-all cursor-pointer group flex items-center gap-4"
+                                 >
+                                    <div className="w-10 h-10 rounded-full border border-[var(--border-main)] overflow-hidden shrink-0">
+                                       {user.avatar_url ? (
+                                          <img src={user.avatar_url} alt="" className="w-full h-full object-cover" />
+                                       ) : (
+                                          <div className="w-full h-full flex items-center justify-center bg-zinc-800">
+                                             <User className="w-5 h-5 text-zinc-600" />
+                                          </div>
+                                       )}
+                                    </div>
+                                    <div className="flex-1 min-w-0">
+                                       <p className="text-[10px] font-black text-white truncate">{user.full_name}</p>
+                                       <p className="text-[8px] font-black text-zinc-500 truncate uppercase tracking-widest">@{user.username || 'ANONYMOUS'}</p>
+                                    </div>
+                                 </div>
+                              ))
+                           ) : (
+                              <div className="text-center py-10 opacity-30">
+                                 <p className="text-[9px] font-black uppercase tracking-widest">NO_SIGNALS_FOUND</p>
+                              </div>
+                           )}
+                        </div>
+                     </div>
+                  ) : (
+                     <div className="flex-1 flex flex-col overflow-hidden">
+                        <h4 className="text-[10px] font-black uppercase tracking-[0.3em] text-zinc-600 mb-6 px-2">STAN_HUBS</h4>
+                        <div className="flex-1 overflow-y-auto hide-scrollbar space-y-2">
                      {[
                        { name: 'GENERAL_CHAT', active: true, users: 432 },
                        { name: 'CASTING_ALERTS', active: false, users: 128 },
@@ -2946,54 +3225,81 @@ export default function AgenticDashboard() {
                      + INITIALIZE_NEW_HUB
                   </button>
                </div>
+               )}
             </div>
+         </div>
 
             {/* Center: Chat Mainframe */}
             <div className="flex-1 flex flex-col gap-6 h-full overflow-hidden">
                <div className="glass-panel-premium p-8 border border-[var(--border-main)] rounded-3xl flex-1 flex flex-col overflow-hidden">
-                  <div className="flex-1 overflow-y-auto p-4 space-y-8 custom-scrollbar">
-                     {[
-                        { user: 'Vanguard_Alpha', text: 'Has anyone seen the new casting call for the period drama?', time: '12:04', isMe: false },
-                        { user: 'Agent_Zero', text: 'Yeah, I just updated my portfolio for it. The requirements are pretty intense.', time: '12:05', isMe: false },
-                        { user: 'Talent_Scout_99', text: 'Directors are looking for raw emotion this time. Skip the polished takes.', time: '12:06', isMe: false },
-                        { user: 'YOU', text: 'Understood. Synchronizing my latest audition reels now.', time: '12:07', isMe: true },
-                        { user: 'Director_X', text: 'I need a male lead with a strong jawline and intense gaze. Check the mission board.', time: '12:08', isMe: false },
-                        { user: 'Vanguard_Alpha', text: 'On it. Let\'s build something legendary.', time: '12:09', isMe: false },
-                     ].map((msg, i) => (
-                        <div key={i} className={`flex flex-col ${msg.isMe ? 'items-end' : 'items-start'} gap-2`}>
-                           <div className="flex items-center gap-3">
-                              {!msg.isMe && <div className="w-6 h-6 rounded-full bg-[var(--accent-primary)]/20 border border-[var(--accent-primary)]/30" />}
-                              <span className="text-[9px] font-black uppercase tracking-widest text-zinc-500">{msg.user}</span>
-                              <span className="text-[8px] font-black text-zinc-700">{msg.time}</span>
-                           </div>
-                           <div className={`max-w-[70%] p-5 text-xs font-medium leading-relaxed ${
-                              msg.isMe 
-                                ? 'bg-gradient-to-r from-[var(--accent-primary)] to-[var(--accent-secondary)] text-white rounded-2xl rounded-tr-none shadow-[0_10px_20px_var(--accent-glow)]' 
-                                : 'bg-[var(--bg-tertiary)] text-zinc-300 border border-[var(--border-main)] rounded-2xl rounded-tl-none'
-                           }`}>
-                              {msg.text}
-                           </div>
-                        </div>
-                     ))}
-                  </div>
+                  {activeChat ? (
+                    <>
+                      <div className="flex-1 overflow-y-auto p-4 space-y-8 custom-scrollbar">
+                        {chatMessages.length > 0 ? (
+                          chatMessages.map((msg: any, i: number) => {
+                            const isMe = msg.sender_id === data.profile.id;
+                            return (
+                              <div key={msg.id || i} className={`flex flex-col ${isMe ? 'items-end' : 'items-start'} gap-2`}>
+                                <div className="flex items-center gap-3">
+                                  {!isMe && <div className="w-6 h-6 rounded-full bg-[var(--accent-primary)]/20 border border-[var(--accent-primary)]/30 overflow-hidden shrink-0">
+                                    {msg.sender?.avatar_url && <img src={msg.sender.avatar_url} alt="" className="w-full h-full object-cover" />}
+                                  </div>}
+                                  <span className="text-[9px] font-black uppercase tracking-widest text-zinc-500">
+                                    {isMe ? 'YOU' : (msg.sender?.full_name || 'AGENT_REMOTE')}
+                                  </span>
+                                  <span className="text-[8px] font-black text-zinc-700">{new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                                </div>
+                                <div className={`max-w-[70%] p-5 text-xs font-medium leading-relaxed ${
+                                  isMe 
+                                    ? 'bg-gradient-to-r from-[var(--accent-primary)] to-[var(--accent-secondary)] text-white rounded-2xl rounded-tr-none shadow-[0_10px_20px_var(--accent-glow)]' 
+                                    : 'bg-[var(--bg-tertiary)] text-zinc-300 border border-[var(--border-main)] rounded-2xl rounded-tl-none'
+                                }`}>
+                                  {msg.content}
+                                </div>
+                              </div>
+                            );
+                          })
+                        ) : (
+                          <div className="h-full flex flex-col items-center justify-center opacity-20">
+                            <MessageSquare className="w-16 h-16 mb-6" />
+                            <p className="text-[10px] font-black uppercase tracking-[0.5em]">INITIALIZE_COMMUNICATION_STREAM</p>
+                          </div>
+                        )}
+                      </div>
 
-                  {/* Input Interface */}
-                  <div className="mt-8 pt-8 border-t border-[var(--border-main)] flex gap-4">
-                     <div className="flex-1 relative">
-                        <input 
-                           type="text" 
-                           placeholder="TYPE_COMMAND_OR_MESSAGE..."
-                           className="w-full bg-[var(--bg-secondary)] border-2 border-[var(--border-main)] p-6 font-black text-xs uppercase tracking-widest outline-none focus:border-[var(--accent-primary)] transition-all"
-                        />
-                        <div className="absolute right-6 top-1/2 -translate-y-1/2 flex gap-4 text-zinc-600">
-                           <Mic2 className="w-5 h-5 hover:text-white transition-colors cursor-pointer" />
-                           <Video className="w-5 h-5 hover:text-white transition-colors cursor-pointer" />
+                      {/* Input Interface */}
+                      <div className="mt-8 pt-8 border-t border-[var(--border-main)] flex gap-4">
+                        <div className="flex-1 relative">
+                            <input 
+                              type="text" 
+                              value={newMessage}
+                              onChange={(e) => setNewMessage(e.target.value)}
+                              onKeyDown={(e) => e.key === 'Enter' && sendMessage()}
+                              placeholder="TYPE_COMMAND_OR_MESSAGE..."
+                              className="w-full bg-[var(--bg-secondary)] border-2 border-[var(--border-main)] p-6 font-black text-xs uppercase tracking-widest outline-none focus:border-[var(--accent-primary)] transition-all"
+                            />
+                            <div className="absolute right-6 top-1/2 -translate-y-1/2 flex gap-4 text-zinc-600">
+                              <Mic2 className="w-5 h-5 hover:text-white transition-colors cursor-pointer" />
+                              <Video className="w-5 h-5 hover:text-white transition-colors cursor-pointer" />
+                            </div>
                         </div>
-                     </div>
-                     <button className="px-10 bg-white text-black font-black uppercase tracking-[0.3em] text-xs hover:bg-[var(--accent-primary)] hover:text-white transition-all shadow-[0_0_20px_rgba(255,255,255,0.1)]">
-                        SEND
-                     </button>
-                  </div>
+                        <button 
+                          onClick={sendMessage}
+                          className="px-10 bg-white text-black font-black uppercase tracking-[0.3em] text-xs hover:bg-[var(--accent-primary)] hover:text-white transition-all shadow-[0_0_20px_rgba(255,255,255,0.1)]"
+                        >
+                            SEND
+                        </button>
+                      </div>
+                    </>
+                  ) : (
+                    <div className="h-full flex flex-col items-center justify-center text-center p-12 opacity-30">
+                       <Compass className="w-20 h-20 text-zinc-800 mb-10 animate-pulse" />
+                       <h3 className="text-2xl font-black uppercase tracking-widest text-zinc-700">SELECT_USER_TO_INITIALIZE_LINK</h3>
+                       <p className="text-[10px] font-black uppercase text-zinc-800 mt-6 tracking-[0.5em] max-w-sm mx-auto leading-loose">
+                         Searching for nodes in the decentralized talent index. Use the sidebar to find and connect with other agents.
+                       </p>
+                    </div>
+                  )}
                </div>
             </div>
 
@@ -3780,6 +4086,97 @@ export default function AgenticDashboard() {
                   </button>
                 </div>
               </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* User Profile Modal */}
+      <AnimatePresence>
+        {showProfileModal && selectedUserProfile && (
+          <div className="fixed inset-0 z-[250] flex items-center justify-center p-6">
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setShowProfileModal(false)}
+              className="absolute inset-0 bg-black/80 backdrop-blur-md"
+            />
+            <motion.div 
+              initial={{ opacity: 0, y: 50, scale: 0.9 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: 50, scale: 0.9 }}
+              className="w-full max-w-2xl glass-panel-premium border border-[var(--accent-primary)]/30 shadow-[0_0_50px_rgba(255,49,49,0.2)] rounded-3xl relative z-10 flex flex-col overflow-hidden max-h-[90vh]"
+            >
+              <div className="p-10 overflow-y-auto custom-scrollbar">
+                <div className="flex flex-col md:flex-row gap-10 items-center md:items-start mb-12">
+                  <div className="w-40 h-40 rounded-full border-4 border-[var(--accent-primary)]/30 p-2 shrink-0">
+                    <div className="w-full h-full rounded-full border border-[var(--accent-primary)]/50 overflow-hidden">
+                      {selectedUserProfile.avatar_url ? (
+                        <img src={selectedUserProfile.avatar_url} alt="" className="w-full h-full object-cover" />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center bg-zinc-900">
+                          <User className="w-16 h-16 text-zinc-700" />
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                  <div className="text-center md:text-left flex-1">
+                    <h2 className="text-5xl font-black uppercase tracking-tighter mb-2">{selectedUserProfile.full_name}</h2>
+                    <p className="text-[var(--accent-primary)] font-black tracking-[0.3em] uppercase text-xs mb-6">@{selectedUserProfile.username || 'ANONYMOUS'}</p>
+                    <div className="flex flex-wrap gap-4 justify-center md:justify-start">
+                      <button 
+                        onClick={() => sendFriendRequest(selectedUserProfile.id)}
+                        className="px-8 py-3 bg-[var(--accent-primary)] text-white font-black uppercase tracking-widest text-[10px] hover:scale-105 transition-all shadow-[0_0_20px_rgba(255,49,49,0.3)]"
+                      >
+                        ADD_FRIEND
+                      </button>
+                      <button 
+                        onClick={() => startChat(selectedUserProfile.id)}
+                        className="px-8 py-3 border border-[var(--border-main)] text-white font-black uppercase tracking-widest text-[10px] hover:border-[var(--accent-primary)] transition-all"
+                      >
+                        INITIALIZE_CHAT
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                  <div className="glass-panel-premium p-6 border border-[var(--border-main)] rounded-2xl">
+                    <h4 className="text-[9px] font-black uppercase tracking-[0.3em] text-zinc-500 mb-6">CORE_METRICS</h4>
+                    <div className="space-y-4">
+                      {[
+                        { label: 'ROLE', value: selectedUserProfile.role },
+                        { label: 'STATUS', value: selectedUserProfile.status },
+                        { label: 'LOCATION', value: selectedUserProfile.settings?.[0]?.show_location !== false ? selectedUserProfile.location : 'RESTRICTED' },
+                        { label: 'AGE', value: selectedUserProfile.settings?.[0]?.show_age !== false ? selectedUserProfile.age : 'HIDDEN' }
+                      ].map(item => (
+                        <div key={item.label} className="flex justify-between items-center border-b border-[var(--border-main)]/30 pb-2">
+                          <span className="text-[8px] font-black text-zinc-600 uppercase tracking-widest">{item.label}</span>
+                          <span className="text-[10px] font-black text-white uppercase">{item.value || 'N/A'}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="glass-panel-premium p-6 border border-[var(--border-main)] rounded-2xl">
+                    <h4 className="text-[9px] font-black uppercase tracking-[0.3em] text-zinc-500 mb-6">IDENTITY_VAULT</h4>
+                    <p className="text-zinc-400 text-xs font-medium leading-relaxed">
+                      {selectedUserProfile.settings?.[0]?.privacy_visibility === 'public' ? (
+                        selectedUserProfile.bio || "No data stream detected."
+                      ) : (
+                        "DATA_ENCRYPTED. ACCESS_RESTRICTED."
+                      )}
+                    </p>
+                  </div>
+                </div>
+              </div>
+              <button 
+                onClick={() => setShowProfileModal(false)}
+                className="w-full py-6 bg-zinc-900 border-t border-[var(--border-main)] text-zinc-500 font-black uppercase tracking-[0.4em] text-[10px] hover:text-white transition-all"
+              >
+                DISCONNECT_VIEW
+              </button>
             </motion.div>
           </div>
         )}
