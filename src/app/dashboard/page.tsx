@@ -697,16 +697,21 @@ export default function AgenticDashboard() {
       const { data, error } = await supabase
         .from('friendships')
         .select(`
-          *,
+          id,
+          status,
+          created_at,
           friend:profiles!friend_id(id, full_name, username, avatar_url:avatar_url_proxy),
           user:profiles!user_id(id, full_name, username, avatar_url:avatar_url_proxy)
         `)
         .or(`user_id.eq.${session.user.id},friend_id.eq.${session.user.id}`);
 
-      if (error) throw error;
+      if (error) {
+        console.error('Fetch friendships error details:', error.message, error.details, error.hint);
+        throw error;
+      }
       setFriendships(data || []);
     } catch (err: any) {
-      console.error('Fetch friendships error raw:', err);
+      console.error('Fetch friendships failed:', err.message || err);
     }
   };
 
