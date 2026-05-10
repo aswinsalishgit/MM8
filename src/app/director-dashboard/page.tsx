@@ -7,7 +7,8 @@ import {
   PlayCircle, Star, Settings, Bell, LogOut, X, 
   ChevronRight, ChevronLeft, Crown, Upload, Trash2, MapPin, 
   ChevronDown, Check, User, CheckCircle2, Trophy, Flame, Lock, ShieldCheck, AlertTriangle, Zap, Info,
-  Menu, Home, Compass, PlusSquare, Briefcase, Target, Rss, Users, Video, Mic2, Database, BookOpen, BarChart3
+  Menu, Home, Compass, PlusSquare, Briefcase, Target, Rss, Users, Video, Mic2, Database, BookOpen, BarChart3,
+  Sparkles
 } from "lucide-react";
 import { supabase } from "@/utils/supabase/client";
 import { useRouter } from "next/navigation";
