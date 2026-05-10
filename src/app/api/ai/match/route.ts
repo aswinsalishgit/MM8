@@ -52,17 +52,22 @@ export async function POST(req: Request) {
 
     if (!ollamaResponse.ok) {
       const errorText = await ollamaResponse.text();
-      console.error("Ollama Error:", errorText);
-      throw new Error("AI Processing Failed");
+      console.error("Ollama Error Output:", errorText);
+      return NextResponse.json({ 
+        error: "AI_COMMUNICATION_FAILED", 
+        details: errorText,
+        status: ollamaResponse.status 
+      }, { status: ollamaResponse.status });
     }
 
     const aiData = await ollamaResponse.json();
     let criteria;
     try {
-      criteria = JSON.parse(aiData.response);
+      // Ollama returns { response: "..." } for /generate
+      criteria = JSON.parse(aiData.response || aiData.message?.content || "{}");
     } catch (e) {
-      console.error("Failed to parse AI response:", aiData.response);
-      throw new Error("Invalid AI Response format");
+      console.error("Failed to parse AI response:", aiData);
+      return NextResponse.json({ error: "INVALID_AI_PROTOCOL", details: aiData.response }, { status: 500 });
     }
 
     // 2. Query Supabase profiles

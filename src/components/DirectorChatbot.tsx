@@ -51,7 +51,9 @@ export default function DirectorChatbot() {
 
       const data = await response.json();
 
-      if (data.error) throw new Error(data.error);
+      if (data.error) {
+        throw new Error(`${data.error}: ${data.details || 'NO_DETAILS_PROVIDED'}`);
+      }
 
       const botMessage: Message = {
         id: (Date.now() + 1).toString(),
