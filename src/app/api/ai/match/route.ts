@@ -11,6 +11,7 @@ export async function POST(req: Request) {
 
     const OLLAMA_HOST = process.env.OLLAMA_HOST || "http://localhost:11434";
     const OLLAMA_API_KEY = process.env.OLLAMA_API_KEY;
+    const OLLAMA_MODEL = process.env.OLLAMA_MODEL || "llama3";
 
     // 1. Ask Ollama to extract search criteria from the prompt
     const systemPrompt = `
@@ -43,7 +44,7 @@ export async function POST(req: Request) {
         ...(OLLAMA_API_KEY ? { "Authorization": `Bearer ${OLLAMA_API_KEY}` } : {}),
       },
       body: JSON.stringify({
-        model: "llama3",
+        model: OLLAMA_MODEL,
         prompt: `System: ${systemPrompt}\nUser: ${prompt}`,
         stream: false,
         format: "json",
@@ -63,11 +64,13 @@ export async function POST(req: Request) {
     const aiData = await ollamaResponse.json();
     let criteria;
     try {
-      // Ollama returns { response: "..." } for /generate
-      criteria = JSON.parse(aiData.response || aiData.message?.content || "{}");
+      let text = aiData.response || aiData.message?.content || "{}";
+      // Strip markdown code blocks if present
+      text = text.replace(/```json\n?|```/g, "").trim();
+      criteria = JSON.parse(text);
     } catch (e) {
       console.error("Failed to parse AI response:", aiData);
-      return NextResponse.json({ error: "INVALID_AI_PROTOCOL", details: aiData.response }, { status: 500 });
+      return NextResponse.json({ error: "INVALID_AI_PROTOCOL", details: aiData.response || aiData.message?.content }, { status: 500 });
     }
 
     // 2. Query Supabase profiles
