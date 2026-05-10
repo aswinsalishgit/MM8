@@ -12,6 +12,8 @@ import {
 import { supabase } from "@/utils/supabase/client";
 import { useRouter } from "next/navigation";
 import { uploadProfilePicture, removeProfilePicture, uploadAuditionTape } from "@/app/actions/driveActions";
+import DirectorChatbot from "@/components/DirectorChatbot";
+
 import { Country, State, City } from "country-state-city";
 import "./dashboard.css";
 import Cropper from "react-easy-crop";
@@ -1557,46 +1559,28 @@ export default function AgenticDashboard() {
         {/* RIGHT COLUMN: OPERATIONS */}
         <div className="lg:col-span-8 flex flex-col gap-12">
           
-          {/* Action Hub */}
+          {/* Action Hub - Chatbot Interface */}
           <section className="w-full">
-            <button 
-              onClick={handleUploadClick}
-              disabled={uploading}
-              className={`w-full relative group p-12 md:p-24 text-left overflow-hidden flex flex-col md:flex-row items-start md:items-center justify-between gap-12 transition-all duration-700 cursor-pointer ${
-                uploading ? 'bg-[var(--bg-tertiary)] border-2 border-[var(--accent-secondary)]' : 'bg-gradient-to-r from-[var(--accent-primary)] to-[var(--accent-secondary)] text-white clip-brutal-hero-primary shadow-[0_0_60px_var(--accent-glow)] hover:shadow-[0_0_100px_var(--accent-glow)]'
-              }`}
-            >
-              {uploading && (
-                <div 
-                  className="absolute top-0 left-0 h-full bg-gradient-to-r from-[var(--accent-primary)] to-[var(--accent-secondary)] opacity-30 z-0 transition-all duration-300"
-                  style={{ width: `${uploadProgress}%` }}
-                />
-              )}
-              
-              <div className="relative z-10 max-w-2xl">
-                <div className="flex items-center gap-4 mb-6">
-                  <p className="font-black uppercase tracking-[0.5em] text-[10px] text-white/70">
-                    {uploading ? "UPLINK_ESTABLISHED" : ""}
-                  </p>
+            <div className="glass-panel-premium border border-[var(--accent-primary)]/30 shadow-[0_0_40px_var(--accent-glow)]/10 rounded-[3rem] p-10 md:p-16 relative overflow-hidden group clip-brutal-hero-primary min-h-[600px] flex flex-col">
+              <div className="flex items-center gap-6 mb-12 relative z-10">
+                <div className="p-4 bg-gradient-to-r from-[var(--accent-primary)] to-[var(--accent-secondary)] rounded-3xl shadow-[0_0_20px_var(--accent-glow)]">
+                  <Sparkles className="w-8 h-8 text-white" />
                 </div>
-                <h2 className="text-6xl md:text-9xl font-black uppercase tracking-tighter leading-[0.8] text-white">
-                  {uploading ? `SYNCING ${uploadProgress}%` : "UPLOAD AUDITION"}
-                </h2>
-                <p className="font-black uppercase tracking-widest mt-8 text-sm text-white/80 max-w-lg">
-                  {uploading ? "Transferring raw talent packets to the MM8 decentralized storage layer." : "Submit your latest performance. Our AI agents will match you directly to the pipeline."}
-                </p>
+                <div>
+                  <h2 className="text-5xl font-black uppercase tracking-tighter leading-none">AI_MATCHING_ENGINE</h2>
+                  <p className="text-[10px] font-black uppercase tracking-[0.5em] text-[var(--accent-primary)] mt-2">AGENTIC_TALENT_ACQUISITION</p>
+                </div>
               </div>
 
-              {!uploading && (
-                <div className="relative z-10 w-32 h-32 bg-white flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform duration-500 clip-brutal-tr shadow-2xl">
-                  <PlayCircle className="w-16 h-16 text-[var(--accent-primary)]" />
-                </div>
-              )}
-              
-              <div className="absolute right-[-30px] bottom-[-30px] text-[20rem] font-black text-black opacity-10 pointer-events-none group-hover:opacity-20 transition-opacity uppercase leading-none">
-                RAW
+              <div className="flex-1 min-h-0 relative z-10">
+                <DirectorChatbot />
               </div>
-            </button>
+
+              {/* Decorative Background Elements */}
+              <div className="absolute right-[-30px] bottom-[-30px] text-[20rem] font-black text-black opacity-10 pointer-events-none uppercase leading-none z-0">
+                AI
+              </div>
+            </div>
           </section>
 
           {/* AI Matching Grid */}
@@ -1686,40 +1670,21 @@ export default function AgenticDashboard() {
 
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-12">
             <div className="lg:col-span-8 flex flex-col gap-12">
-              <button 
-                onClick={handleUploadClick}
-                disabled={uploading}
-                className={`w-full relative group p-16 md:p-24 text-left overflow-hidden flex flex-col md:flex-row items-start md:items-center justify-between gap-12 transition-all duration-700 cursor-pointer ${
-                  uploading ? 'bg-[var(--bg-tertiary)] border-2 border-[var(--accent-secondary)]' : 'bg-gradient-to-r from-[var(--accent-primary)] to-[var(--accent-secondary)] text-white clip-brutal-hero-primary shadow-[0_0_60px_var(--accent-glow)] hover:shadow-[0_0_100px_var(--accent-glow)]'
-                }`}
-              >
-                {uploading && (
-                  <div 
-                    className="absolute top-0 left-0 h-full bg-gradient-to-r from-[var(--accent-primary)] to-[var(--accent-secondary)] opacity-30 z-0 transition-all duration-300"
-                    style={{ width: `${uploadProgress}%` }}
-                  />
-                )}
-                
-                <div className="relative z-10 max-w-2xl">
-                  <div className="flex items-center gap-4 mb-6">
-                    <p className="font-black uppercase tracking-[0.5em] text-[10px] text-white/70">
-                      {uploading ? "UPLINK_ESTABLISHED" : "ACTIVATE_PIPELINE"}
-                    </p>
+              <div className="glass-panel-premium border border-[var(--accent-primary)]/30 shadow-[0_0_40px_var(--accent-glow)]/10 rounded-[3rem] p-12 md:p-16 relative overflow-hidden group clip-brutal-hero-primary min-h-[600px] flex flex-col">
+                <div className="flex items-center gap-6 mb-12 relative z-10">
+                  <div className="p-4 bg-gradient-to-r from-[var(--accent-primary)] to-[var(--accent-secondary)] rounded-3xl shadow-[0_0_20px_var(--accent-glow)]">
+                    <Sparkles className="w-8 h-8 text-white" />
                   </div>
-                  <h2 className="text-6xl md:text-8xl font-black uppercase tracking-tighter leading-[0.8] text-white">
-                    {uploading ? `SYNCING ${uploadProgress}%` : "UPLOAD AUDITION"}
-                  </h2>
-                  <p className="font-black uppercase tracking-widest mt-8 text-sm text-white/80 max-w-lg">
-                    {uploading ? "Transferring performance data to MM8 decentralized storage." : "Submit your latest performance. MM8 agents will automatically analyze and match your data."}
-                  </p>
+                  <div>
+                    <h2 className="text-5xl font-black uppercase tracking-tighter leading-none">AI_MATCHING_ENGINE</h2>
+                    <p className="text-[10px] font-black uppercase tracking-[0.5em] text-[var(--accent-primary)] mt-2">AGENTIC_TALENT_ACQUISITION</p>
+                  </div>
                 </div>
 
-                {!uploading && (
-                  <div className="relative z-10 w-32 h-32 bg-white flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform duration-500 clip-brutal-tr shadow-2xl">
-                    <PlayCircle className="w-16 h-16 text-[var(--accent-primary)]" />
-                  </div>
-                )}
-              </button>
+                <div className="flex-1 min-h-0 relative z-10">
+                  <DirectorChatbot />
+                </div>
+              </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                 <div className="glass-panel-premium p-10 border border-white/10 rounded-3xl border-[var(--border-main)] clip-brutal-tl hover:border-[var(--accent-primary)]/30 transition-colors group">
