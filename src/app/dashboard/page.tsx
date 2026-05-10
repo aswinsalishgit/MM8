@@ -698,7 +698,7 @@ export default function AgenticDashboard() {
 
     try {
       const { data, error } = await supabase
-        .from('friends')
+        .from('friendships')
         .select(`
           id,
           status,
