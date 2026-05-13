@@ -46,7 +46,10 @@ export default function DirectorChatbot() {
       const response = await fetch("/api/ai/match", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ prompt: input }),
+        body: JSON.stringify({ 
+          prompt: input,
+          history: messages.slice(-5).map(m => ({ type: m.type, text: m.text })) 
+        }),
       });
 
       const data = await response.json();
@@ -58,9 +61,7 @@ export default function DirectorChatbot() {
       const botMessage: Message = {
         id: (Date.now() + 1).toString(),
         type: "bot",
-        text: data.matches.length > 0 
-          ? `I HAVE FOUND ${data.matches.length} MATCHING NODES BASED ON YOUR PROTOCOL.` 
-          : "NO DIRECT MATCHES FOUND IN THE DATABASE. TRY ADJUSTING YOUR PARAMETERS.",
+        text: data.reply,
         matches: data.matches,
       };
 
